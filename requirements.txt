@@ -1,0 +1,3 @@
+flet[all]>=0.28
+requests>=2.31
+uvicorn[standard]>=0.30
