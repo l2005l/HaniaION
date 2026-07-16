@@ -1,0 +1,19 @@
+{
+  "name": "HaniaION RAAM",
+  "short_name": "HaniaION",
+  "description": "Klobuchar data conversion for RAAM",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#edf3f8",
+  "theme_color": "#123b63",
+  "icons": [
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: haniaion-raam
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: EARTHDATA_USERNAME
+        sync: false
+      - key: EARTHDATA_PASSWORD
+        sync: false

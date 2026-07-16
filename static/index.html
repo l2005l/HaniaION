@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#123b63">
+  <meta
+    name="description"
+    content="Klobuchar data conversion for RAAM"
+  >
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon.svg">
+  <link rel="stylesheet" href="/static/style.css">
+  <title>HaniaION RAAM</title>
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <img
+        class="logo"
+        src="/static/icons/icon.svg"
+        alt=""
+      >
+      <div>
+        <h1>HaniaION RAAM</h1>
+        <p>Klobuchar Data Extractor & Converter</p>
+      </div>
+    </header>
+
+    <section class="panel action-panel">
+      <div>
+        <span class="eyebrow">CDDIS / Earthdata</span>
+        <h2>נתוני היונוספרה המעודכנים</h2>
+        <p>
+          לחיצה אחת מורידה את קובץ ה־BRDC האחרון,
+          מחלצת וממירה ל־RAAM.
+        </p>
+      </div>
+
+      <button id="calculateButton" type="button">
+        הורד, המר והצג
+      </button>
+    </section>
+
+    <section
+      id="progressPanel"
+      class="panel progress-panel hidden"
+      aria-live="polite"
+    >
+      <div class="spinner"></div>
+      <div>
+        <strong>מתחבר ל־CDDIS...</strong>
+        <p>הפעולה עשויה לקחת מספר שניות.</p>
+      </div>
+    </section>
+
+    <section
+      id="errorPanel"
+      class="panel error-panel hidden"
+      role="alert"
+    >
+      <strong>לא ניתן להשלים את הפעולה</strong>
+      <p id="errorText"></p>
+    </section>
+
+    <section id="resultsPanel" class="panel hidden">
+      <div class="results-heading">
+        <div>
+          <span class="eyebrow">RAAM DATA</span>
+          <h2>תוצאות</h2>
+        </div>
+        <span id="cacheBadge" class="badge"></span>
+      </div>
+
+      <div class="meta-grid">
+        <div>
+          <span>קובץ</span>
+          <strong id="fileName">—</strong>
+        </div>
+        <div>
+          <span>תאריך מקור</span>
+          <strong id="sourceDate">—</strong>
+        </div>
+      </div>
+
+      <div class="data-grid">
+        <article>
+          <span>Data 1</span>
+          <strong id="data1">—</strong>
+        </article>
+        <article>
+          <span>Data 2</span>
+          <strong id="data2">—</strong>
+        </article>
+        <article>
+          <span>Data 3</span>
+          <strong id="data3">—</strong>
+        </article>
+        <article>
+          <span>Data 4</span>
+          <strong id="data4">—</strong>
+        </article>
+        <article class="tls">
+          <span>tLS</span>
+          <strong id="tls">—</strong>
+        </article>
+      </div>
+
+      <details>
+        <summary>הצגת ערכי Klobuchar המקוריים</summary>
+        <div class="raw-values">
+          <p>
+            <b>Alpha:</b>
+            <span id="alpha">—</span>
+          </p>
+          <p>
+            <b>Beta:</b>
+            <span id="beta">—</span>
+          </p>
+        </div>
+      </details>
+
+      <div class="button-row">
+        <button
+          id="copyButton"
+          class="secondary"
+          type="button"
+        >
+          העתק תוצאות
+        </button>
+
+        <button
+          id="refreshButton"
+          class="secondary"
+          type="button"
+        >
+          רענן
+        </button>
+      </div>
+    </section>
+
+    <footer>
+      HaniaION • RAAM Navigation Utility
+    </footer>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
