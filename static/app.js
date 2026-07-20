@@ -120,6 +120,7 @@ function displayResult(data) {
   byId("alpha").textContent = data.alpha.map(formatCoefficient).join("  ·  ");
   byId("beta").textContent = data.beta.map(formatCoefficient).join("  ·  ");
   byId("cacheBadge").textContent = data.cached ? "Cached result" : "Updated now";
+  setLiveStatus("cacheStatusCard", "cacheStatus", "cacheFreshness", "online", data.cached ? "Warm" : "Fresh", data.cached ? "Served from cache" : "Latest source loaded");
   byId("updatedAt").textContent = formatDateTime(data.updated_at);
   elements.resultsPanel.classList.remove("hidden");
 }
@@ -245,23 +246,39 @@ function initializeTheme() {
   applyTheme(saved || preferred);
 }
 
+function setLiveStatus(cardId, labelId, detailId, state, label, detail) {
+  const card = byId(cardId);
+  const labelNode = byId(labelId);
+  const detailNode = byId(detailId);
+  if (card) {
+    card.classList.remove("status-checking", "status-online", "status-offline", "status-neutral");
+    card.classList.add(`status-${state}`);
+  }
+  if (labelNode) labelNode.textContent = label;
+  if (detailNode) detailNode.textContent = detail;
+}
+
 async function checkHealth() {
+  const started = performance.now();
+  setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "checking", "Checking", "Health endpoint");
+  setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "checking", "Checking", "Server gateway");
   try {
     const response = await fetch("/api/health", { cache: "no-store" });
     if (!response.ok) throw new Error("offline");
     const payload = await response.json();
     if (payload.status !== "ok") throw new Error("offline");
+    const latency = Math.max(1, Math.round(performance.now() - started));
     elements.serviceStatus.classList.add("online");
     elements.serviceStatus.classList.remove("offline");
     elements.serviceStatusText.textContent = "Service online";
-    const apiStatus = byId("apiStatus");
-    if (apiStatus) apiStatus.textContent = "Online";
+    setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "online", "Online", `${latency} ms response`);
+    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "online", "Connected", "Earthdata gateway ready");
   } catch {
     elements.serviceStatus.classList.add("offline");
     elements.serviceStatus.classList.remove("online");
     elements.serviceStatusText.textContent = "Service unavailable";
-    const apiStatus = byId("apiStatus");
-    if (apiStatus) apiStatus.textContent = "Unavailable";
+    setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "offline", "Unavailable", "Health check failed");
+    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "offline", "Unavailable", "Backend connection required");
   }
 }
 
