@@ -1,364 +1,210 @@
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="en" dir="ltr" data-theme="dark">
 <head>
   <meta charset="utf-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  >
-
-  <meta name="theme-color" content="#123b63">
-
-  <meta
-    name="description"
-    content="Open-source Python and FastAPI developer utility for extracting GNSS Klobuchar coefficients from NASA CDDIS and converting them for RAAM navigation software."
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="HaniaION retrieves the latest GNSS BRDC navigation file from NASA CDDIS, extracts Klobuchar coefficients and converts them into RAAM-ready data.">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/icon.svg">
   <link rel="stylesheet" href="/static/style.css">
-
-  <title>HaniaION — Open Source GNSS Developer Tool</title>
+  <title>HaniaION — GNSS Ionospheric Data Platform</title>
 </head>
-
 <body>
-  <main class="shell">
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
 
-    <!-- Developer-focused project header -->
-    <header class="hero developer-hero">
-      <img
-        class="logo"
-        src="/static/icons/icon.svg"
-        alt="HaniaION logo"
-      >
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="HaniaION home">
+      <img src="/static/icons/icon.svg" alt="" width="40" height="40">
+      <span><strong>HaniaION</strong><small>GNSS DATA PLATFORM</small></span>
+    </a>
 
-      <div>
-        <span class="project-label">OPEN SOURCE SOFTWARE PROJECT</span>
+    <nav class="topnav" aria-label="Primary navigation">
+      <a href="#converter">Converter</a>
+      <a href="#architecture">Architecture</a>
+      <a href="/docs" target="_blank" rel="noopener">API Docs</a>
+      <a href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener">GitHub</a>
+    </nav>
 
-        <h1>HaniaION</h1>
-
-        <p class="hero-subtitle">
-          GNSS Klobuchar Data API &amp; RAAM Converter
-        </p>
-
-        <p class="hero-description">
-          A Python and FastAPI utility that retrieves the latest BRDC
-          navigation data from NASA CDDIS, extracts Klobuchar ionospheric
-          coefficients, and converts them for GNSS and RAAM software.
-        </p>
-
-        <div class="tech-tags" aria-label="Project technologies">
-          <span>Python</span>
-          <span>FastAPI</span>
-          <span>REST API</span>
-          <span>Docker</span>
-          <span>GNSS</span>
-          <span>RINEX</span>
-          <span>NASA CDDIS</span>
-        </div>
-
-        <nav class="developer-links" aria-label="Developer resources">
-          <a
-            class="developer-link primary-link"
-            href="https://github.com/I2005I/HaniaION"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            View Source on GitHub
-          </a>
-
-          <a
-            class="developer-link"
-            href="/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Interactive API Docs
-          </a>
-
-          <a
-            class="developer-link"
-            href="/api/health"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            API Health
-          </a>
-        </nav>
+    <div class="top-actions">
+      <div class="service-pill" title="Backend service status">
+        <span id="statusDot" class="status-dot checking"></span>
+        <span id="statusText">Checking service</span>
       </div>
-    </header>
-
-    <!-- Project overview -->
-    <section class="panel developer-panel">
-      <span class="eyebrow">DEVELOPER PLATFORM</span>
-      <h2>Software Development Features</h2>
-
-      <div class="feature-grid">
-        <article>
-          <strong>BRDC Retrieval</strong>
-          <p>
-            Automatically locates and downloads the latest GNSS navigation
-            file from NASA CDDIS Earthdata.
-          </p>
-        </article>
-
-        <article>
-          <strong>RINEX Parsing</strong>
-          <p>
-            Parses the navigation header and extracts the Klobuchar Alpha
-            and Beta ionospheric coefficients.
-          </p>
-        </article>
-
-        <article>
-          <strong>RAAM Conversion</strong>
-          <p>
-            Converts scientific coefficients into signed integer values
-            suitable for RAAM navigation software.
-          </p>
-        </article>
-
-        <article>
-          <strong>REST Backend</strong>
-          <p>
-            Built with Python and FastAPI, packaged with Docker, and deployed
-            as a reproducible web service.
-          </p>
-        </article>
-      </div>
-    </section>
-
-    <!-- Technical flow -->
-    <section class="panel developer-panel">
-      <span class="eyebrow">ARCHITECTURE</span>
-      <h2>Processing Pipeline</h2>
-
-      <div class="pipeline" aria-label="Application processing pipeline">
-        <div>
-          <span>1</span>
-          <strong>NASA CDDIS</strong>
-          <small>Latest BRDC file</small>
-        </div>
-
-        <div class="pipeline-arrow">→</div>
-
-        <div>
-          <span>2</span>
-          <strong>Python Parser</strong>
-          <small>RINEX header extraction</small>
-        </div>
-
-        <div class="pipeline-arrow">→</div>
-
-        <div>
-          <span>3</span>
-          <strong>Converter</strong>
-          <small>Klobuchar → RAAM</small>
-        </div>
-
-        <div class="pipeline-arrow">→</div>
-
-        <div>
-          <span>4</span>
-          <strong>API Output</strong>
-          <small>Structured developer data</small>
-        </div>
-      </div>
-    </section>
-
-    <!-- Existing working application -->
-    <section class="panel action-panel" dir="rtl">
-      <div>
-        <span class="eyebrow">CDDIS / Earthdata</span>
-        <h2>נתוני היונוספרה המעודכנים</h2>
-        <p>
-          לחיצה אחת מורידה את קובץ ה־BRDC האחרון,
-          מחלצת את מקדמי Klobuchar וממירה אותם לערכי RAAM.
-        </p>
-      </div>
-
-      <button id="calculateButton" type="button">
-        הורד, המר והצג
+      <button id="themeToggle" class="icon-button" type="button" aria-label="Toggle color theme" title="Toggle theme">
+        <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4V2m0 20v-2M4 12H2m20 0h-2M5.64 5.64 4.22 4.22m15.56 15.56-1.42-1.42m0-12.72 1.42-1.42M4.22 19.78l1.42-1.42M17 12a5 5 0 1 1-10 0 5 5 0 0 1 10 0Z"/></svg>
       </button>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero-section">
+      <div class="hero-copy">
+        <div class="kicker"><span></span> OPEN-SOURCE GNSS ENGINEERING</div>
+        <h1>From NASA BRDC data<br>to <em>RAAM-ready values.</em></h1>
+        <p class="hero-lead">A focused Python and FastAPI platform that retrieves the latest navigation file, extracts Klobuchar ionospheric coefficients, and converts them into operational RAAM data.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="#converter">Extract latest BRDC <span>→</span></a>
+          <a class="ghost-button" href="/docs" target="_blank" rel="noopener">Explore REST API</a>
+        </div>
+        <div class="trust-row" aria-label="Technologies">
+          <span>PYTHON</span><i></i><span>FASTAPI</span><i></i><span>RINEX</span><i></i><span>NASA CDDIS</span>
+        </div>
+      </div>
+
+      <div class="orbit-card" aria-label="GNSS processing visualization">
+        <div class="orbit-grid"></div>
+        <div class="earth">
+          <div class="earth-glow"></div>
+          <div class="earth-surface"></div>
+        </div>
+        <div class="orbit orbit-a"><span class="satellite"></span></div>
+        <div class="orbit orbit-b"><span class="satellite"></span></div>
+        <div class="telemetry telemetry-one"><small>SOURCE</small><strong>NASA CDDIS</strong><span>BRDC / RINEX</span></div>
+        <div class="telemetry telemetry-two"><small>MODEL</small><strong>KLOBUCHAR</strong><span>ALPHA + BETA</span></div>
+        <div class="telemetry telemetry-three"><small>OUTPUT</small><strong>RAAM DATA</strong><span>DATA 1–4 + tLS</span></div>
+      </div>
     </section>
 
-    <section
-      id="progressPanel"
-      class="panel progress-panel hidden"
-      aria-live="polite"
-      dir="rtl"
-    >
-      <div class="spinner"></div>
+    <section class="metrics-strip" aria-label="Platform highlights">
+      <article><strong>01</strong><span>Latest BRDC<br>auto-discovery</span></article>
+      <article><strong>02</strong><span>RINEX header<br>parsing</span></article>
+      <article><strong>03</strong><span>Klobuchar<br>conversion</span></article>
+      <article><strong>04</strong><span>Structured RAAM<br>output</span></article>
+    </section>
 
+    <section id="converter" class="workspace-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-label">LIVE WORKSPACE</span>
+          <h2>BRDC → RAAM Converter</h2>
+        </div>
+        <p>Run the complete processing pipeline from the browser. Existing server calculations and Earthdata credentials remain protected on the backend.</p>
+      </div>
+
+      <div class="workspace-grid">
+        <aside class="control-card" dir="rtl">
+          <div class="control-head">
+            <span class="control-icon">⌁</span>
+            <div><small>GNSS DATA SOURCE</small><h3>הפקת נתוני RAAM</h3></div>
+          </div>
+          <p>המערכת מאתרת את קובץ ה־BRDC העדכני ביותר, מורידה אותו מ־NASA CDDIS, מחלצת Alpha/Beta וממירה את הנתונים אוטומטית.</p>
+
+          <button id="calculateButton" class="run-button" type="button">
+            <span class="button-label">הורד, המר והצג</span>
+            <span class="button-loader" aria-hidden="true"></span>
+          </button>
+
+          <div class="control-meta">
+            <div><span>API Endpoint</span><code>POST /api/calculate</code></div>
+            <div><span>Cache Window</span><code>15 minutes</code></div>
+          </div>
+        </aside>
+
+        <div class="output-stack">
+          <section id="emptyPanel" class="output-card empty-state">
+            <div class="signal-visual"><span></span><span></span><span></span><span></span></div>
+            <div>
+              <small>READY FOR EXTRACTION</small>
+              <h3>No result loaded yet</h3>
+              <p>Start the converter to retrieve the newest available GNSS navigation data.</p>
+            </div>
+          </section>
+
+          <section id="progressPanel" class="output-card progress-card hidden" aria-live="polite" dir="rtl">
+            <div class="progress-top">
+              <div><small>PROCESSING PIPELINE</small><h3 id="progressTitle">מתחבר ל־NASA CDDIS</h3></div>
+              <strong id="progressPercent">12%</strong>
+            </div>
+            <div class="progress-track"><span id="progressBar"></span></div>
+            <ol class="progress-steps">
+              <li data-step="0" class="active"><span></span>חיבור לשרת</li>
+              <li data-step="1"><span></span>הורדת BRDC</li>
+              <li data-step="2"><span></span>חילוץ Klobuchar</li>
+              <li data-step="3"><span></span>המרה ל־RAAM</li>
+            </ol>
+          </section>
+
+          <section id="errorPanel" class="output-card error-card hidden" role="alert" dir="rtl">
+            <div class="error-symbol">!</div>
+            <div><small>PROCESS FAILED</small><h3>לא ניתן להשלים את הפעולה</h3><p id="errorText"></p></div>
+            <button id="retryButton" class="small-button" type="button">נסה שוב</button>
+          </section>
+
+          <section id="resultsPanel" class="results-card hidden" dir="rtl">
+            <div class="results-toolbar">
+              <div><span class="section-label">RAAM OUTPUT</span><h3>תוצאות עדכניות</h3></div>
+              <div class="result-status"><span></span><b id="cacheBadge">עודכן כעת</b></div>
+            </div>
+
+            <div class="source-meta">
+              <div><span>קובץ מקור</span><strong id="fileName">—</strong></div>
+              <div><span>תאריך מקור</span><strong id="sourceDate">—</strong></div>
+              <div><span>זמן עדכון UTC</span><strong id="updatedAt">—</strong></div>
+            </div>
+
+            <div class="result-grid" dir="ltr">
+              <article><span>DATA 1</span><strong id="data1">—</strong><small>Alpha 0 / 1</small></article>
+              <article><span>DATA 2</span><strong id="data2">—</strong><small>Alpha 2 / 3</small></article>
+              <article><span>DATA 3</span><strong id="data3">—</strong><small>Beta 0 / 1</small></article>
+              <article><span>DATA 4</span><strong id="data4">—</strong><small>Beta 2 / 3</small></article>
+              <article class="tls-card"><span>tLS</span><strong id="tls">—</strong><small>Leap seconds</small></article>
+            </div>
+
+            <details class="raw-details">
+              <summary><span>הצג מקדמי Klobuchar המקוריים</span><b>+</b></summary>
+              <div class="raw-grid" dir="ltr">
+                <div><span>ALPHA</span><code id="alpha">—</code></div>
+                <div><span>BETA</span><code id="beta">—</code></div>
+              </div>
+            </details>
+
+            <div class="result-actions">
+              <button id="copyButton" class="small-button primary" type="button">העתק תוצאות</button>
+              <button id="downloadTxtButton" class="small-button" type="button">הורד RAAM.txt</button>
+              <button id="downloadJsonButton" class="small-button" type="button">JSON</button>
+              <button id="downloadCsvButton" class="small-button" type="button">CSV</button>
+              <button id="refreshButton" class="small-button icon-only" type="button" aria-label="Refresh data" title="Refresh">↻</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture" class="architecture-section">
+      <div class="section-heading compact">
+        <div><span class="section-label">SYSTEM ARCHITECTURE</span><h2>One clean processing pipeline</h2></div>
+      </div>
+      <div class="pipeline-grid">
+        <article><span>01</span><div class="pipeline-icon">↓</div><h3>Acquire</h3><p>Locate and download the newest valid BRDC navigation file from NASA Earthdata.</p><code>CDDIS / GNSS / DAILY</code></article>
+        <article><span>02</span><div class="pipeline-icon">⌘</div><h3>Parse</h3><p>Read the RINEX header and extract GPSA/GPSB or legacy Alpha/Beta parameters.</p><code>RINEX NAV HEADER</code></article>
+        <article><span>03</span><div class="pipeline-icon">±</div><h3>Convert</h3><p>Scale, round, mask, and combine each coefficient pair into RAAM-compatible values.</p><code>KLOBUCHAR → RAAM</code></article>
+        <article><span>04</span><div class="pipeline-icon">{ }</div><h3>Deliver</h3><p>Return a structured API response with source metadata, values, and cache state.</p><code>FASTAPI / JSON</code></article>
+      </div>
+    </section>
+
+    <section class="developer-section">
       <div>
-        <strong>מתחבר ל־CDDIS...</strong>
-        <p>הפעולה עשויה לקחת מספר שניות.</p>
+        <span class="section-label">BUILT FOR ENGINEERING</span>
+        <h2>Transparent, portable, and ready to extend.</h2>
+        <p>HaniaION keeps the mission-critical calculation on the server while exposing a simple interface for operators and a documented REST endpoint for developers.</p>
+      </div>
+      <div class="developer-links-grid">
+        <a href="/docs" target="_blank" rel="noopener"><small>INTERACTIVE</small><strong>API Documentation</strong><span>Open Swagger UI →</span></a>
+        <a href="/api/health" target="_blank" rel="noopener"><small>MONITORING</small><strong>Service Health</strong><span>Check endpoint →</span></a>
+        <a href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener"><small>OPEN SOURCE</small><strong>GitHub Repository</strong><span>View source →</span></a>
       </div>
     </section>
-
-    <section
-      id="errorPanel"
-      class="panel error-panel hidden"
-      role="alert"
-      dir="rtl"
-    >
-      <strong>לא ניתן להשלים את הפעולה</strong>
-      <p id="errorText"></p>
-    </section>
-
-    <section id="resultsPanel" class="panel hidden" dir="rtl">
-      <div class="results-heading">
-        <div>
-          <span class="eyebrow">RAAM DATA</span>
-          <h2>תוצאות</h2>
-        </div>
-
-        <span id="cacheBadge" class="badge"></span>
-      </div>
-
-      <div class="meta-grid">
-        <div>
-          <span>קובץ</span>
-          <strong id="fileName">—</strong>
-        </div>
-
-        <div>
-          <span>תאריך מקור</span>
-          <strong id="sourceDate">—</strong>
-        </div>
-      </div>
-
-      <div class="data-grid">
-        <article>
-          <span>Data 1</span>
-          <strong id="data1">—</strong>
-        </article>
-
-        <article>
-          <span>Data 2</span>
-          <strong id="data2">—</strong>
-        </article>
-
-        <article>
-          <span>Data 3</span>
-          <strong id="data3">—</strong>
-        </article>
-
-        <article>
-          <span>Data 4</span>
-          <strong id="data4">—</strong>
-        </article>
-
-        <article class="tls">
-          <span>tLS</span>
-          <strong id="tls">—</strong>
-        </article>
-      </div>
-
-      <details>
-        <summary>מקדמי Klobuchar ונתוני מקור</summary>
-
-        <div class="raw-values">
-          <p>
-            <b>Alpha:</b>
-            <span id="alpha">—</span>
-          </p>
-
-          <p>
-            <b>Beta:</b>
-            <span id="beta">—</span>
-          </p>
-        </div>
-      </details>
-
-      <div class="button-row">
-        <button
-          id="copyButton"
-          class="secondary"
-          type="button"
-        >
-          העתק תוצאות
-        </button>
-
-        <button
-          id="refreshButton"
-          class="secondary"
-          type="button"
-        >
-          רענן
-        </button>
-      </div>
-    </section>
-
-    <!-- Technical project information -->
-    <section class="panel developer-panel">
-      <span class="eyebrow">TECHNICAL SPECIFICATION</span>
-      <h2>Developer Information</h2>
-
-      <div class="spec-grid">
-        <div>
-          <span>Backend</span>
-          <strong>Python / FastAPI</strong>
-        </div>
-
-        <div>
-          <span>Deployment</span>
-          <strong>Docker / Render</strong>
-        </div>
-
-        <div>
-          <span>Input</span>
-          <strong>BRDC RINEX Navigation File</strong>
-        </div>
-
-        <div>
-          <span>Data Source</span>
-          <strong>NASA CDDIS Earthdata</strong>
-        </div>
-
-        <div>
-          <span>Model</span>
-          <strong>Klobuchar Ionospheric Model</strong>
-        </div>
-
-        <div>
-          <span>Output</span>
-          <strong>RAAM-Compatible Values</strong>
-        </div>
-      </div>
-    </section>
-
-    <section class="panel developer-panel">
-      <span class="eyebrow">INTENDED USE</span>
-      <h2>Built for Developers and Engineering</h2>
-
-      <ul class="developer-list">
-        <li>GNSS navigation software development</li>
-        <li>RAAM and positioning-system integration</li>
-        <li>RINEX and ionospheric-data processing</li>
-        <li>Embedded and aerospace software projects</li>
-        <li>Research, education, and technical validation</li>
-      </ul>
-    </section>
-
-    <footer>
-      <strong>HaniaION — Open Source GNSS Developer Utility</strong>
-      <span>
-        Python · FastAPI · Docker · NASA CDDIS · RINEX · RAAM
-      </span>
-
-      <a
-        href="https://github.com/I2005I/HaniaION"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Source code on GitHub
-      </a>
-    </footer>
-
   </main>
 
+  <footer class="site-footer">
+    <div class="brand footer-brand"><img src="/static/icons/icon.svg" alt="" width="34" height="34"><span><strong>HaniaION</strong><small>GNSS DATA PLATFORM</small></span></div>
+    <p>Python · FastAPI · Docker · RINEX · NASA CDDIS · RAAM</p>
+    <span>© <span id="year"></span> HaniaION</span>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/static/app.js"></script>
 </body>
 </html>
