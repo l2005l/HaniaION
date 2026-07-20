@@ -38,6 +38,12 @@ const elements = {
   historyEmpty: byId("historyEmpty"),
   historyContent: byId("historyContent"),
   historyList: byId("historyList"),
+  historyShowcaseEmpty: byId("historyShowcaseEmpty"),
+  historyShowcaseContent: byId("historyShowcaseContent"),
+  showcaseLatestDate: byId("showcaseLatestDate"),
+  showcaseChangeStatus: byId("showcaseChangeStatus"),
+  historyShowcaseValues: byId("historyShowcaseValues"),
+  showcaseSavedTime: byId("showcaseSavedTime"),
   clearHistoryButton: byId("clearHistoryButton"),
   comparisonCard: byId("comparisonCard"),
   comparisonTitle: byId("comparisonTitle"),
@@ -276,7 +282,33 @@ function renderHistory() {
   if (!history.length) {
     elements.historyList.innerHTML = "";
     elements.comparisonCard.classList.add("hidden");
+    elements.historyShowcaseEmpty?.classList.remove("hidden");
+    elements.historyShowcaseContent?.classList.add("hidden");
     return;
+  }
+
+  elements.historyShowcaseEmpty?.classList.add("hidden");
+  elements.historyShowcaseContent?.classList.remove("hidden");
+  const latest = history[0];
+  const previousLatest = history[1];
+  const showcaseKeys = ["data1", "data2", "data3", "data4", "tls"];
+  const showcaseChanged = previousLatest ? showcaseKeys.filter(key => Number(latest[key]) !== Number(previousLatest[key])).length : null;
+  if (elements.showcaseLatestDate) elements.showcaseLatestDate.textContent = latest.source_date || "—";
+  if (elements.showcaseChangeStatus) {
+    elements.showcaseChangeStatus.textContent = previousLatest ? (showcaseChanged ? `${showcaseChanged} value${showcaseChanged === 1 ? "" : "s"} changed` : "No changes") : "First saved result";
+    elements.showcaseChangeStatus.classList.toggle("no-change", showcaseChanged === 0);
+  }
+  if (elements.showcaseSavedTime) elements.showcaseSavedTime.textContent = `Saved ${formatSavedTime(latest.saved_at)}`;
+  if (elements.historyShowcaseValues) {
+    elements.historyShowcaseValues.innerHTML = showcaseKeys.map(key => {
+      const now = Number(latest[key]);
+      const before = previousLatest ? Number(previousLatest[key]) : null;
+      const delta = previousLatest ? now - before : null;
+      const changed = previousLatest ? delta !== 0 : false;
+      const deltaText = previousLatest ? (changed ? `${delta > 0 ? "+" : ""}${delta}` : "unchanged") : "baseline";
+      const direction = !previousLatest ? "baseline" : delta > 0 ? "up" : delta < 0 ? "down" : "same";
+      return `<div class="history-showcase-value ${direction}"><span>${key.toUpperCase()}</span><strong>${now}</strong><small>${deltaText}</small></div>`;
+    }).join("");
   }
 
   elements.historyList.innerHTML = history.map((entry, index) => {
