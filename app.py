@@ -345,6 +345,16 @@ def index():
     return FileResponse("static/index.html")
 
 
+@app.get("/preview")
+def preview():
+    return FileResponse("static/preview/index.html")
+
+
+@app.get("/preview/")
+def preview_slash():
+    return FileResponse("static/preview/index.html")
+
+
 @app.get("/manifest.webmanifest")
 def manifest():
     return FileResponse(
