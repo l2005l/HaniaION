@@ -1,13 +1,13 @@
 {
-  "name": "HaniaION RAAM",
+  "name": "HaniaION GNSS Data Platform",
   "short_name": "HaniaION",
-  "description": "Klobuchar data conversion for RAAM",
+  "description": "Latest Klobuchar ionospheric coefficients and RAAM-ready GNSS data from NASA CDDIS.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#edf3f8",
-  "theme_color": "#123b63",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
   "icons": [
     {
       "src": "/static/icons/icon.svg",
