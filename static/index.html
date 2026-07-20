@@ -28,6 +28,7 @@
 
     <nav class="topnav" aria-label="Primary navigation">
       <a href="#converter">Converter</a>
+      <a href="#history">History</a>
       <a href="#gps-pulse">GPS Pulse</a>
       <a href="#architecture">Architecture</a>
       <a href="/docs" target="_blank" rel="noopener noreferrer">API Docs</a>
@@ -35,6 +36,9 @@
     </nav>
 
     <div class="topbar-actions">
+      <a class="icon-button history-shortcut-button" href="#history" aria-label="Jump to results history" title="Results history">↺</a>
+      <a class="icon-button quick-pulse-button" href="#gps-pulse" aria-label="Jump to GPS Pulse Monitor" title="GPS Pulse Monitor">⌁</a>
+      <button id="installAppButton" class="icon-button install-icon-button" type="button" aria-label="Install HaniaION app" title="Install HaniaION">⇩</button>
       <div id="serviceStatus" class="status-pill" role="status" aria-live="polite">
         <span class="status-dot"></span>
         <span id="serviceStatusText">Checking service</span>
@@ -61,6 +65,8 @@
             <span class="button-icon" aria-hidden="true">↯</span>
             Extract latest BRDC
           </button>
+          <a class="button button-secondary button-large" href="#gps-pulse"><span aria-hidden="true">⌁</span> GPS Pulse Monitor</a>
+          <button id="heroInstallButton" class="button button-ghost button-large" type="button"><span aria-hidden="true">⇩</span> Install on phone</button>
           <a class="button button-ghost button-large" href="#architecture">Explore architecture</a>
         </div>
 
@@ -220,6 +226,42 @@
       </details>
     </section>
 
+    <section id="history" class="history-section reveal">
+      <div class="section-heading history-heading-row">
+        <div>
+          <span class="section-kicker">LOCAL RESULT ARCHIVE</span>
+          <h2>Results history and comparison</h2>
+        </div>
+        <div class="history-heading-actions">
+          <span id="historyCount" class="result-badge">0 saved results</span>
+          <button id="clearHistoryButton" class="button button-ghost history-clear-button" type="button">Clear history</button>
+        </div>
+      </div>
+
+      <p class="history-intro">Each successful extraction is stored on this device. Select any saved result to reopen it, download it, or compare it with the previous result.</p>
+
+      <div id="historyEmpty" class="card history-empty">
+        <div class="state-orb idle-orb"><span>↺</span></div>
+        <h3>No saved results yet</h3>
+        <p>Run the BRDC extraction once. The result will appear here automatically and remain available on this device.</p>
+      </div>
+
+      <div id="historyContent" class="history-content hidden">
+        <article id="comparisonCard" class="card comparison-card hidden">
+          <div class="comparison-header">
+            <div>
+              <span class="card-label">CHANGE SINCE PREVIOUS RESULT</span>
+              <h3 id="comparisonTitle">Latest comparison</h3>
+            </div>
+            <span id="comparisonSummary" class="comparison-summary">—</span>
+          </div>
+          <div id="comparisonGrid" class="comparison-grid"></div>
+        </article>
+
+        <div id="historyList" class="history-list" aria-live="polite"></div>
+      </div>
+    </section>
+
     <section id="gps-pulse" class="pulse-section reveal">
       <div class="section-heading">
         <div>
@@ -319,6 +361,26 @@
     <nav aria-label="Footer navigation"><a href="/docs">API Docs</a><a href="/api/health">Health</a><a href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener noreferrer">GitHub</a></nav>
   </footer>
 
+  <div id="installModal" class="install-modal hidden" role="dialog" aria-modal="true" aria-labelledby="installModalTitle">
+    <div class="install-modal-backdrop" data-close-install></div>
+    <div class="install-modal-card">
+      <button class="install-modal-close" type="button" data-close-install aria-label="Close">×</button>
+      <div class="install-app-icon"><img src="/static/icons/icon.svg" alt="" width="58" height="58"></div>
+      <span class="section-kicker">INSTALL HaniaION</span>
+      <h2 id="installModalTitle">Add it to your phone</h2>
+      <div id="installAndroidInstructions" class="install-instructions hidden">
+        <p>Install HaniaION as a standalone app with its own icon and full-screen window.</p>
+        <button id="confirmInstallButton" class="button button-primary full-width" type="button">Install app</button>
+      </div>
+      <div id="installIosInstructions" class="install-instructions hidden">
+        <p>On iPhone, open this page in <strong>Safari</strong>, tap the <strong>Share</strong> button <span class="share-symbol">□↑</span>, then choose <strong>Add to Home Screen</strong>.</p>
+        <div class="ios-install-steps"><span>1</span> Share <i>→</i><span>2</span> Add to Home Screen</div>
+      </div>
+      <div id="installFallbackInstructions" class="install-instructions hidden">
+        <p>Open your browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
+      </div>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div class="cursor-glow" aria-hidden="true"></div>
   <script src="/static/app.js" defer></script>
