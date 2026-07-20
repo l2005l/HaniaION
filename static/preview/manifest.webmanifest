@@ -1,0 +1,11 @@
+{
+  "name": "HaniaION Mission Control",
+  "short_name": "HaniaION",
+  "description": "GNSS ionospheric data and RAAM operations dashboard.",
+  "start_url": "/preview/",
+  "scope": "/preview/",
+  "display": "standalone",
+  "background_color": "#06101d",
+  "theme_color": "#06101d",
+  "icons": [{"src":"/static/icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
