@@ -7,7 +7,8 @@
   <meta name="description" content="HaniaION retrieves the latest NASA CDDIS BRDC file, extracts Klobuchar coefficients, and converts them into RAAM-ready GNSS values.">
   <meta name="color-scheme" content="dark light">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/icons/icon.svg?v=22" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=22">
   <link rel="stylesheet" href="/static/style.css">
   <title>HaniaION — GNSS Ionospheric Data Platform</title>
 </head>
@@ -63,9 +64,9 @@
         </div>
 
         <div class="live-status-grid" aria-label="Live platform status">
-          <div class="live-status-card"><span class="live-dot"></span><small>NASA CDDIS</small><strong id="nasaStatus">Connected</strong></div>
-          <div class="live-status-card"><span class="live-dot"></span><small>REST API</small><strong id="apiStatus">Online</strong></div>
-          <div class="live-status-card"><span class="live-dot cache-dot"></span><small>Cache</small><strong id="cacheStatus">Ready</strong></div>
+          <div id="nasaStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>NASA CDDIS</small><strong id="nasaStatus">Checking</strong><em id="nasaLatency">—</em></div>
+          <div id="apiStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>REST API</small><strong id="apiStatus">Checking</strong><em id="apiLatency">—</em></div>
+          <div id="cacheStatusCard" class="live-status-card status-neutral"><span class="live-dot cache-dot"></span><small>Cache</small><strong id="cacheStatus">Ready</strong><em id="cacheFreshness">Standby</em></div>
         </div>
 
         <div class="hero-metrics" aria-label="Platform capabilities">
@@ -238,7 +239,7 @@
       </div>
     </section>
 
-    <section class="developer-section">
+    <section class="developer-section reveal">
       <div class="developer-copy">
         <span class="section-kicker">DEVELOPER READY</span>
         <h2>Built as software, not a one-off webpage.</h2>
