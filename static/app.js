@@ -1,653 +1,462 @@
-"use strict";
+from __future__ import annotations
 
-const byId = id => document.getElementById(id);
+import gzip
+import os
+import re
+import threading
+import time
+from datetime import date, datetime, timedelta, timezone
+from typing import Any
+from urllib.parse import urlparse
 
-const elements = {
-  calculateButton: byId("calculateButton"),
-  heroCalculateButton: byId("heroCalculateButton"),
-  refreshButton: byId("refreshButton"),
-  retryButton: byId("retryButton"),
-  copyButton: byId("copyButton"),
-  downloadTxtButton: byId("downloadTxtButton"),
-  downloadJsonButton: byId("downloadJsonButton"),
-  downloadCsvButton: byId("downloadCsvButton"),
-  viewResultsButton: byId("viewResultsButton"),
-  resultsPanel: byId("resultsPanel"),
-  idleState: byId("idleState"),
-  loadingState: byId("loadingState"),
-  successState: byId("successState"),
-  errorState: byId("errorState"),
-  loadingTitle: byId("loadingTitle"),
-  loadingDescription: byId("loadingDescription"),
-  progressBar: byId("progressBar"),
-  progressStep: byId("progressStep"),
-  elapsedTime: byId("elapsedTime"),
-  errorText: byId("errorText"),
-  themeToggle: byId("themeToggle"),
-  serviceStatus: byId("serviceStatus"),
-  serviceStatusText: byId("serviceStatusText"),
-  toast: byId("toast"),
-  installAppButton: byId("installAppButton"),
-  heroInstallButton: byId("heroInstallButton"),
-  installModal: byId("installModal"),
-  installAndroidInstructions: byId("installAndroidInstructions"),
-  installIosInstructions: byId("installIosInstructions"),
-  installFallbackInstructions: byId("installFallbackInstructions"),
-  confirmInstallButton: byId("confirmInstallButton"),
-  historyCount: byId("historyCount"),
-  historyEmpty: byId("historyEmpty"),
-  historyContent: byId("historyContent"),
-  historyList: byId("historyList"),
-  historyShowcaseEmpty: byId("historyShowcaseEmpty"),
-  historyShowcaseContent: byId("historyShowcaseContent"),
-  showcaseLatestDate: byId("showcaseLatestDate"),
-  showcaseChangeStatus: byId("showcaseChangeStatus"),
-  historyShowcaseValues: byId("historyShowcaseValues"),
-  showcaseSavedTime: byId("showcaseSavedTime"),
-  clearHistoryButton: byId("clearHistoryButton"),
-  comparisonCard: byId("comparisonCard"),
-  comparisonTitle: byId("comparisonTitle"),
-  comparisonSummary: byId("comparisonSummary"),
-  comparisonGrid: byId("comparisonGrid"),
-};
+import requests
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, Response
+from fastapi.staticfiles import StaticFiles
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-let latestResult = null;
-let loadingTimer = null;
-let elapsedTimer = null;
-let loadingStartedAt = 0;
-let toastTimer = null;
-let deferredInstallPrompt = null;
-const HISTORY_STORAGE_KEY = "haniaion-result-history-v1";
-const HISTORY_LIMIT = 30;
 
-const loadingSteps = [
-  { delay: 0, progress: 12, title: "Connecting to NASA CDDIS", description: "Establishing a secure Earthdata session...", step: "Step 1 of 4" },
-  { delay: 1800, progress: 38, title: "Locating the latest BRDC file", description: "Checking the most recent UTC daily directories...", step: "Step 2 of 4" },
-  { delay: 4200, progress: 68, title: "Parsing the RINEX header", description: "Extracting GPS Alpha, Beta, and leap-second values...", step: "Step 3 of 4" },
-  { delay: 6800, progress: 88, title: "Converting for RAAM", description: "Scaling coefficients and packing the output words...", step: "Step 4 of 4" },
-];
+APP_NAME = "HaniaION RAAM"
+CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
+EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 
-function showToast(message) {
-  clearTimeout(toastTimer);
-  elements.toast.textContent = message;
-  elements.toast.classList.add("show");
-  toastTimer = setTimeout(() => elements.toast.classList.remove("show"), 1800);
+app = FastAPI(title=APP_NAME)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+_cache_lock = threading.Lock()
+_cache: dict[str, Any] = {
+    "result": None,
+    "expires_at": 0.0,
 }
 
-function setState(name) {
-  const states = ["idle", "loading", "success", "error"];
-  states.forEach(state => byId(`${state}State`).classList.toggle("hidden", state !== name));
-}
+_rate_lock = threading.Lock()
+_rate_history: dict[str, list[float]] = {}
 
-function setButtonsDisabled(disabled) {
-  [elements.calculateButton, elements.heroCalculateButton].filter(Boolean).forEach(button => button.classList.toggle("loading", disabled));
-  [elements.calculateButton, elements.heroCalculateButton, elements.refreshButton, elements.retryButton]
-    .filter(Boolean)
-    .forEach(button => { button.disabled = disabled; });
-}
 
-function startLoadingPresentation() {
-  stopLoadingPresentation();
-  setState("loading");
-  loadingStartedAt = performance.now();
-  let index = 0;
+class EarthdataSession(requests.Session):
+    def rebuild_auth(self, prepared_request, response):
+        headers = prepared_request.headers
 
-  const applyStep = () => {
-    const current = loadingSteps[index];
-    elements.progressBar.style.width = `${current.progress}%`;
-    elements.loadingTitle.textContent = current.title;
-    elements.loadingDescription.textContent = current.description;
-    elements.progressStep.textContent = current.step;
-    index += 1;
-    if (index < loadingSteps.length) {
-      loadingTimer = setTimeout(applyStep, loadingSteps[index].delay - current.delay);
+        if "Authorization" not in headers:
+            return
+
+        original = urlparse(response.request.url)
+        redirected = urlparse(prepared_request.url)
+
+        if (
+            original.hostname != redirected.hostname
+            and redirected.hostname != EARTHDATA_HOST
+            and original.hostname != EARTHDATA_HOST
+        ):
+            del headers["Authorization"]
+
+
+def create_session() -> EarthdataSession:
+    username = os.getenv("EARTHDATA_USERNAME", "").strip()
+    password = os.getenv("EARTHDATA_PASSWORD", "")
+
+    if not username or not password:
+        raise RuntimeError(
+            "פרטי Earthdata לא הוגדרו בשרת."
+        )
+
+    session = EarthdataSession()
+    session.auth = (username, password)
+    session.headers.update(
+        {
+            "User-Agent": "HaniaION-RAAM/1.0",
+            "Accept": "*/*",
+        }
+    )
+
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        backoff_factor=1.5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET"],
+    )
+
+    session.mount(
+        "https://",
+        HTTPAdapter(max_retries=retry),
+    )
+
+    return session
+
+
+def check_rate_limit(client_ip: str) -> None:
+    now = time.time()
+    cutoff = now - 60
+
+    with _rate_lock:
+        recent = [
+            stamp
+            for stamp in _rate_history.get(client_ip, [])
+            if stamp > cutoff
+        ]
+
+        if len(recent) >= 12:
+            raise HTTPException(
+                status_code=429,
+                detail="יותר מדי בקשות. נסה שוב בעוד דקה.",
+            )
+
+        recent.append(now)
+        _rate_history[client_ip] = recent
+
+
+def candidate_file_names(day: date) -> list[str]:
+    year = day.year
+    doy = day.timetuple().tm_yday
+    yy = year % 100
+
+    return [
+        f"BRDC00IGS_R_{year}{doy:03d}0000_01D_MN.rnx.gz",
+        f"brdc{doy:03d}0.{yy:02d}n.gz",
+    ]
+
+
+def directory_url(day: date) -> str:
+    return f"{CDDIS_BASE}/{day.year}/brdc/"
+
+
+def is_gzip_response(response: requests.Response) -> bool:
+    content_type = response.headers.get("Content-Type", "").lower()
+
+    if "text/html" in content_type:
+        return False
+
+    return response.content[:2] == b"\x1f\x8b"
+
+
+def download_latest_brdc(
+    session: EarthdataSession,
+) -> tuple[str, bytes, date]:
+    today = datetime.now(timezone.utc).date()
+    errors: list[str] = []
+
+    for offset in range(7):
+        target_day = today - timedelta(days=offset)
+        base_url = directory_url(target_day)
+
+        for file_name in candidate_file_names(target_day):
+            try:
+                response = session.get(
+                    base_url + file_name,
+                    timeout=(20, 180),
+                    allow_redirects=True,
+                )
+
+                if response.status_code == 404:
+                    continue
+
+                response.raise_for_status()
+
+                if is_gzip_response(response):
+                    return file_name, response.content, target_day
+
+            except requests.RequestException as error:
+                errors.append(f"{file_name}: {error}")
+
+    for offset in range(7):
+        target_day = today - timedelta(days=offset)
+        base_url = directory_url(target_day)
+
+        try:
+            response = session.get(
+                base_url,
+                timeout=(20, 180),
+                allow_redirects=True,
+            )
+            response.raise_for_status()
+
+            links = re.findall(
+                r'href=["\']([^"\']+(?:\.rnx\.gz|\.n\.gz))["\']',
+                response.text,
+                flags=re.IGNORECASE,
+            )
+
+            file_names = [
+                link.split("/")[-1]
+                for link in links
+                if "brdc" in link.lower()
+            ]
+
+            for file_name in sorted(
+                set(file_names),
+                reverse=True,
+            ):
+                file_response = session.get(
+                    base_url + file_name,
+                    timeout=(20, 180),
+                    allow_redirects=True,
+                )
+                file_response.raise_for_status()
+
+                if is_gzip_response(file_response):
+                    return (
+                        file_name,
+                        file_response.content,
+                        target_day,
+                    )
+
+        except requests.RequestException as error:
+            errors.append(f"{base_url}: {error}")
+
+    detail = "\n".join(errors[-3:])
+
+    raise RuntimeError(
+        "לא נמצא קובץ BRDC תקין בשבעת הימים האחרונים."
+        + (f"\n{detail}" if detail else "")
+    )
+
+
+def parse_klobuchar(rinex_text: str) -> dict[str, Any]:
+    alpha: list[float] = []
+    beta: list[float] = []
+    leap_seconds: int | None = None
+
+    for line in rinex_text.splitlines():
+        if "END OF HEADER" in line:
+            break
+
+        if "ION ALPHA" in line:
+            values = line[:60].replace("D", "E").split()
+            alpha = [float(value) for value in values[:4]]
+
+        elif "ION BETA" in line:
+            values = line[:60].replace("D", "E").split()
+            beta = [float(value) for value in values[:4]]
+
+        elif "IONOSPHERIC CORR" in line:
+            values = line[:60].replace("D", "E").split()
+
+            if values and values[0] == "GPSA":
+                alpha = [float(value) for value in values[1:5]]
+
+            elif values and values[0] == "GPSB":
+                beta = [float(value) for value in values[1:5]]
+
+        elif "LEAP SECONDS" in line:
+            values = line[:60].split()
+
+            if values:
+                leap_seconds = int(values[0])
+
+    if len(alpha) != 4:
+        raise ValueError("לא נמצאו ארבעה ערכי Alpha.")
+
+    if len(beta) != 4:
+        raise ValueError("לא נמצאו ארבעה ערכי Beta.")
+
+    if leap_seconds is None:
+        raise ValueError("לא נמצא ערך LEAP SECONDS.")
+
+    return {
+        "alpha": alpha,
+        "beta": beta,
+        "leap_seconds": leap_seconds,
     }
-  };
 
-  applyStep();
-  elapsedTimer = setInterval(() => {
-    elements.elapsedTime.textContent = `${((performance.now() - loadingStartedAt) / 1000).toFixed(1)}s`;
-  }, 100);
-}
 
-function stopLoadingPresentation() {
-  clearTimeout(loadingTimer);
-  clearInterval(elapsedTimer);
-  loadingTimer = null;
-  elapsedTimer = null;
-}
+def format_for_raam(
+    klob_data: dict[str, Any],
+) -> dict[str, int]:
+    alpha = klob_data["alpha"].copy()
+    beta = klob_data["beta"].copy()
 
-function formatDateTime(isoString) {
-  if (!isoString) return "—";
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return isoString;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(date) + " UTC";
-}
+    alpha[0] *= 2**30
+    alpha[1] *= 2**27
+    alpha[2] *= 2**24
+    alpha[3] *= 2**24
 
-function formatCoefficient(value) {
-  if (typeof value !== "number") return String(value);
-  return value.toExponential(12).replace("e", "E");
-}
+    beta[0] /= 2**11
+    beta[1] /= 2**14
+    beta[2] /= 2**16
+    beta[3] /= 2**16
 
-function displayResult(data) {
-  latestResult = data;
-  byId("fileName").textContent = data.file_name;
-  byId("sourceDate").textContent = data.source_date;
-  animateValue(byId("data1"), data.data1);
-  animateValue(byId("data2"), data.data2);
-  animateValue(byId("data3"), data.data3);
-  animateValue(byId("data4"), data.data4);
-  animateValue(byId("tls"), data.tls, 650);
-  byId("alpha").textContent = data.alpha.map(formatCoefficient).join("  ·  ");
-  byId("beta").textContent = data.beta.map(formatCoefficient).join("  ·  ");
-  byId("cacheBadge").textContent = data.cached ? "Cached result" : "Updated now";
-  setLiveStatus("cacheStatusCard", "cacheStatus", "cacheFreshness", "online", data.cached ? "Warm" : "Fresh", data.cached ? "Served from cache" : "Latest source loaded");
-  byId("updatedAt").textContent = formatDateTime(data.updated_at);
-  elements.resultsPanel.classList.remove("hidden");
-}
+    alpha = [round(value) & 0xFF for value in alpha]
+    beta = [round(value) & 0xFF for value in beta]
 
-async function calculate({ scrollToWorkspace = false } = {}) {
-  if (scrollToWorkspace) {
-    byId("converter").scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  setButtonsDisabled(true);
-  startLoadingPresentation();
-
-  try {
-    const response = await fetch("/api/calculate", {
-      method: "POST",
-      headers: { "Accept": "application/json" },
-    });
-
-    let payload;
-    try {
-      payload = await response.json();
-    } catch {
-      throw new Error("The server returned an unreadable response.");
+    return {
+        "data1": (alpha[0] << 8) | alpha[1],
+        "data2": (alpha[2] << 8) | alpha[3],
+        "data3": (beta[0] << 8) | beta[1],
+        "data4": (beta[2] << 8) | beta[3],
+        "tls": int(klob_data["leap_seconds"]),
     }
 
-    if (!response.ok) {
-      throw new Error(payload.detail || `Request failed with HTTP ${response.status}.`);
+
+def calculate_latest() -> dict[str, Any]:
+    with _cache_lock:
+        if (
+            _cache["result"] is not None
+            and time.time() < _cache["expires_at"]
+        ):
+            result = dict(_cache["result"])
+            result["cached"] = True
+            return result
+
+    session = create_session()
+
+    file_name, compressed_data, source_day = (
+        download_latest_brdc(session)
+    )
+
+    try:
+        decompressed = gzip.decompress(compressed_data)
+    except (gzip.BadGzipFile, EOFError) as error:
+        raise RuntimeError(
+            "קובץ ה-BRDC שהתקבל פגום."
+        ) from error
+
+    rinex_text = decompressed.decode(
+        "ascii",
+        errors="replace",
+    )
+
+    klob = parse_klobuchar(rinex_text)
+    raam = format_for_raam(klob)
+
+    result = {
+        "file_name": file_name,
+        "source_date": source_day.isoformat(),
+        "updated_at": datetime.now(
+            timezone.utc
+        ).isoformat(),
+        "alpha": klob["alpha"],
+        "beta": klob["beta"],
+        **raam,
+        "cached": False,
     }
 
-    displayResult(payload);
-    saveResultToHistory(payload);
-    elements.progressBar.style.width = "100%";
-    setState("success");
-    showToast(payload.cached ? "Cached RAAM data loaded" : "Latest RAAM data generated");
-  } catch (error) {
-    elements.errorText.textContent = error instanceof Error ? error.message : "An unexpected error occurred.";
-    setState("error");
-  } finally {
-    stopLoadingPresentation();
-    setButtonsDisabled(false);
-  }
-}
+    with _cache_lock:
+        _cache["result"] = result
+        _cache["expires_at"] = time.time() + 15 * 60
+
+    return result
 
 
-function normalizeHistoryEntry(data) {
-  return {
-    id: `${data.source_date || "unknown"}-${data.updated_at || Date.now()}`,
-    saved_at: new Date().toISOString(),
-    file_name: data.file_name,
-    source_date: data.source_date,
-    updated_at: data.updated_at,
-    data1: data.data1,
-    data2: data.data2,
-    data3: data.data3,
-    data4: data.data4,
-    tls: data.tls,
-    alpha: Array.isArray(data.alpha) ? data.alpha : [],
-    beta: Array.isArray(data.beta) ? data.beta : [],
-    cached: Boolean(data.cached),
-  };
-}
+@app.get("/")
+def index():
+    return FileResponse("static/index.html")
 
-function loadHistory() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 
-function saveHistory(history) {
-  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, HISTORY_LIMIT)));
-}
+@app.get("/preview")
+def preview():
+    return FileResponse("static/preview/index.html")
 
-function sameResult(a, b) {
-  if (!a || !b) return false;
-  return a.file_name === b.file_name && ["data1", "data2", "data3", "data4", "tls"].every(key => Number(a[key]) === Number(b[key]));
-}
 
-function saveResultToHistory(data) {
-  const history = loadHistory();
-  const entry = normalizeHistoryEntry(data);
-  if (history.length && sameResult(history[0], entry)) {
-    history[0] = { ...history[0], saved_at: entry.saved_at, updated_at: entry.updated_at, cached: entry.cached };
-  } else {
-    history.unshift(entry);
-  }
-  saveHistory(history);
-  renderHistory();
-}
+@app.get("/preview/")
+def preview_slash():
+    return FileResponse("static/preview/index.html")
 
-function formatSavedTime(isoString) {
-  const date = new Date(isoString);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
-}
 
-function deltaDetails(current, previous, key) {
-  const now = Number(current[key]);
-  const before = Number(previous[key]);
-  const delta = now - before;
-  return { now, before, delta, changed: delta !== 0 };
-}
+@app.get("/preview/manifest.webmanifest")
+def preview_manifest():
+    return FileResponse(
+        "static/preview/manifest.webmanifest",
+        media_type="application/manifest+json",
+    )
 
-function renderComparison(history, selectedIndex = 0) {
-  if (!elements.comparisonCard || history.length < 2 || selectedIndex >= history.length - 1) {
-    elements.comparisonCard?.classList.add("hidden");
-    return;
-  }
-  const current = history[selectedIndex];
-  const previous = history[selectedIndex + 1];
-  const keys = ["data1", "data2", "data3", "data4", "tls"];
-  const changes = keys.map(key => ({ key, ...deltaDetails(current, previous, key) }));
-  const changedCount = changes.filter(item => item.changed).length;
-  elements.comparisonCard.classList.remove("hidden");
-  elements.comparisonTitle.textContent = `${current.source_date} compared with ${previous.source_date}`;
-  elements.comparisonSummary.textContent = changedCount ? `${changedCount} value${changedCount === 1 ? "" : "s"} changed` : "No RAAM value changes";
-  elements.comparisonSummary.classList.toggle("no-change", changedCount === 0);
-  elements.comparisonGrid.innerHTML = changes.map(item => {
-    const sign = item.delta > 0 ? "+" : "";
-    const direction = item.delta > 0 ? "up" : item.delta < 0 ? "down" : "same";
-    return `<div class="comparison-value ${direction}"><span>${item.key.toUpperCase()}</span><strong>${item.now}</strong><small>${item.changed ? `${sign}${item.delta} from ${item.before}` : `unchanged from ${item.before}`}</small></div>`;
-  }).join("");
-}
 
-function renderHistory() {
-  if (!elements.historyList) return;
-  const history = loadHistory();
-  elements.historyCount.textContent = `${history.length} saved result${history.length === 1 ? "" : "s"}`;
-  elements.historyEmpty.classList.toggle("hidden", history.length > 0);
-  elements.historyContent.classList.toggle("hidden", history.length === 0);
-  elements.clearHistoryButton.disabled = history.length === 0;
-  if (!history.length) {
-    elements.historyList.innerHTML = "";
-    elements.comparisonCard.classList.add("hidden");
-    elements.historyShowcaseEmpty?.classList.remove("hidden");
-    elements.historyShowcaseContent?.classList.add("hidden");
-    return;
-  }
+@app.get("/preview/service-worker.js")
+def preview_service_worker():
+    response = FileResponse(
+        "static/preview/service-worker.js",
+        media_type="application/javascript",
+    )
+    response.headers["Service-Worker-Allowed"] = "/preview/"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
-  elements.historyShowcaseEmpty?.classList.add("hidden");
-  elements.historyShowcaseContent?.classList.remove("hidden");
-  const latest = history[0];
-  const previousLatest = history[1];
-  const showcaseKeys = ["data1", "data2", "data3", "data4", "tls"];
-  const showcaseChanged = previousLatest ? showcaseKeys.filter(key => Number(latest[key]) !== Number(previousLatest[key])).length : null;
-  if (elements.showcaseLatestDate) elements.showcaseLatestDate.textContent = latest.source_date || "—";
-  if (elements.showcaseChangeStatus) {
-    elements.showcaseChangeStatus.textContent = previousLatest ? (showcaseChanged ? `${showcaseChanged} value${showcaseChanged === 1 ? "" : "s"} changed` : "No changes") : "First saved result";
-    elements.showcaseChangeStatus.classList.toggle("no-change", showcaseChanged === 0);
-  }
-  if (elements.showcaseSavedTime) elements.showcaseSavedTime.textContent = `Saved ${formatSavedTime(latest.saved_at)}`;
-  if (elements.historyShowcaseValues) {
-    elements.historyShowcaseValues.innerHTML = showcaseKeys.map(key => {
-      const now = Number(latest[key]);
-      const before = previousLatest ? Number(previousLatest[key]) : null;
-      const delta = previousLatest ? now - before : null;
-      const changed = previousLatest ? delta !== 0 : false;
-      const deltaText = previousLatest ? (changed ? `${delta > 0 ? "+" : ""}${delta}` : "unchanged") : "baseline";
-      const direction = !previousLatest ? "baseline" : delta > 0 ? "up" : delta < 0 ? "down" : "same";
-      return `<div class="history-showcase-value ${direction}"><span>${key.toUpperCase()}</span><strong>${now}</strong><small>${deltaText}</small></div>`;
-    }).join("");
-  }
 
-  elements.historyList.innerHTML = history.map((entry, index) => {
-    const previous = history[index + 1];
-    const changed = previous ? ["data1", "data2", "data3", "data4", "tls"].filter(key => Number(entry[key]) !== Number(previous[key])).length : null;
-    const changeText = previous ? (changed ? `${changed} changed` : "No changes") : "First saved result";
-    return `<article class="card history-item" data-history-index="${index}">
-      <div class="history-item-main">
-        <div class="history-date-block"><span>Source date</span><strong>${entry.source_date || "—"}</strong><small>${formatSavedTime(entry.saved_at)}</small></div>
-        <div class="history-values">
-          <div><span>D1</span><strong>${entry.data1}</strong></div><div><span>D2</span><strong>${entry.data2}</strong></div><div><span>D3</span><strong>${entry.data3}</strong></div><div><span>D4</span><strong>${entry.data4}</strong></div><div><span>tLS</span><strong>${entry.tls}</strong></div>
-        </div>
-      </div>
-      <div class="history-item-footer">
-        <span class="history-change ${changed === 0 ? "no-change" : ""}">${changeText}</span>
-        <div class="history-actions">
-          ${previous ? `<button type="button" class="text-button history-compare" data-index="${index}">Compare</button>` : ""}
-          <button type="button" class="text-button history-open" data-index="${index}">Open</button>
-          <button type="button" class="text-button history-download" data-index="${index}">JSON</button>
-          <button type="button" class="text-button history-delete" data-index="${index}" aria-label="Delete saved result">Delete</button>
-        </div>
-      </div>
-    </article>`;
-  }).join("");
+@app.get("/manifest.webmanifest")
+def manifest():
+    return FileResponse(
+        "static/manifest.webmanifest",
+        media_type="application/manifest+json",
+    )
 
-  renderComparison(history, 0);
-}
 
-function openHistoryResult(index) {
-  const entry = loadHistory()[index];
-  if (!entry) return;
-  displayResult(entry);
-  setState("success");
-  elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-  showToast(`Opened result from ${entry.source_date}`);
-}
+@app.get("/service-worker.js")
+def service_worker():
+    return FileResponse(
+        "static/service-worker.js",
+        media_type="application/javascript",
+    )
 
-function downloadHistoryResult(index) {
-  const entry = loadHistory()[index];
-  if (!entry) return;
-  downloadBlob(JSON.stringify(entry, null, 2), `HaniaION-${entry.source_date || "history"}.json`, "application/json;charset=utf-8");
-  showToast("Saved result exported");
-}
 
-function deleteHistoryResult(index) {
-  const history = loadHistory();
-  if (!history[index]) return;
-  history.splice(index, 1);
-  saveHistory(history);
-  renderHistory();
-  showToast("Saved result deleted");
-}
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
 
-function clearHistory() {
-  if (!loadHistory().length) return;
-  if (!window.confirm("Delete all saved HaniaION results from this device?")) return;
-  localStorage.removeItem(HISTORY_STORAGE_KEY);
-  renderHistory();
-  showToast("History cleared");
-}
 
-function registerHistoryEvents() {
-  elements.clearHistoryButton?.addEventListener("click", clearHistory);
-  elements.historyList?.addEventListener("click", event => {
-    const button = event.target.closest("button[data-index]");
-    if (!button) return;
-    const index = Number(button.dataset.index);
-    if (button.classList.contains("history-open")) openHistoryResult(index);
-    if (button.classList.contains("history-download")) downloadHistoryResult(index);
-    if (button.classList.contains("history-delete")) deleteHistoryResult(index);
-    if (button.classList.contains("history-compare")) {
-      renderComparison(loadHistory(), index);
-      elements.comparisonCard.scrollIntoView({ behavior: "smooth", block: "center" });
+@app.get("/api/status")
+def status():
+    now = time.time()
+    with _cache_lock:
+        has_result = _cache["result"] is not None
+        expires_at = float(_cache["expires_at"] or 0.0)
+        cached_result = _cache["result"]
+
+    return {
+        "status": "ok",
+        "server_time": datetime.now(timezone.utc).isoformat(),
+        "cache": {
+            "has_result": has_result,
+            "valid": has_result and now < expires_at,
+            "expires_at": datetime.fromtimestamp(expires_at, timezone.utc).isoformat() if expires_at else None,
+            "file_name": cached_result.get("file_name") if cached_result else None,
+            "source_date": cached_result.get("source_date") if cached_result else None,
+        },
+        "model": "GPS Klobuchar",
+        "auto_refresh_hours": 3,
     }
-  });
-}
-
-function buildTextExport() {
-  if (!latestResult) return "";
-  return [
-    "HaniaION RAAM Output",
-    `Source File: ${latestResult.file_name}`,
-    `Source Date: ${latestResult.source_date}`,
-    `Updated At: ${latestResult.updated_at}`,
-    "",
-    `Data1: ${latestResult.data1}`,
-    `Data2: ${latestResult.data2}`,
-    `Data3: ${latestResult.data3}`,
-    `Data4: ${latestResult.data4}`,
-    `tLS: ${latestResult.tls}`,
-    "",
-    `Alpha: ${latestResult.alpha.join(", ")}`,
-    `Beta: ${latestResult.beta.join(", ")}`,
-  ].join("\n");
-}
-
-async function copyText(text, successMessage = "Copied") {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    textarea.remove();
-  }
-  showToast(successMessage);
-}
-
-function downloadBlob(content, filename, type) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function exportTxt() {
-  if (!latestResult) return;
-  downloadBlob(buildTextExport(), "RAAM.txt", "text/plain;charset=utf-8");
-  showToast("RAAM.txt created");
-}
-
-function exportJson() {
-  if (!latestResult) return;
-  downloadBlob(JSON.stringify(latestResult, null, 2), `HaniaION-${latestResult.source_date}.json`, "application/json;charset=utf-8");
-  showToast("JSON export created");
-}
-
-function exportCsv() {
-  if (!latestResult) return;
-  const rows = [
-    ["file_name", "source_date", "updated_at", "data1", "data2", "data3", "data4", "tls", "alpha", "beta"],
-    [latestResult.file_name, latestResult.source_date, latestResult.updated_at, latestResult.data1, latestResult.data2, latestResult.data3, latestResult.data4, latestResult.tls, latestResult.alpha.join(" | "), latestResult.beta.join(" | ")],
-  ];
-  const csv = rows.map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(",")).join("\n");
-  downloadBlob(csv, `HaniaION-${latestResult.source_date}.csv`, "text/csv;charset=utf-8");
-  showToast("CSV export created");
-}
-
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem("haniaion-theme", theme);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#07111f" : "#eef6fb");
-  elements.themeToggle.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
-}
-
-function initializeTheme() {
-  const saved = localStorage.getItem("haniaion-theme");
-  const preferred = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-  applyTheme(saved || preferred);
-}
-
-function setLiveStatus(cardId, labelId, detailId, state, label, detail) {
-  const card = byId(cardId);
-  const labelNode = byId(labelId);
-  const detailNode = byId(detailId);
-  if (card) {
-    card.classList.remove("status-checking", "status-online", "status-offline", "status-neutral");
-    card.classList.add(`status-${state}`);
-  }
-  if (labelNode) labelNode.textContent = label;
-  if (detailNode) detailNode.textContent = detail;
-}
-
-async function checkHealth() {
-  const started = performance.now();
-  setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "checking", "Checking", "Health endpoint");
-  setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "checking", "Checking", "Server gateway");
-  try {
-    const response = await fetch("/api/health", { cache: "no-store" });
-    if (!response.ok) throw new Error("offline");
-    const payload = await response.json();
-    if (payload.status !== "ok") throw new Error("offline");
-    const latency = Math.max(1, Math.round(performance.now() - started));
-    elements.serviceStatus.classList.add("online");
-    elements.serviceStatus.classList.remove("offline");
-    elements.serviceStatusText.textContent = "Service online";
-    setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "online", "Online", `${latency} ms response`);
-    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "online", "Connected", "Earthdata gateway ready");
-  } catch {
-    elements.serviceStatus.classList.add("offline");
-    elements.serviceStatus.classList.remove("online");
-    elements.serviceStatusText.textContent = "Service unavailable";
-    setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "offline", "Unavailable", "Health check failed");
-    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "offline", "Unavailable", "Backend connection required");
-  }
-}
-
-function registerEvents() {
-  elements.calculateButton.addEventListener("click", () => calculate());
-  elements.heroCalculateButton.addEventListener("click", () => calculate({ scrollToWorkspace: true }));
-  elements.refreshButton.addEventListener("click", () => calculate());
-  elements.retryButton.addEventListener("click", () => calculate());
-  elements.copyButton.addEventListener("click", () => latestResult && copyText(buildTextExport(), "All RAAM values copied"));
-  elements.downloadTxtButton.addEventListener("click", exportTxt);
-  elements.downloadJsonButton.addEventListener("click", exportJson);
-  elements.downloadCsvButton.addEventListener("click", exportCsv);
-  elements.viewResultsButton.addEventListener("click", () => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }));
-  elements.themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
-
-  document.querySelectorAll(".mini-copy").forEach(button => {
-    button.addEventListener("click", () => {
-      const target = byId(button.dataset.copyTarget);
-      if (target) copyText(target.textContent.trim(), `${button.dataset.copyTarget} copied`);
-    });
-  });
-}
 
 
-function animateValue(element, value, duration = 900) {
-  const target = Number(value);
-  if (!element || !Number.isFinite(target)) {
-    if (element) element.textContent = value;
-    return;
-  }
-  const started = performance.now();
-  const tick = now => {
-    const progress = Math.min((now - started) / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    element.textContent = Math.round(target * eased);
-    if (progress < 1) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-}
+@app.post("/api/calculate")
+def calculate(request: Request):
+    client_ip = (
+        request.client.host
+        if request.client
+        else "unknown"
+    )
 
-function initializePremiumMotion() {
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add("is-visible");
-        observer.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.12 });
-  document.querySelectorAll(".reveal").forEach(element => observer.observe(element));
+    check_rate_limit(client_ip)
 
-  const glow = document.querySelector(".cursor-glow");
-  if (glow && window.matchMedia("(pointer:fine)").matches) {
-    window.addEventListener("pointermove", event => {
-      glow.style.left = `${event.clientX}px`;
-      glow.style.top = `${event.clientY}px`;
-    }, { passive: true });
-  }
-}
+    try:
+        return calculate_latest()
 
+    except requests.Timeout as error:
+        raise HTTPException(
+            status_code=504,
+            detail="החיבור ל-CDDIS ארך יותר מדי זמן.",
+        ) from error
 
-function isIosDevice() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-}
+    except requests.HTTPError as error:
+        status = (
+            error.response.status_code
+            if error.response is not None
+            else 502
+        )
 
-function isStandaloneApp() {
-  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-}
+        raise HTTPException(
+            status_code=502,
+            detail=f"שגיאת CDDIS/Earthdata: HTTP {status}",
+        ) from error
 
-function setInstallButtonsInstalled() {
-  [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.classList.add("is-installed"));
-}
+    except requests.RequestException as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"לא ניתן להתחבר ל-CDDIS: {error}",
+        ) from error
 
-function openInstallModal() {
-  if (isStandaloneApp()) {
-    showToast("HaniaION is already installed");
-    setInstallButtonsInstalled();
-    return;
-  }
-  elements.installAndroidInstructions.classList.add("hidden");
-  elements.installIosInstructions.classList.add("hidden");
-  elements.installFallbackInstructions.classList.add("hidden");
-
-  if (isIosDevice()) {
-    elements.installIosInstructions.classList.remove("hidden");
-  } else if (deferredInstallPrompt) {
-    elements.installAndroidInstructions.classList.remove("hidden");
-  } else {
-    elements.installFallbackInstructions.classList.remove("hidden");
-  }
-
-  elements.installModal.classList.remove("hidden");
-  document.body.classList.add("install-modal-open");
-}
-
-function closeInstallModal() {
-  elements.installModal.classList.add("hidden");
-  document.body.classList.remove("install-modal-open");
-}
-
-async function confirmInstall() {
-  if (!deferredInstallPrompt) {
-    closeInstallModal();
-    showToast("Use the browser menu to add HaniaION to your home screen");
-    return;
-  }
-  deferredInstallPrompt.prompt();
-  const choice = await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  closeInstallModal();
-  if (choice.outcome === "accepted") showToast("HaniaION installation started");
-}
-
-function initializeInstallExperience() {
-  if (isStandaloneApp()) setInstallButtonsInstalled();
-
-  window.addEventListener("beforeinstallprompt", event => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-  });
-
-  window.addEventListener("appinstalled", () => {
-    deferredInstallPrompt = null;
-    closeInstallModal();
-    setInstallButtonsInstalled();
-    showToast("HaniaION installed successfully");
-  });
-
-  [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.addEventListener("click", openInstallModal));
-  elements.confirmInstallButton?.addEventListener("click", confirmInstall);
-  elements.installModal?.querySelectorAll("[data-close-install]").forEach(node => node.addEventListener("click", closeInstallModal));
-  document.addEventListener("keydown", event => { if (event.key === "Escape") closeInstallModal(); });
-}
-
-function registerServiceWorker() {
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js").catch(() => {}));
-  }
-}
-
-initializeTheme();
-registerEvents();
-registerHistoryEvents();
-renderHistory();
-registerServiceWorker();
-initializeInstallExperience();
-initializePremiumMotion();
-checkHealth();
-setInterval(checkHealth, 60000);
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=str(error),
+        ) from error
