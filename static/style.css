@@ -584,3 +584,41 @@ main > section { scroll-margin-top: 92px; }
   .pulse-card-copy { grid-template-columns: 1fr; }
   .pulse-icon { width: 50px; height: 50px; border-radius: 15px; }
 }
+
+
+/* K-69 embedded live monitor — v2.4 */
+.pulse-card-embedded { grid-template-columns: 1fr; align-items: stretch; gap: 26px; }
+.pulse-frame-shell {
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid color-mix(in srgb, var(--premium-cyan) 24%, var(--border));
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(2, 12, 27, .16);
+}
+.pulse-frame-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  min-height: 52px; padding: 0 18px;
+  color: var(--text-dim); font-size: .8rem; font-weight: 700;
+  background: color-mix(in srgb, var(--surface-strong) 88%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+.pulse-frame-toolbar a { color: var(--premium-cyan); text-decoration: none; }
+.pulse-frame-toolbar a:hover { text-decoration: underline; }
+.pulse-frame-status { display: inline-flex; align-items: center; gap: 8px; }
+.pulse-frame-status span {
+  width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
+  box-shadow: 0 0 16px rgba(34, 197, 94, .75);
+  animation: pulse-live-dot 1.8s ease-in-out infinite;
+}
+@keyframes pulse-live-dot { 0%,100% { opacity: .58; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.14); } }
+.pulse-frame {
+  display: block; width: 100%; height: 560px; border: 0; background: #fff;
+}
+.pulse-frame-fallback { margin: 0; padding: 20px; color: #0f172a; background: #fff; }
+@media (max-width: 860px) {
+  .pulse-frame { height: 640px; }
+}
+@media (max-width: 560px) {
+  .pulse-frame-toolbar { align-items: flex-start; flex-direction: column; padding: 12px 14px; }
+  .pulse-frame { height: 720px; }
+}
