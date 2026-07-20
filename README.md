@@ -1,34 +1,60 @@
 # HaniaION
 
-## GNSS Klobuchar Ionospheric Data API
+HaniaION is an open-source GNSS ionospheric-data platform built with Python and FastAPI.
 
-HaniaION is an open-source software development project.
+It retrieves the latest BRDC navigation file from NASA CDDIS Earthdata, extracts the GPS Klobuchar Alpha/Beta coefficients and leap-second value, and converts them into RAAM-compatible integer data words.
 
-The project provides a web application and API that automatically retrieves the latest GNSS Klobuchar ionospheric coefficients from NASA CDDIS (Earthdata), converts them into RAAM-compatible values, and exposes them for navigation software.
+## Features
 
-### Features
+- Automatic search across the latest seven UTC daily BRDC directories
+- NASA Earthdata authenticated download
+- RINEX 2 and RINEX 3 Klobuchar header parsing
+- RAAM conversion into Data1, Data2, Data3, Data4, and tLS
+- Fifteen-minute server cache
+- Retry strategy and request rate limiting
+- FastAPI interactive documentation
+- Responsive dashboard with dark/light themes
+- Copy, TXT, JSON, and CSV export
+- Installable PWA shell
+- Docker and Render deployment configuration
 
-- Automatic download of the latest BRDC navigation file
-- Klobuchar coefficient extraction
-- RAAM format conversion
-- REST API
-- Docker support
-- Render deployment
-- Open source Python project
+## Local run
 
-Repository purpose:
-This repository demonstrates Python backend development, API design, Docker deployment, and GNSS navigation software integration.
-# HaniaION RAAM
+1. Create a Python virtual environment.
+2. Install dependencies:
 
-## Render
+```bash
+pip install -r requirements.txt
+```
 
-Add these secret environment variables:
+3. Set environment variables:
+
+```text
+EARTHDATA_USERNAME=your_username
+EARTHDATA_PASSWORD=your_password
+```
+
+4. Start the app:
+
+```bash
+uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+5. Open `http://localhost:8000`.
+
+## API
+
+- `GET /api/health` — service health
+- `POST /api/calculate` — retrieve and convert the latest available BRDC data
+- `GET /docs` — interactive OpenAPI documentation
+
+## Render deployment
+
+The repository includes `render.yaml` and a Dockerfile.
+
+In the Render service, add these secret environment variables:
 
 - `EARTHDATA_USERNAME`
 - `EARTHDATA_PASSWORD`
 
-The service uses the included Dockerfile.
-
-Health check:
-
-`/api/health`
+Do not commit Earthdata credentials to GitHub.
