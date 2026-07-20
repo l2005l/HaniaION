@@ -586,9 +586,10 @@ main > section { scroll-margin-top: 92px; }
 }
 
 
-/* K-69 embedded live monitor — v2.4 */
-.pulse-card-embedded { grid-template-columns: 1fr; align-items: stretch; gap: 26px; }
+/* K-69 embedded live monitor — v2.5 compact fit */
+.pulse-card-embedded { grid-template-columns: 1fr; align-items: stretch; gap: 22px; }
 .pulse-frame-shell {
+  --k69-scale: .52;
   overflow: hidden;
   border-radius: 22px;
   border: 1px solid color-mix(in srgb, var(--premium-cyan) 24%, var(--border));
@@ -611,14 +612,29 @@ main > section { scroll-margin-top: 92px; }
   animation: pulse-live-dot 1.8s ease-in-out infinite;
 }
 @keyframes pulse-live-dot { 0%,100% { opacity: .58; transform: scale(.92); } 50% { opacity: 1; transform: scale(1.14); } }
+
+/* The external page uses very large typography. We render a larger iframe and
+   scale the complete page down so GPS time, next pulse and counter fit together
+   without an inner scrollbar. */
 .pulse-frame {
-  display: block; width: 100%; height: 560px; border: 0; background: #fff;
+  display: block;
+  width: calc(100% / var(--k69-scale));
+  height: 1040px;
+  border: 0;
+  background: #fff;
+  transform: scale(var(--k69-scale));
+  transform-origin: top left;
+  margin-bottom: calc(1040px * (var(--k69-scale) - 1));
+  overflow: hidden;
 }
 .pulse-frame-fallback { margin: 0; padding: 20px; color: #0f172a; background: #fff; }
+
 @media (max-width: 860px) {
-  .pulse-frame { height: 640px; }
+  .pulse-frame-shell { --k69-scale: .47; }
+  .pulse-frame { height: 1120px; margin-bottom: calc(1120px * (var(--k69-scale) - 1)); }
 }
 @media (max-width: 560px) {
   .pulse-frame-toolbar { align-items: flex-start; flex-direction: column; padding: 12px 14px; }
-  .pulse-frame { height: 720px; }
+  .pulse-frame-shell { --k69-scale: .39; }
+  .pulse-frame { height: 1320px; margin-bottom: calc(1320px * (var(--k69-scale) - 1)); }
 }
