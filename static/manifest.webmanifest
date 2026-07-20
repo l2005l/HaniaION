@@ -1,13 +1,16 @@
 {
-  "name": "HaniaION GNSS Data Platform",
+  "name": "HaniaION — GNSS Ionospheric Data Platform",
   "short_name": "HaniaION",
-  "description": "Latest Klobuchar ionospheric coefficients and RAAM-ready GNSS data from NASA CDDIS.",
+  "description": "Retrieve NASA CDDIS BRDC data, extract Klobuchar coefficients, and convert them for RAAM.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#07111f",
+  "background_color": "#06101d",
   "theme_color": "#07111f",
+  "lang": "en",
+  "categories": ["utilities", "developer tools", "navigation"],
   "icons": [
     {
       "src": "/static/icons/icon.svg",
