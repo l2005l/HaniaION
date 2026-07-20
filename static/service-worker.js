@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-shell-v2-4";
+const CACHE_NAME = "haniaion-shell-v2-5";
 const APP_SHELL = [
   "/",
   "/static/style.css",
