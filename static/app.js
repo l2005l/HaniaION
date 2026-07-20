@@ -27,6 +27,22 @@ const elements = {
   serviceStatus: byId("serviceStatus"),
   serviceStatusText: byId("serviceStatusText"),
   toast: byId("toast"),
+  installAppButton: byId("installAppButton"),
+  heroInstallButton: byId("heroInstallButton"),
+  installModal: byId("installModal"),
+  installAndroidInstructions: byId("installAndroidInstructions"),
+  installIosInstructions: byId("installIosInstructions"),
+  installFallbackInstructions: byId("installFallbackInstructions"),
+  confirmInstallButton: byId("confirmInstallButton"),
+  historyCount: byId("historyCount"),
+  historyEmpty: byId("historyEmpty"),
+  historyContent: byId("historyContent"),
+  historyList: byId("historyList"),
+  clearHistoryButton: byId("clearHistoryButton"),
+  comparisonCard: byId("comparisonCard"),
+  comparisonTitle: byId("comparisonTitle"),
+  comparisonSummary: byId("comparisonSummary"),
+  comparisonGrid: byId("comparisonGrid"),
 };
 
 let latestResult = null;
@@ -34,6 +50,9 @@ let loadingTimer = null;
 let elapsedTimer = null;
 let loadingStartedAt = 0;
 let toastTimer = null;
+let deferredInstallPrompt = null;
+const HISTORY_STORAGE_KEY = "haniaion-result-history-v1";
+const HISTORY_LIMIT = 30;
 
 const loadingSteps = [
   { delay: 0, progress: 12, title: "Connecting to NASA CDDIS", description: "Establishing a secure Earthdata session...", step: "Step 1 of 4" },
@@ -151,6 +170,7 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     }
 
     displayResult(payload);
+    saveResultToHistory(payload);
     elements.progressBar.style.width = "100%";
     setState("success");
     showToast(payload.cached ? "Cached RAAM data loaded" : "Latest RAAM data generated");
@@ -161,6 +181,177 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     stopLoadingPresentation();
     setButtonsDisabled(false);
   }
+}
+
+
+function normalizeHistoryEntry(data) {
+  return {
+    id: `${data.source_date || "unknown"}-${data.updated_at || Date.now()}`,
+    saved_at: new Date().toISOString(),
+    file_name: data.file_name,
+    source_date: data.source_date,
+    updated_at: data.updated_at,
+    data1: data.data1,
+    data2: data.data2,
+    data3: data.data3,
+    data4: data.data4,
+    tls: data.tls,
+    alpha: Array.isArray(data.alpha) ? data.alpha : [],
+    beta: Array.isArray(data.beta) ? data.beta : [],
+    cached: Boolean(data.cached),
+  };
+}
+
+function loadHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history) {
+  localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history.slice(0, HISTORY_LIMIT)));
+}
+
+function sameResult(a, b) {
+  if (!a || !b) return false;
+  return a.file_name === b.file_name && ["data1", "data2", "data3", "data4", "tls"].every(key => Number(a[key]) === Number(b[key]));
+}
+
+function saveResultToHistory(data) {
+  const history = loadHistory();
+  const entry = normalizeHistoryEntry(data);
+  if (history.length && sameResult(history[0], entry)) {
+    history[0] = { ...history[0], saved_at: entry.saved_at, updated_at: entry.updated_at, cached: entry.cached };
+  } else {
+    history.unshift(entry);
+  }
+  saveHistory(history);
+  renderHistory();
+}
+
+function formatSavedTime(isoString) {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function deltaDetails(current, previous, key) {
+  const now = Number(current[key]);
+  const before = Number(previous[key]);
+  const delta = now - before;
+  return { now, before, delta, changed: delta !== 0 };
+}
+
+function renderComparison(history, selectedIndex = 0) {
+  if (!elements.comparisonCard || history.length < 2 || selectedIndex >= history.length - 1) {
+    elements.comparisonCard?.classList.add("hidden");
+    return;
+  }
+  const current = history[selectedIndex];
+  const previous = history[selectedIndex + 1];
+  const keys = ["data1", "data2", "data3", "data4", "tls"];
+  const changes = keys.map(key => ({ key, ...deltaDetails(current, previous, key) }));
+  const changedCount = changes.filter(item => item.changed).length;
+  elements.comparisonCard.classList.remove("hidden");
+  elements.comparisonTitle.textContent = `${current.source_date} compared with ${previous.source_date}`;
+  elements.comparisonSummary.textContent = changedCount ? `${changedCount} value${changedCount === 1 ? "" : "s"} changed` : "No RAAM value changes";
+  elements.comparisonSummary.classList.toggle("no-change", changedCount === 0);
+  elements.comparisonGrid.innerHTML = changes.map(item => {
+    const sign = item.delta > 0 ? "+" : "";
+    const direction = item.delta > 0 ? "up" : item.delta < 0 ? "down" : "same";
+    return `<div class="comparison-value ${direction}"><span>${item.key.toUpperCase()}</span><strong>${item.now}</strong><small>${item.changed ? `${sign}${item.delta} from ${item.before}` : `unchanged from ${item.before}`}</small></div>`;
+  }).join("");
+}
+
+function renderHistory() {
+  if (!elements.historyList) return;
+  const history = loadHistory();
+  elements.historyCount.textContent = `${history.length} saved result${history.length === 1 ? "" : "s"}`;
+  elements.historyEmpty.classList.toggle("hidden", history.length > 0);
+  elements.historyContent.classList.toggle("hidden", history.length === 0);
+  elements.clearHistoryButton.disabled = history.length === 0;
+  if (!history.length) {
+    elements.historyList.innerHTML = "";
+    elements.comparisonCard.classList.add("hidden");
+    return;
+  }
+
+  elements.historyList.innerHTML = history.map((entry, index) => {
+    const previous = history[index + 1];
+    const changed = previous ? ["data1", "data2", "data3", "data4", "tls"].filter(key => Number(entry[key]) !== Number(previous[key])).length : null;
+    const changeText = previous ? (changed ? `${changed} changed` : "No changes") : "First saved result";
+    return `<article class="card history-item" data-history-index="${index}">
+      <div class="history-item-main">
+        <div class="history-date-block"><span>Source date</span><strong>${entry.source_date || "—"}</strong><small>${formatSavedTime(entry.saved_at)}</small></div>
+        <div class="history-values">
+          <div><span>D1</span><strong>${entry.data1}</strong></div><div><span>D2</span><strong>${entry.data2}</strong></div><div><span>D3</span><strong>${entry.data3}</strong></div><div><span>D4</span><strong>${entry.data4}</strong></div><div><span>tLS</span><strong>${entry.tls}</strong></div>
+        </div>
+      </div>
+      <div class="history-item-footer">
+        <span class="history-change ${changed === 0 ? "no-change" : ""}">${changeText}</span>
+        <div class="history-actions">
+          ${previous ? `<button type="button" class="text-button history-compare" data-index="${index}">Compare</button>` : ""}
+          <button type="button" class="text-button history-open" data-index="${index}">Open</button>
+          <button type="button" class="text-button history-download" data-index="${index}">JSON</button>
+          <button type="button" class="text-button history-delete" data-index="${index}" aria-label="Delete saved result">Delete</button>
+        </div>
+      </div>
+    </article>`;
+  }).join("");
+
+  renderComparison(history, 0);
+}
+
+function openHistoryResult(index) {
+  const entry = loadHistory()[index];
+  if (!entry) return;
+  displayResult(entry);
+  setState("success");
+  elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  showToast(`Opened result from ${entry.source_date}`);
+}
+
+function downloadHistoryResult(index) {
+  const entry = loadHistory()[index];
+  if (!entry) return;
+  downloadBlob(JSON.stringify(entry, null, 2), `HaniaION-${entry.source_date || "history"}.json`, "application/json;charset=utf-8");
+  showToast("Saved result exported");
+}
+
+function deleteHistoryResult(index) {
+  const history = loadHistory();
+  if (!history[index]) return;
+  history.splice(index, 1);
+  saveHistory(history);
+  renderHistory();
+  showToast("Saved result deleted");
+}
+
+function clearHistory() {
+  if (!loadHistory().length) return;
+  if (!window.confirm("Delete all saved HaniaION results from this device?")) return;
+  localStorage.removeItem(HISTORY_STORAGE_KEY);
+  renderHistory();
+  showToast("History cleared");
+}
+
+function registerHistoryEvents() {
+  elements.clearHistoryButton?.addEventListener("click", clearHistory);
+  elements.historyList?.addEventListener("click", event => {
+    const button = event.target.closest("button[data-index]");
+    if (!button) return;
+    const index = Number(button.dataset.index);
+    if (button.classList.contains("history-open")) openHistoryResult(index);
+    if (button.classList.contains("history-download")) downloadHistoryResult(index);
+    if (button.classList.contains("history-delete")) deleteHistoryResult(index);
+    if (button.classList.contains("history-compare")) {
+      renderComparison(loadHistory(), index);
+      elements.comparisonCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
 }
 
 function buildTextExport() {
@@ -339,6 +530,80 @@ function initializePremiumMotion() {
   }
 }
 
+
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneApp() {
+  return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+}
+
+function setInstallButtonsInstalled() {
+  [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.classList.add("is-installed"));
+}
+
+function openInstallModal() {
+  if (isStandaloneApp()) {
+    showToast("HaniaION is already installed");
+    setInstallButtonsInstalled();
+    return;
+  }
+  elements.installAndroidInstructions.classList.add("hidden");
+  elements.installIosInstructions.classList.add("hidden");
+  elements.installFallbackInstructions.classList.add("hidden");
+
+  if (isIosDevice()) {
+    elements.installIosInstructions.classList.remove("hidden");
+  } else if (deferredInstallPrompt) {
+    elements.installAndroidInstructions.classList.remove("hidden");
+  } else {
+    elements.installFallbackInstructions.classList.remove("hidden");
+  }
+
+  elements.installModal.classList.remove("hidden");
+  document.body.classList.add("install-modal-open");
+}
+
+function closeInstallModal() {
+  elements.installModal.classList.add("hidden");
+  document.body.classList.remove("install-modal-open");
+}
+
+async function confirmInstall() {
+  if (!deferredInstallPrompt) {
+    closeInstallModal();
+    showToast("Use the browser menu to add HaniaION to your home screen");
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const choice = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  closeInstallModal();
+  if (choice.outcome === "accepted") showToast("HaniaION installation started");
+}
+
+function initializeInstallExperience() {
+  if (isStandaloneApp()) setInstallButtonsInstalled();
+
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+  });
+
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    closeInstallModal();
+    setInstallButtonsInstalled();
+    showToast("HaniaION installed successfully");
+  });
+
+  [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.addEventListener("click", openInstallModal));
+  elements.confirmInstallButton?.addEventListener("click", confirmInstall);
+  elements.installModal?.querySelectorAll("[data-close-install]").forEach(node => node.addEventListener("click", closeInstallModal));
+  document.addEventListener("keydown", event => { if (event.key === "Escape") closeInstallModal(); });
+}
+
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("/service-worker.js").catch(() => {}));
@@ -347,7 +612,10 @@ function registerServiceWorker() {
 
 initializeTheme();
 registerEvents();
+registerHistoryEvents();
+renderHistory();
 registerServiceWorker();
+initializeInstallExperience();
 initializePremiumMotion();
 checkHealth();
 setInterval(checkHealth, 60000);
