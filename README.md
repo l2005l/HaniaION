@@ -58,3 +58,8 @@ In the Render service, add these secret environment variables:
 - `EARTHDATA_PASSWORD`
 
 Do not commit Earthdata credentials to GitHub.
+
+
+## GPS Pulse Monitor
+
+The frontend includes a clearly labelled external-source card linking to the trusted K-69 live GPS pulse monitor. The external page opens in a separate tab and HaniaION does not alter its values.

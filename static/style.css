@@ -532,3 +532,55 @@ main > section { scroll-margin-top: 92px; }
 @keyframes status-blink { 50%{opacity:.35; transform:scale(.8)} }
 @media (max-width:760px){ .hero-section{padding-top:44px;padding-bottom:34px}.workspace-section,.results-section,.architecture-section,.developer-section{padding-top:58px;padding-bottom:58px}.live-status-card em{display:none} }
 @media (prefers-reduced-motion:reduce){ .button-primary:not(:disabled){animation:none}.button-primary::before{animation:none}.live-status-card.status-checking .live-dot{animation:none} }
+
+
+/* HaniaION 2.3 — K-69 external GPS pulse entry point */
+.pulse-section { padding-top: var(--section-space); padding-bottom: var(--section-space); }
+.pulse-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 32px;
+  padding: clamp(24px, 4vw, 42px);
+  background:
+    radial-gradient(circle at 8% 18%, rgba(34,211,238,.12), transparent 34%),
+    linear-gradient(135deg, rgba(59,130,246,.08), rgba(52,211,153,.04)),
+    var(--surface);
+  border-color: color-mix(in srgb, var(--premium-cyan) 22%, var(--border));
+  overflow: hidden;
+}
+.pulse-card-copy { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 20px; }
+.pulse-icon {
+  display: grid; place-items: center;
+  width: 58px; height: 58px; border-radius: 18px;
+  font-size: 1.65rem; color: var(--premium-cyan);
+  background: linear-gradient(145deg, rgba(34,211,238,.16), rgba(59,130,246,.1));
+  border: 1px solid rgba(34,211,238,.2);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 14px 36px rgba(2,12,27,.12);
+}
+.pulse-title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.pulse-title-row h3 { margin: 0; }
+.external-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 10px; border-radius: 999px;
+  color: var(--text-dim); font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  background: rgba(148,163,184,.08); border: 1px solid var(--border);
+}
+.external-badge span { width: 7px; height: 7px; border-radius: 50%; background: var(--premium-cyan); box-shadow: 0 0 14px rgba(34,211,238,.65); }
+.pulse-card p { max-width: 760px; margin: 0; color: var(--text-dim); line-height: 1.75; }
+.pulse-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.pulse-meta span {
+  padding: 7px 11px; border-radius: 999px; font-size: .76rem; color: var(--text-dim);
+  background: color-mix(in srgb, var(--surface-strong) 74%, transparent); border: 1px solid var(--border);
+}
+.pulse-open-button { min-width: 210px; justify-content: center; white-space: nowrap; }
+.pulse-open-button span { font-size: 1.05em; transition: transform .25s ease; }
+.pulse-open-button:hover span { transform: translate(3px,-3px); }
+@media (max-width: 860px) {
+  .pulse-card { grid-template-columns: 1fr; gap: 24px; }
+  .pulse-open-button { width: 100%; }
+}
+@media (max-width: 560px) {
+  .pulse-card-copy { grid-template-columns: 1fr; }
+  .pulse-icon { width: 50px; height: 50px; border-radius: 15px; }
+}
