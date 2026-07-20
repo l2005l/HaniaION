@@ -339,18 +339,27 @@
           <a class="button button-secondary" href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener noreferrer">View source on GitHub</a>
         </div>
       </div>
-      <div class="code-window" aria-label="API response example">
-        <div class="code-toolbar"><span></span><span></span><span></span><strong>POST /api/calculate</strong></div>
-        <pre><code>{
-  <span class="code-key">"file_name"</span>: <span class="code-string">"BRDC00IGS_R_...rnx.gz"</span>,
-  <span class="code-key">"source_date"</span>: <span class="code-string">"2026-07-20"</span>,
-  <span class="code-key">"data1"</span>: <span class="code-number">5889</span>,
-  <span class="code-key">"data2"</span>: <span class="code-number">...</span>,
-  <span class="code-key">"data3"</span>: <span class="code-number">...</span>,
-  <span class="code-key">"data4"</span>: <span class="code-number">...</span>,
-  <span class="code-key">"tls"</span>: <span class="code-number">18</span>,
-  <span class="code-key">"cached"</span>: <span class="code-bool">false</span>
-}</code></pre>
+      <div class="history-showcase" aria-label="Recent ionosphere result history">
+        <div class="history-showcase-toolbar">
+          <div><span></span><strong>Ionosphere history</strong></div>
+          <a href="#history">Open full history ↓</a>
+        </div>
+        <div id="historyShowcaseEmpty" class="history-showcase-empty">
+          <span class="history-showcase-orb">↺</span>
+          <h3>Your latest changes will appear here</h3>
+          <p>Run two BRDC extractions to compare RAAM values across source dates.</p>
+        </div>
+        <div id="historyShowcaseContent" class="history-showcase-content hidden">
+          <div class="history-showcase-summary">
+            <div><span>LATEST SOURCE</span><strong id="showcaseLatestDate">—</strong></div>
+            <div><span>CHANGE STATUS</span><strong id="showcaseChangeStatus">—</strong></div>
+          </div>
+          <div id="historyShowcaseValues" class="history-showcase-values"></div>
+          <div class="history-showcase-footer">
+            <span id="showcaseSavedTime">—</span>
+            <a href="#history">Compare all saved results</a>
+          </div>
+        </div>
       </div>
     </section>
   </main>
