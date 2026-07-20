@@ -229,15 +229,15 @@
         <p>Open the trusted K-69 live monitor for GPS time, the next pulse time, and its running counter.</p>
       </div>
 
-      <article class="card pulse-card">
+      <article class="card pulse-card pulse-card-embedded">
         <div class="pulse-card-copy">
           <div class="pulse-icon" aria-hidden="true">⌁</div>
           <div>
             <div class="pulse-title-row">
               <h3>K-69 Live Monitor</h3>
-              <span class="external-badge"><span></span> External source</span>
+              <span class="external-badge"><span></span> Live embedded source</span>
             </div>
-            <p>Live GPS pulse information is supplied directly by K-69 and opens in a separate secure tab. HaniaION does not modify or recalculate the displayed values.</p>
+            <p>The K-69 monitor is displayed directly inside HaniaION. Its GPS time, next pulse time, and running counter remain controlled by the external source.</p>
             <div class="pulse-meta">
               <span>GPS time</span>
               <span>Next pulse</span>
@@ -245,10 +245,24 @@
             </div>
           </div>
         </div>
-        <a class="button button-primary button-large pulse-open-button" href="https://k69.link/" target="_blank" rel="noopener noreferrer">
-          Open live monitor
-          <span aria-hidden="true">↗</span>
-        </a>
+
+        <div class="pulse-frame-shell">
+          <div class="pulse-frame-toolbar">
+            <div class="pulse-frame-status"><span></span> K-69 live view</div>
+            <a href="https://k69.link/" target="_blank" rel="noopener noreferrer">Open separately ↗</a>
+          </div>
+          <iframe
+            class="pulse-frame"
+            src="https://k69.link/"
+            title="K-69 GPS pulse live monitor"
+            loading="eager"
+            referrerpolicy="no-referrer"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+          ></iframe>
+          <noscript>
+            <p class="pulse-frame-fallback">JavaScript is required for the live monitor. <a href="https://k69.link/" target="_blank" rel="noopener noreferrer">Open K-69</a>.</p>
+          </noscript>
+        </div>
       </article>
     </section>
 
