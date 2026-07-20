@@ -28,6 +28,7 @@
 
     <nav class="topnav" aria-label="Primary navigation">
       <a href="#converter">Converter</a>
+      <a href="#gps-pulse">GPS Pulse</a>
       <a href="#architecture">Architecture</a>
       <a href="/docs" target="_blank" rel="noopener noreferrer">API Docs</a>
       <a href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -217,6 +218,38 @@
           <div><span>GPSB / Beta</span><code id="beta">—</code></div>
         </div>
       </details>
+    </section>
+
+    <section id="gps-pulse" class="pulse-section reveal">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">EXTERNAL LIVE SOURCE</span>
+          <h2>GPS Pulse Monitor</h2>
+        </div>
+        <p>Open the trusted K-69 live monitor for GPS time, the next pulse time, and its running counter.</p>
+      </div>
+
+      <article class="card pulse-card">
+        <div class="pulse-card-copy">
+          <div class="pulse-icon" aria-hidden="true">⌁</div>
+          <div>
+            <div class="pulse-title-row">
+              <h3>K-69 Live Monitor</h3>
+              <span class="external-badge"><span></span> External source</span>
+            </div>
+            <p>Live GPS pulse information is supplied directly by K-69 and opens in a separate secure tab. HaniaION does not modify or recalculate the displayed values.</p>
+            <div class="pulse-meta">
+              <span>GPS time</span>
+              <span>Next pulse</span>
+              <span>Live counter</span>
+            </div>
+          </div>
+        </div>
+        <a class="button button-primary button-large pulse-open-button" href="https://k69.link/" target="_blank" rel="noopener noreferrer">
+          Open live monitor
+          <span aria-hidden="true">↗</span>
+        </a>
+      </article>
     </section>
 
     <section id="architecture" class="architecture-section reveal">
