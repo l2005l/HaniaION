@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#07111f">
   <meta name="description" content="Animated Middle East wind map from surface to approximately 50,000 feet.">
   <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/wind.css?v=10">
+  <link rel="stylesheet" href="/static/wind.css?v=11">
   <title>HaniaION — Middle East Wind Map</title>
 </head>
 <body>
@@ -49,8 +49,19 @@
     </section>
 
     <section class="map-card">
-      <div id="loading" class="loading">Loading animated wind map…</div>
-      <iframe id="windFrame" title="Animated Middle East wind map" loading="eager" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      <iframe
+        id="windFrame"
+        title="Animated Middle East wind map"
+        loading="eager"
+        allow="fullscreen"
+        allowfullscreen
+        referrerpolicy="no-referrer-when-downgrade"
+        frameborder="0"
+      ></iframe>
+      <div class="map-help">
+        <span>If the map is blocked by the browser:</span>
+        <a id="openDirect" href="#" target="_blank" rel="noopener">Open the wind map directly</a>
+      </div>
     </section>
 
     <section class="notes">
@@ -60,6 +71,6 @@
     </section>
     <p class="notice">For situational awareness only. Not an official aviation weather briefing.</p>
   </main>
-  <script src="/static/wind.js?v=10" defer></script>
+  <script src="/static/wind.js?v=11" defer></script>
 </body>
 </html>

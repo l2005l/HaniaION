@@ -1,43 +1,49 @@
 const altitudeSelect = document.getElementById("altitudeSelect");
 const loadButton = document.getElementById("loadButton");
 const frame = document.getElementById("windFrame");
-const loading = document.getElementById("loading");
+const openDirect = document.getElementById("openDirect");
 
-function windyUrl(level) {
+function windyEmbedUrl(level) {
   const params = new URLSearchParams({
-    type: "map",
-    location: "coordinates",
-    metricWind: "kt",
-    metricTemp: "°C",
-    overlay: "wind",
-    product: "ecmwf",
-    level,
     lat: "29.5",
     lon: "39.5",
-    zoom: "4",
     detailLat: "31.8",
     detailLon: "35.2",
-    marker: "true",
+    width: "1200",
+    height: "760",
+    zoom: "4",
+    level,
+    overlay: "wind",
+    product: "ecmwf",
+    menu: "",
     message: "true",
+    marker: "",
     calendar: "now",
     pressure: "true",
-    menu: "true"
+    type: "map",
+    location: "coordinates",
+    detail: "true",
+    metricWind: "kt",
+    metricTemp: "default",
+    radarRange: "-1"
   });
-  return `https://embed.windy.com/embed.html?${params.toString()}`;
+  return `https://embed.windy.com/embed2.html?${params.toString()}`;
 }
 
 function loadMap() {
-  loading.hidden = false;
-  frame.src = windyUrl(altitudeSelect.value);
-  localStorage.setItem("haniaion-wind-level", altitudeSelect.value);
+  const level = altitudeSelect.value;
+  const url = windyEmbedUrl(level);
+  frame.src = url;
+  openDirect.href = url;
+  localStorage.setItem("haniaion-wind-level", level);
 }
 
-frame.addEventListener("load", () => {
-  setTimeout(() => { loading.hidden = true; }, 500);
-});
 loadButton.addEventListener("click", loadMap);
 altitudeSelect.addEventListener("change", loadMap);
 
 const saved = localStorage.getItem("haniaion-wind-level");
-if (saved && [...altitudeSelect.options].some(o => o.value === saved)) altitudeSelect.value = saved;
+if (saved && [...altitudeSelect.options].some(option => option.value === saved)) {
+  altitudeSelect.value = saved;
+}
+
 loadMap();

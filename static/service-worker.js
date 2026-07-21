@@ -1,10 +1,10 @@
-const CACHE_NAME = "haniaion-shell-v10";
+const CACHE_NAME = "haniaion-shell-v11";
 const APP_SHELL = [
   "/static/style.css",
   "/static/app.js",
   "/static/icons/icon.svg",
-  "/static/wind.css?v=10",
-  "/static/wind.js?v=10",
+  "/static/wind.css?v=11",
+  "/static/wind.js?v=11",
   "/manifest.webmanifest"
 ];
 self.addEventListener("install", event => {
