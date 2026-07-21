@@ -1,31 +1,79 @@
-const CACHE_NAME = "haniaion-shell-v11";
+const CACHE_NAME = "haniaion-shell-v8-1-english-route-map";
+
 const APP_SHELL = [
+  "/",
   "/static/style.css",
   "/static/app.js",
   "/static/icons/icon.svg",
-  "/static/wind.css?v=11",
-  "/static/wind.js?v=11",
-  "/manifest.webmanifest"
+  "/wind",
+  "/static/wind.css",
+  "/static/wind.js",
+  "/manifest.webmanifest",
 ];
-self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
-});
-self.addEventListener("activate", event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
-  self.clients.claim();
-});
-self.addEventListener("fetch", event => {
-  if (event.request.method !== "GET") return;
-  const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin) return;
-  if (event.request.mode === "navigate") {
-    event.respondWith(fetch(event.request).catch(() => caches.match("/")));
+
+self.addEventListener(
+  "install",
+  event => {
+    event.waitUntil(
+      caches
+        .open(CACHE_NAME)
+        .then(cache => cache.addAll(APP_SHELL))
+    );
+
+    self.skipWaiting();
+  }
+);
+
+self.addEventListener(
+  "activate",
+  event => {
+    event.waitUntil(
+      caches
+        .keys()
+        .then(keys =>
+          Promise.all(
+            keys
+              .filter(key => key !== CACHE_NAME)
+              .map(key => caches.delete(key))
+          )
+        )
+    );
+
+    self.clients.claim();
+  }
+);
+
+self.addEventListener(
+  "fetch",
+  event => {
+    if (event.request.method !== "GET") {
+      return;
+    }
+
+    if (new URL(event.request.url).pathname.startsWith("/api/")) {
+    event.respondWith(fetch(event.request, { cache: "no-store" }));
     return;
   }
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
-    const copy = response.clone();
-    caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-    return response;
-  })));
-});
+
+  event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const copy = response.clone();
+
+          caches
+            .open(CACHE_NAME)
+            .then(cache =>
+              cache.put(
+                event.request,
+                copy
+              )
+            );
+
+          return response;
+        })
+        .catch(() =>
+          caches.match(event.request)
+        )
+    );
+  }
+);
