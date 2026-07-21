@@ -1,76 +1,124 @@
 <!doctype html>
-<html lang="en" dir="ltr" data-theme="dark">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07111f">
-  <meta name="description" content="Animated Middle East wind map from surface to approximately 50,000 feet.">
-  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/wind.css?v=11">
-  <title>HaniaION — Middle East Wind Map</title>
+  <meta name="theme-color" content="#07111e">
+  <meta name="description" content="HaniaION Mission Weather Center with animated winds and a non-operational route planning workspace.">
+  <link rel="icon" href="/static/icons/icon.svg">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/static/wind.css?v=8.1">
+  <title>HaniaION — Mission Weather Center V8.1</title>
 </head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="/">
-      <img src="/static/icons/icon.svg" alt="" width="42" height="42">
-      <span><strong>HaniaION</strong><small>Middle East Wind</small></span>
-    </a>
-    <a class="back" href="/">← Back to RAAM</a>
-  </header>
+<body class="wind-body">
+  <main class="mission-shell">
+    <header class="mission-header">
+      <a class="mission-brand" href="/">
+        <img src="/static/icons/icon.svg" alt="HaniaION logo">
+        <div><strong>HaniaION</strong><span>Mission Weather Center · V8.1</span></div>
+      </a>
+      <div class="mission-clock"><span>UTC</span><strong id="utcClock">--:--:--</strong></div>
+      <a class="mission-back" href="/">Back to RAAM</a>
+    </header>
 
-  <main>
-    <section class="hero">
-      <div>
-        <span class="kicker">LIVE WEATHER LAYER</span>
-        <h1>Winds from surface to 50,000 ft</h1>
-        <p>Choose an approximate altitude, then explore the animated forecast across the Middle East.</p>
+    <section class="mission-toolbar" aria-label="Weather controls">
+      <div class="mission-intro">
+        <span>ATMOSPHERIC OVERVIEW</span>
+        <h1>Animated winds and route workspace</h1>
+        <p>Windy supplies the weather display. The route planner runs locally in your browser.</p>
       </div>
-      <div class="control-card">
-        <label for="altitudeSelect">Altitude</label>
+      <label><span>Altitude</span>
         <select id="altitudeSelect">
-          <option value="surface">Surface</option>
-          <option value="950h">~2,000 ft</option>
-          <option value="925h">~2,500 ft</option>
-          <option value="900h">~3,000 ft</option>
-          <option value="850h">~5,000 ft</option>
-          <option value="800h">~6,500 ft</option>
-          <option value="700h" selected>~10,000 ft</option>
-          <option value="600h">~14,000 ft</option>
-          <option value="500h">~18,000 ft</option>
-          <option value="400h">~24,000 ft</option>
-          <option value="300h">~30,000 ft</option>
-          <option value="250h">~34,000 ft</option>
-          <option value="200h">~39,000 ft</option>
-          <option value="150h">~45,000 ft</option>
-          <option value="100h">~53,000 ft</option>
+          <option value="surface">Surface</option><option value="850h">~5,000 ft</option>
+          <option value="700h">~10,000 ft</option><option value="600h">~14,000 ft</option>
+          <option value="500h">~18,000 ft</option><option value="400h">~24,000 ft</option>
+          <option value="300h">~30,000 ft</option><option value="250h" selected>~34,000 ft</option>
+          <option value="200h">~39,000 ft</option><option value="150h">~44,000 ft</option>
+          <option value="100h">~52,000 ft</option>
         </select>
-        <button id="loadButton" type="button">Load altitude</button>
+      </label>
+      <label><span>Forecast</span>
+        <select id="forecastSelect">
+          <option value="0">Now</option><option value="3">+3 hours</option><option value="6">+6 hours</option>
+          <option value="12">+12 hours</option><option value="24">+24 hours</option><option value="36">+36 hours</option>
+          <option value="48">+48 hours</option><option value="72">+72 hours</option>
+        </select>
+      </label>
+      <button id="refreshWind" type="button">Refresh wind</button>
+    </section>
+
+    <nav class="mission-tabs" aria-label="Dashboard views">
+      <button class="tab-button active" data-tab="weather">Wind map</button>
+      <button class="tab-button" data-tab="planner">Route planner</button>
+      <button class="tab-button" data-tab="summary">Mission summary</button>
+    </nav>
+
+    <section id="weatherTab" class="tab-panel active">
+      <div class="weather-card">
+        <div class="panel-heading">
+          <div><span id="levelLabel">250 hPa · approximately 34,000 ft</span><strong id="mapSummary">Current model time</strong></div>
+          <small>Pan, zoom and click inside Windy for local weather values.</small>
+        </div>
+        <div class="wind-frame-wrap">
+          <iframe id="windFrame" title="Animated Middle East wind map" loading="eager" allowfullscreen></iframe>
+          <div id="windLoading" class="wind-loading"><div class="spinner"></div><strong>Loading wind map…</strong></div>
+        </div>
       </div>
     </section>
 
-    <section class="map-card">
-      <iframe
-        id="windFrame"
-        title="Animated Middle East wind map"
-        loading="eager"
-        allow="fullscreen"
-        allowfullscreen
-        referrerpolicy="no-referrer-when-downgrade"
-        frameborder="0"
-      ></iframe>
-      <div class="map-help">
-        <span>If the map is blocked by the browser:</span>
-        <a id="openDirect" href="#" target="_blank" rel="noopener">Open the wind map directly</a>
+    <section id="plannerTab" class="tab-panel">
+      <div class="planner-layout">
+        <aside class="planner-controls">
+          <div class="section-kicker">ROUTE WORKSPACE</div>
+          <h2>Build a route</h2>
+          <p>Enter coordinates or use the map. Click “Set start,” then “Set destination.”</p>
+
+          <div class="point-card"><div class="point-title"><span class="dot start-dot"></span>Start</div>
+            <div class="coord-grid"><input id="startLat" inputmode="decimal" placeholder="Latitude"><input id="startLon" inputmode="decimal" placeholder="Longitude"></div>
+            <button class="secondary-button map-mode" data-mode="start" type="button">Set start on map</button>
+          </div>
+          <div class="point-card"><div class="point-title"><span class="dot end-dot"></span>Destination</div>
+            <div class="coord-grid"><input id="endLat" inputmode="decimal" placeholder="Latitude"><input id="endLon" inputmode="decimal" placeholder="Longitude"></div>
+            <button class="secondary-button map-mode" data-mode="end" type="button">Set destination on map</button>
+          </div>
+
+          <label class="speed-field"><span>Planned true airspeed (kt)</span><input id="speedKt" type="number" min="1" max="999" value="420"></label>
+          <div class="planner-actions"><button id="calculateRoute" type="button">Calculate route</button><button id="clearRoute" class="secondary-button" type="button">Clear</button></div>
+          <div id="plannerStatus" class="planner-status">Ready.</div>
+        </aside>
+
+        <div class="planner-map-card">
+          <div id="routeMap" aria-label="Route planning map"></div>
+          <div class="map-hint" id="mapHint">Select a point-setting button, then click the map. Right-click to clear the route.</div>
+        </div>
+
+        <aside class="route-results">
+          <div class="section-kicker">ROUTE METRICS</div>
+          <div class="metric"><span>Great-circle distance</span><strong id="distanceNm">—</strong></div>
+          <div class="metric"><span>Initial true bearing</span><strong id="bearingDeg">—</strong></div>
+          <div class="metric"><span>Reciprocal true bearing</span><strong id="reciprocalDeg">—</strong></div>
+          <div class="metric"><span>Estimated still-air time</span><strong id="estimatedTime">—</strong></div>
+          <div class="metric"><span>Selected weather layer</span><strong id="routeWeatherLayer">34,000 ft · Now</strong></div>
+          <button id="openWeatherView" class="secondary-button" type="button">Open wind map</button>
+          <p class="result-note">Wind correction, fuel, terrain, airspace and operational constraints are not calculated.</p>
+        </aside>
       </div>
     </section>
 
-    <section class="notes">
-      <article><span>CONTROLS</span><strong>Zoom, drag and timeline</strong><p>Use the controls inside the map to move through the forecast.</p></article>
-      <article><span>UNITS</span><strong>Knots</strong><p>Tap or click the map for local wind information.</p></article>
-      <article><span>ALTITUDE</span><strong>Approximate pressure levels</strong><p>Upper-air levels are approximate heights above mean sea level.</p></article>
+    <section id="summaryTab" class="tab-panel">
+      <div class="summary-grid">
+        <article><span>GNSS / RAAM</span><strong>Main HaniaION workspace</strong><p>Return to the original dashboard for BRDC and RAAM extraction.</p><a href="/">Open RAAM dashboard</a></article>
+        <article><span>WEATHER</span><strong id="summaryWeather">34,000 ft · Now</strong><p>Animated external weather layer focused on the Middle East.</p><button class="link-button" data-open-tab="weather">Open wind map</button></article>
+        <article><span>ROUTE</span><strong id="summaryRoute">No route selected</strong><p id="summaryRouteDetail">Set start and destination points to create a summary.</p><button class="link-button" data-open-tab="planner">Open route planner</button></article>
+        <article><span>STATUS</span><strong>Informational workspace</strong><p>Not an official aviation briefing or a certified flight-planning system.</p></article>
+      </div>
     </section>
-    <p class="notice">For situational awareness only. Not an official aviation weather briefing.</p>
+
+    <aside class="mission-warning"><strong>Planning note</strong><p>Pressure levels are approximate altitude above mean sea level. This dashboard is for visualization and software development only. Use authorized aviation weather, navigation, terrain and airspace sources for real-world decisions.</p></aside>
   </main>
-  <script src="/static/wind.js?v=11" defer></script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="/static/wind.js?v=8.1"></script>
 </body>
 </html>
