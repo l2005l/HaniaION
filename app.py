@@ -41,12 +41,12 @@ WIND_LEVELS = {
 }
 
 WIND_REGION = {
-    "lat_min": 20.0,
-    "lat_max": 40.0,
-    "lon_min": 18.0,
-    "lon_max": 44.0,
-    "lat_step": 2.5,
-    "lon_step": 2.5,
+    "lat_min": 16.0,
+    "lat_max": 42.0,
+    "lon_min": 20.0,
+    "lon_max": 64.0,
+    "lat_step": 2.0,
+    "lon_step": 2.0,
 }
 
 _wind_cache_lock = threading.Lock()
@@ -95,25 +95,31 @@ def fetch_wind_grid(altitude_ft: int, forecast_hour: int) -> dict[str, Any]:
         speed_var = f"wind_speed_{hpa}hPa"
         direction_var = f"wind_direction_{hpa}hPa"
 
-    params = {
-        "latitude": ",".join(str(value) for value in lats),
-        "longitude": ",".join(str(value) for value in lons),
-        "hourly": f"{speed_var},{direction_var}",
-        "wind_speed_unit": "kn",
-        "forecast_days": 4,
-        "timezone": "UTC",
-        "models": "gfs_seamless",
-    }
-
-    response = requests.get(
-        "https://api.open-meteo.com/v1/forecast",
-        params=params,
-        timeout=(15, 60),
-        headers={"User-Agent": "HaniaION-Wind/1.0"},
-    )
-    response.raise_for_status()
-    raw = response.json()
-    locations = raw if isinstance(raw, list) else [raw]
+    locations: list[dict[str, Any]] = []
+    # Open-Meteo accepts multiple coordinate pairs. Chunking keeps URLs short
+    # and avoids proxy/server limits while still returning a dense regional grid.
+    chunk_size = 70
+    for start in range(0, len(lats), chunk_size):
+        lat_chunk = lats[start:start + chunk_size]
+        lon_chunk = lons[start:start + chunk_size]
+        params = {
+            "latitude": ",".join(str(value) for value in lat_chunk),
+            "longitude": ",".join(str(value) for value in lon_chunk),
+            "hourly": f"{speed_var},{direction_var}",
+            "wind_speed_unit": "kn",
+            "forecast_days": 4,
+            "timezone": "UTC",
+            "models": "gfs_seamless",
+        }
+        response = requests.get(
+            "https://api.open-meteo.com/v1/forecast",
+            params=params,
+            timeout=(15, 75),
+            headers={"User-Agent": "HaniaION-Wind/2.0"},
+        )
+        response.raise_for_status()
+        raw = response.json()
+        locations.extend(raw if isinstance(raw, list) else [raw])
 
     points: list[dict[str, Any]] = []
     valid_time: str | None = None
@@ -151,6 +157,7 @@ def fetch_wind_grid(altitude_ft: int, forecast_hour: int) -> dict[str, Any]:
         "forecast_hour": forecast_hour,
         "valid_time_utc": valid_time,
         "source": "Open-Meteo / GFS",
+        "region": WIND_REGION,
         "points": points,
         "cached": False,
     }

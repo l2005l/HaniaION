@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-shell-v2";
+const CACHE_NAME = "haniaion-shell-v4-english-map";
 
 const APP_SHELL = [
   "/",

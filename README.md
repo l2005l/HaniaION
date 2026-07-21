@@ -45,3 +45,10 @@ Features:
 - responsive mobile layout
 
 The dashboard uses Open-Meteo's GFS endpoint and OpenStreetMap tiles. It is intended for software development and general situational awareness only, not as an official aviation weather briefing.
+
+## Wind Flow V2
+The `/wind` dashboard now renders a dense animated particle-flow field over the Middle East (20E–64E, 16N–42N), with altitude layers from surface to 50,000 ft, forecast-time selection, map click inspection, and interpolated wind speed/direction.
+
+
+## Wind map labels
+The wind dashboard uses the Esri World Dark Gray base and reference layers so country and city labels are displayed consistently in English across the Middle East.
