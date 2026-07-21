@@ -21,6 +21,148 @@ APP_NAME = "HaniaION RAAM"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 
+
+
+# Approximate pressure-level heights used by the wind dashboard.
+# Altitudes are approximate above mean sea level; the API response also
+# exposes the selected model level so the UI can display it clearly.
+WIND_LEVELS = {
+    0: {"kind": "surface", "label": "10 m AGL", "speed": "wind_speed_10m", "direction": "wind_direction_10m"},
+    5000: {"kind": "pressure", "hpa": 850, "label": "850 hPa (~5,000 ft)"},
+    10000: {"kind": "pressure", "hpa": 700, "label": "700 hPa (~10,000 ft)"},
+    15000: {"kind": "pressure", "hpa": 600, "label": "600 hPa (~14,000 ft)"},
+    20000: {"kind": "pressure", "hpa": 500, "label": "500 hPa (~18,000 ft)"},
+    25000: {"kind": "pressure", "hpa": 400, "label": "400 hPa (~24,000 ft)"},
+    30000: {"kind": "pressure", "hpa": 300, "label": "300 hPa (~30,000 ft)"},
+    35000: {"kind": "pressure", "hpa": 250, "label": "250 hPa (~34,000 ft)"},
+    40000: {"kind": "pressure", "hpa": 200, "label": "200 hPa (~39,000 ft)"},
+    45000: {"kind": "pressure", "hpa": 150, "label": "150 hPa (~44,000 ft)"},
+    50000: {"kind": "pressure", "hpa": 100, "label": "100 hPa (~52,000 ft)"},
+}
+
+WIND_REGION = {
+    "lat_min": 20.0,
+    "lat_max": 40.0,
+    "lon_min": 18.0,
+    "lon_max": 44.0,
+    "lat_step": 2.5,
+    "lon_step": 2.5,
+}
+
+_wind_cache_lock = threading.Lock()
+_wind_cache: dict[str, Any] = {}
+
+
+def _nearest_wind_level(altitude_ft: int) -> tuple[int, dict[str, Any]]:
+    chosen = min(WIND_LEVELS, key=lambda value: abs(value - altitude_ft))
+    return chosen, WIND_LEVELS[chosen]
+
+
+def _wind_grid_points() -> tuple[list[float], list[float]]:
+    lats: list[float] = []
+    lons: list[float] = []
+    lat = WIND_REGION["lat_min"]
+    while lat <= WIND_REGION["lat_max"] + 0.001:
+        lon = WIND_REGION["lon_min"]
+        while lon <= WIND_REGION["lon_max"] + 0.001:
+            lats.append(round(lat, 2))
+            lons.append(round(lon, 2))
+            lon += WIND_REGION["lon_step"]
+        lat += WIND_REGION["lat_step"]
+    return lats, lons
+
+
+def fetch_wind_grid(altitude_ft: int, forecast_hour: int) -> dict[str, Any]:
+    selected_ft, level = _nearest_wind_level(altitude_ft)
+    forecast_hour = max(0, min(72, int(forecast_hour)))
+    cache_key = f"{selected_ft}:{forecast_hour}"
+    now = time.time()
+
+    with _wind_cache_lock:
+        cached = _wind_cache.get(cache_key)
+        if cached and cached["expires_at"] > now:
+            payload = dict(cached["payload"])
+            payload["cached"] = True
+            return payload
+
+    lats, lons = _wind_grid_points()
+
+    if level["kind"] == "surface":
+        speed_var = level["speed"]
+        direction_var = level["direction"]
+    else:
+        hpa = level["hpa"]
+        speed_var = f"wind_speed_{hpa}hPa"
+        direction_var = f"wind_direction_{hpa}hPa"
+
+    params = {
+        "latitude": ",".join(str(value) for value in lats),
+        "longitude": ",".join(str(value) for value in lons),
+        "hourly": f"{speed_var},{direction_var}",
+        "wind_speed_unit": "kn",
+        "forecast_days": 4,
+        "timezone": "UTC",
+        "models": "gfs_seamless",
+    }
+
+    response = requests.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params=params,
+        timeout=(15, 60),
+        headers={"User-Agent": "HaniaION-Wind/1.0"},
+    )
+    response.raise_for_status()
+    raw = response.json()
+    locations = raw if isinstance(raw, list) else [raw]
+
+    points: list[dict[str, Any]] = []
+    valid_time: str | None = None
+
+    for location in locations:
+        hourly = location.get("hourly", {})
+        times = hourly.get("time", [])
+        if not times:
+            continue
+        target_time = datetime.now(timezone.utc) + timedelta(hours=forecast_hour)
+        parsed_times = [
+            datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+            for value in times
+        ]
+        index = min(
+            range(len(parsed_times)),
+            key=lambda item: abs((parsed_times[item] - target_time).total_seconds()),
+        )
+        speeds = hourly.get(speed_var, [])
+        directions = hourly.get(direction_var, [])
+        if index >= len(speeds) or index >= len(directions):
+            continue
+        valid_time = valid_time or times[index]
+        points.append({
+            "latitude": location.get("latitude"),
+            "longitude": location.get("longitude"),
+            "speed_knots": round(float(speeds[index]), 1),
+            "direction_degrees": round(float(directions[index])),
+        })
+
+    payload = {
+        "requested_altitude_ft": altitude_ft,
+        "selected_altitude_ft": selected_ft,
+        "level_label": level["label"],
+        "forecast_hour": forecast_hour,
+        "valid_time_utc": valid_time,
+        "source": "Open-Meteo / GFS",
+        "points": points,
+        "cached": False,
+    }
+
+    with _wind_cache_lock:
+        _wind_cache[cache_key] = {
+            "payload": payload,
+            "expires_at": now + 20 * 60,
+        }
+
+    return payload
+
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -344,6 +486,28 @@ def calculate_latest() -> dict[str, Any]:
 def index():
     return FileResponse("static/index.html")
 
+
+
+
+@app.get("/wind")
+def wind_page():
+    return FileResponse("static/wind.html")
+
+
+@app.get("/api/wind/grid")
+def wind_grid(altitude_ft: int = 0, forecast_hour: int = 0):
+    try:
+        return fetch_wind_grid(altitude_ft, forecast_hour)
+    except requests.Timeout as error:
+        raise HTTPException(
+            status_code=504,
+            detail="Wind-data request timed out.",
+        ) from error
+    except requests.RequestException as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Unable to retrieve wind data: {error}",
+        ) from error
 
 @app.get("/manifest.webmanifest")
 def manifest():
