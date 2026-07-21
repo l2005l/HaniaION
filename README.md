@@ -56,3 +56,6 @@ The wind dashboard uses the Esri World Dark Gray base and reference layers so co
 
 ## Wind map v5
 Reliable server-side Open-Meteo proxy, continuous color field, arrows, and animated flow.
+
+## Wind Map V6
+The `/wind` page now uses the official Windy embedded map instead of requesting a large Open-Meteo grid. This removes the 429 rate-limit failure seen on Render while preserving animated wind, pressure levels, zoom, and point inspection.

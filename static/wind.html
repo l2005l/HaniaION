@@ -4,19 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#07111e">
-  <meta name="description" content="Animated Middle East wind forecast from surface to 50,000 feet.">
+  <meta name="description" content="Middle East wind forecast from the surface to 50,000 feet.">
   <link rel="icon" href="/static/icons/icon.svg">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="/static/style.css">
-  <link rel="stylesheet" href="/static/wind.css">
-  <title>HaniaION — Middle East Wind Flow</title>
+  <link rel="stylesheet" href="/static/wind.css?v=6">
+  <title>HaniaION — Middle East Wind Map</title>
 </head>
 <body class="wind-body">
   <main class="wind-shell">
     <header class="wind-topbar">
       <a class="wind-brand" href="/">
         <img src="/static/icons/icon.svg" alt="HaniaION logo">
-        <div><strong>HaniaION</strong><span>Middle East Wind Flow</span></div>
+        <div><strong>HaniaION</strong><span>Middle East Wind Map</span></div>
       </a>
       <a class="wind-back" href="/">Back to RAAM</a>
     </header>
@@ -24,61 +23,66 @@
     <section class="wind-command-bar" aria-label="Wind controls">
       <div class="wind-title-block">
         <span>ATMOSPHERIC OVERVIEW</span>
-        <h1>Animated winds — surface to 50,000 ft</h1>
+        <h1>Live animated wind — surface to 50,000 ft</h1>
+        <p>No HaniaION weather-server requests are used in this version.</p>
       </div>
+
       <label><span>Altitude</span>
         <select id="altitudeSelect">
-          <option value="0">Surface</option><option value="5000">5,000 ft</option>
-          <option value="10000">10,000 ft</option><option value="15000">15,000 ft</option>
-          <option value="20000">20,000 ft</option><option value="25000">25,000 ft</option>
-          <option value="30000">30,000 ft</option><option value="35000" selected>35,000 ft</option>
-          <option value="40000">40,000 ft</option><option value="45000">45,000 ft</option>
-          <option value="50000">50,000 ft</option>
+          <option value="surface">Surface</option>
+          <option value="850h">~5,000 ft (850 hPa)</option>
+          <option value="700h">~10,000 ft (700 hPa)</option>
+          <option value="600h">~14,000 ft (600 hPa)</option>
+          <option value="500h">~18,000 ft (500 hPa)</option>
+          <option value="400h">~24,000 ft (400 hPa)</option>
+          <option value="300h">~30,000 ft (300 hPa)</option>
+          <option value="250h" selected>~34,000 ft (250 hPa)</option>
+          <option value="200h">~39,000 ft (200 hPa)</option>
+          <option value="150h">~44,000 ft (150 hPa)</option>
+          <option value="100h">~52,000 ft (100 hPa)</option>
         </select>
       </label>
+
       <label><span>Forecast</span>
         <select id="forecastSelect">
-          <option value="0">Now</option><option value="3">+3 hours</option>
-          <option value="6">+6 hours</option><option value="12">+12 hours</option>
-          <option value="24">+24 hours</option><option value="36">+36 hours</option>
-          <option value="48">+48 hours</option><option value="72">+72 hours</option>
+          <option value="0">Now</option>
+          <option value="3">+3 hours</option>
+          <option value="6">+6 hours</option>
+          <option value="12">+12 hours</option>
+          <option value="24">+24 hours</option>
+          <option value="36">+36 hours</option>
+          <option value="48">+48 hours</option>
+          <option value="72">+72 hours</option>
         </select>
       </label>
-      <button id="refreshWind" type="button">Refresh</button>
+
+      <button id="refreshWind" type="button">Load wind layer</button>
     </section>
 
-    <section class="wind-map-panel">
-      <div id="windMap" aria-label="Animated wind map of the Middle East"></div>
-      <div class="wind-map-overlay wind-map-meta">
-        <span id="levelLabel">Loading level…</span>
-        <strong id="mapSummary">Loading wind field…</strong>
-        <small id="validTime">Model time unavailable</small>
+    <section class="wind-map-panel wind-embed-panel">
+      <div class="wind-map-meta">
+        <span id="levelLabel">250 hPa · approximately 34,000 ft</span>
+        <strong id="mapSummary">Animated wind field powered by Windy</strong>
+        <small>Drag, zoom and click the map for local values.</small>
       </div>
-      <div class="wind-map-overlay wind-legend">
-        <span><i class="legend-low"></i>0–15 kt</span>
-        <span><i class="legend-mid"></i>15–35 kt</span>
-        <span><i class="legend-high"></i>35–55 kt</span>
-        <span><i class="legend-extreme"></i>55+ kt</span>
-      </div>
-      <button id="animationToggle" class="wind-flow-toggle" type="button">Pause flow</button>
-      <div id="windLoading" class="wind-loading">
-        <div class="spinner"></div><strong>Building animated wind field…</strong>
+      <div id="windFrameWrap" class="wind-frame-wrap">
+        <iframe id="windFrame" title="Animated Middle East wind map" loading="eager" allowfullscreen></iframe>
+        <div id="windLoading" class="wind-loading"><div class="spinner"></div><strong>Loading wind map…</strong></div>
       </div>
     </section>
 
     <section class="wind-detail-strip">
-      <div><span>Selected point</span><strong id="selectedPoint">Tap anywhere on the map for exact interpolated wind.</strong></div>
-      <div><span>Coverage</span><strong>Eastern Mediterranean, Arabian Peninsula and Iran</strong></div>
-      <div><span>Source</span><strong>Open-Meteo / NOAA GFS</strong></div>
+      <div><span>Coverage</span><strong>Eastern Mediterranean, Arabian Peninsula, Iraq and Iran</strong></div>
+      <div><span>Units</span><strong>Knots · meteorological direction</strong></div>
+      <div><span>Display</span><strong>Interactive animated Windy embed</strong></div>
     </section>
 
     <aside class="wind-warning">
       <strong>Planning note</strong>
-      <p>Model forecast for situational awareness and software development. Pressure-level altitudes are approximate above mean sea level. This is not an official aviation weather briefing.</p>
+      <p>Pressure levels represent approximate altitude above mean sea level. This display is for situational awareness and is not a substitute for an official aviation weather briefing.</p>
     </aside>
   </main>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/static/wind.js"></script>
+  <script src="/static/wind.js?v=6"></script>
 </body>
 </html>
