@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-shell-v4-english-map";
+const CACHE_NAME = "haniaion-shell-v5-wind-fixed";
 
 const APP_SHELL = [
   "/",
@@ -50,7 +50,12 @@ self.addEventListener(
       return;
     }
 
-    event.respondWith(
+    if (new URL(event.request.url).pathname.startsWith("/api/")) {
+    event.respondWith(fetch(event.request, { cache: "no-store" }));
+    return;
+  }
+
+  event.respondWith(
       fetch(event.request)
         .then(response => {
           const copy = response.clone();

@@ -52,3 +52,7 @@ The `/wind` dashboard now renders a dense animated particle-flow field over the 
 
 ## Wind map labels
 The wind dashboard uses the Esri World Dark Gray base and reference layers so country and city labels are displayed consistently in English across the Middle East.
+
+
+## Wind map v5
+Reliable server-side Open-Meteo proxy, continuous color field, arrows, and animated flow.

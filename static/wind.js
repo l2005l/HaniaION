@@ -171,13 +171,22 @@ async function loadWind(){
   loading.classList.remove("hidden");refreshWind.disabled=true;mapSummary.textContent="Retrieving GFS wind field…";
   try{
     const params=new URLSearchParams({altitude_ft:altitudeSelect.value,forecast_hour:forecastSelect.value});
-    const response=await fetch(`/api/wind/grid?${params}`,{cache:"no-store"});const data=await response.json();
-    if(!response.ok)throw new Error(data.detail||"Unable to load wind data.");if(!data.points?.length)throw new Error("The forecast returned no usable wind samples.");
+    const response = await fetch(`/api/wind/grid?${params}`, { cache: "no-store" });
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json") ? await response.json() : { detail: await response.text() };
+    if (!response.ok) throw new Error(data.detail || `Wind service returned ${response.status}.`);
+    if (!data.points?.length) throw new Error("The forecast returned no usable wind samples.");
     windData=data;grid=createGrid(data);levelLabel.textContent=data.level_label;validTime.textContent=formatUtc(data.valid_time_utc);
     const speeds=data.points.map(p=>p.speed_knots),min=Math.min(...speeds),max=Math.max(...speeds);
     mapSummary.textContent=`${data.points.length} samples · ${min.toFixed(0)}–${max.toFixed(0)} kt · ${data.cached?"cached":"updated"}`;
     selectedPoint.textContent="Tap anywhere on the map for exact interpolated wind.";drawField();resetParticles();
-  }catch(error){mapSummary.textContent=error.message;}finally{loading.classList.add("hidden");refreshWind.disabled=false;}
+  } catch (error) {
+    console.error("Wind loading failed", error);
+    mapSummary.textContent = `Unable to load wind data: ${error.message}`;
+    selectedPoint.textContent = "Try Refresh again. If the error continues, redeploy the latest commit on Render.";
+    fieldCtx.clearRect(0, 0, fieldCanvas.clientWidth, fieldCanvas.clientHeight);
+    flowCtx.clearRect(0, 0, flowCanvas.clientWidth, flowCanvas.clientHeight);
+  } finally { loading.classList.add("hidden"); refreshWind.disabled=false; }
 }
 refreshWind.addEventListener("click",loadWind);altitudeSelect.addEventListener("change",loadWind);forecastSelect.addEventListener("change",loadWind);
 animationToggle.addEventListener("click",()=>{animationEnabled=!animationEnabled;animationToggle.classList.toggle("is-off",!animationEnabled);animationToggle.textContent=animationEnabled?"Pause flow":"Resume flow";if(!animationEnabled)flowCtx.clearRect(0,0,flowCanvas.clientWidth,flowCanvas.clientHeight);else resetParticles();});
