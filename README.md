@@ -59,3 +59,10 @@ Reliable server-side Open-Meteo proxy, continuous color field, arrows, and anima
 
 ## Wind Map V6
 The `/wind` page now uses the official Windy embedded map instead of requesting a large Open-Meteo grid. This removes the 429 rate-limit failure seen on Render while preserving animated wind, pressure levels, zoom, and point inspection.
+
+## V8 Mission Weather Center
+- Windy embedded animated wind map with altitude and forecast controls.
+- Local route-planning workspace with map-selected or typed coordinates.
+- Great-circle distance, initial true bearing, and still-air time estimate.
+- Local persistence of the last route.
+- Informational only; not a certified flight-planning or aviation-weather system.

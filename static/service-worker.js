@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-shell-v5-wind-fixed";
+const CACHE_NAME = "haniaion-shell-v8-mission-dashboard";
 
 const APP_SHELL = [
   "/",
