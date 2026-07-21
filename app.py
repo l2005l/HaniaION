@@ -21,6 +21,127 @@ APP_NAME = "HaniaION RAAM"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 
+
+
+# Approximate pressure-level heights used by the wind dashboard.
+WIND_LEVELS = {
+    0: {"kind": "surface", "label": "10 m AGL", "speed": "wind_speed_10m", "direction": "wind_direction_10m"},
+    5000: {"kind": "pressure", "hpa": 850, "label": "850 hPa (~5,000 ft)"},
+    10000: {"kind": "pressure", "hpa": 700, "label": "700 hPa (~10,000 ft)"},
+    15000: {"kind": "pressure", "hpa": 600, "label": "600 hPa (~14,000 ft)"},
+    20000: {"kind": "pressure", "hpa": 500, "label": "500 hPa (~18,000 ft)"},
+    25000: {"kind": "pressure", "hpa": 400, "label": "400 hPa (~24,000 ft)"},
+    30000: {"kind": "pressure", "hpa": 300, "label": "300 hPa (~30,000 ft)"},
+    35000: {"kind": "pressure", "hpa": 250, "label": "250 hPa (~34,000 ft)"},
+    40000: {"kind": "pressure", "hpa": 200, "label": "200 hPa (~39,000 ft)"},
+    45000: {"kind": "pressure", "hpa": 150, "label": "150 hPa (~44,000 ft)"},
+    50000: {"kind": "pressure", "hpa": 100, "label": "100 hPa (~52,000 ft)"},
+}
+
+# A deliberately compact grid keeps the upstream request reliable on Render.
+# The browser interpolates these samples into a continuous colored field.
+WIND_REGION = {
+    "lat_min": 17.0, "lat_max": 42.0,
+    "lon_min": 20.0, "lon_max": 65.0,
+    "lat_step": 5.0, "lon_step": 5.0,
+}
+
+_wind_cache_lock = threading.Lock()
+_wind_cache: dict[str, Any] = {}
+
+def _nearest_wind_level(altitude_ft: int) -> tuple[int, dict[str, Any]]:
+    chosen = min(WIND_LEVELS, key=lambda value: abs(value - altitude_ft))
+    return chosen, WIND_LEVELS[chosen]
+
+def _wind_grid_points() -> tuple[list[float], list[float]]:
+    lats: list[float] = []
+    lons: list[float] = []
+    lat = WIND_REGION["lat_min"]
+    while lat <= WIND_REGION["lat_max"] + 0.001:
+        lon = WIND_REGION["lon_min"]
+        while lon <= WIND_REGION["lon_max"] + 0.001:
+            lats.append(round(lat, 2))
+            lons.append(round(lon, 2))
+            lon += WIND_REGION["lon_step"]
+        lat += WIND_REGION["lat_step"]
+    return lats, lons
+
+def _request_open_meteo(params: dict[str, Any]) -> Any:
+    session = requests.Session()
+    retry = Retry(total=3, connect=3, read=3, backoff_factor=0.8,
+                  status_forcelist=[429, 500, 502, 503, 504],
+                  allowed_methods=["GET"])
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+    response = session.get(
+        "https://api.open-meteo.com/v1/forecast",
+        params=params, timeout=(10, 40),
+        headers={"User-Agent": "HaniaION-Wind/5.0", "Accept": "application/json"},
+    )
+    response.raise_for_status()
+    return response.json()
+
+def fetch_wind_grid(altitude_ft: int, forecast_hour: int) -> dict[str, Any]:
+    selected_ft, level = _nearest_wind_level(altitude_ft)
+    forecast_hour = max(0, min(72, int(forecast_hour)))
+    cache_key = f"{selected_ft}:{forecast_hour}"
+    now = time.time()
+    with _wind_cache_lock:
+        cached = _wind_cache.get(cache_key)
+        if cached and cached["expires_at"] > now:
+            payload = dict(cached["payload"]); payload["cached"] = True; return payload
+
+    lats, lons = _wind_grid_points()
+    if level["kind"] == "surface":
+        speed_var, direction_var = level["speed"], level["direction"]
+    else:
+        hpa = level["hpa"]
+        speed_var = f"wind_speed_{hpa}hPa"
+        direction_var = f"wind_direction_{hpa}hPa"
+
+    params = {
+        "latitude": ",".join(map(str, lats)),
+        "longitude": ",".join(map(str, lons)),
+        "hourly": f"{speed_var},{direction_var}",
+        "wind_speed_unit": "kn",
+        "forecast_days": 4,
+        "timezone": "UTC",
+    }
+    raw = _request_open_meteo(params)
+    locations = raw if isinstance(raw, list) else [raw]
+    target_time = datetime.now(timezone.utc) + timedelta(hours=forecast_hour)
+    points: list[dict[str, Any]] = []
+    valid_time: str | None = None
+    for location in locations:
+        hourly = location.get("hourly") or {}
+        times = hourly.get("time") or []
+        speeds = hourly.get(speed_var) or []
+        directions = hourly.get(direction_var) or []
+        if not times or not speeds or not directions:
+            continue
+        parsed = [datetime.fromisoformat(t).replace(tzinfo=timezone.utc) for t in times]
+        idx = min(range(len(parsed)), key=lambda i: abs((parsed[i]-target_time).total_seconds()))
+        if idx >= len(speeds) or idx >= len(directions) or speeds[idx] is None or directions[idx] is None:
+            continue
+        valid_time = valid_time or times[idx]
+        points.append({
+            "latitude": float(location.get("latitude")),
+            "longitude": float(location.get("longitude")),
+            "speed_knots": round(float(speeds[idx]), 1),
+            "direction_degrees": round(float(directions[idx])) % 360,
+        })
+    if len(points) < 20:
+        raise RuntimeError(f"Wind provider returned only {len(points)} usable samples.")
+
+    payload = {
+        "requested_altitude_ft": altitude_ft, "selected_altitude_ft": selected_ft,
+        "level_label": level["label"], "forecast_hour": forecast_hour,
+        "valid_time_utc": valid_time, "source": "Open-Meteo forecast",
+        "region": WIND_REGION, "points": points, "cached": False,
+    }
+    with _wind_cache_lock:
+        _wind_cache[cache_key] = {"payload": payload, "expires_at": now + 20*60}
+    return payload
+
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -344,6 +465,29 @@ def calculate_latest() -> dict[str, Any]:
 def index():
     return FileResponse("static/index.html")
 
+
+
+
+@app.get("/wind")
+def wind_page():
+    return FileResponse("static/wind.html")
+
+
+@app.get("/api/wind/grid")
+def wind_grid(altitude_ft: int = 0, forecast_hour: int = 0):
+    try:
+        return fetch_wind_grid(altitude_ft, forecast_hour)
+    except requests.Timeout as error:
+        raise HTTPException(
+            status_code=504,
+            detail="Wind-data request timed out.",
+        ) from error
+    except requests.RequestException as error:
+        raise HTTPException(status_code=502, detail=f"Wind provider error: {error}") from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Wind service error: {error}") from error
 
 @app.get("/manifest.webmanifest")
 def manifest():

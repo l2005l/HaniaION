@@ -1,397 +1,371 @@
 <!doctype html>
-<html lang="en" dir="ltr" data-theme="dark">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07111f">
-  <meta name="description" content="HaniaION retrieves the latest NASA CDDIS BRDC file, extracts Klobuchar coefficients, and converts them into RAAM-ready GNSS values.">
-  <meta name="color-scheme" content="dark light">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta name="theme-color" content="#123b63">
+
+  <meta
+    name="description"
+    content="Open-source Python and FastAPI developer utility for extracting GNSS Klobuchar coefficients from NASA CDDIS and converting them for RAAM navigation software."
+  >
+
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/static/icons/icon.svg?v=22" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=22">
+  <link rel="icon" href="/static/icons/icon.svg">
   <link rel="stylesheet" href="/static/style.css">
-  <title>HaniaION — GNSS Ionospheric Data Platform</title>
+
+  <title>HaniaION — Open Source GNSS Developer Tool</title>
 </head>
+
 <body>
-  <div class="ambient ambient-one" aria-hidden="true"></div>
-  <div class="ambient ambient-two" aria-hidden="true"></div>
-  <div class="star-field" aria-hidden="true"></div>
+  <main class="shell">
 
-  <header class="topbar">
-    <a class="brand" href="#top" aria-label="HaniaION home">
-      <img src="/static/icons/icon.svg" alt="" width="42" height="42">
-      <span>
-        <strong>HaniaION</strong>
-        <small>GNSS Data Platform</small>
-      </span>
-    </a>
+    <!-- Developer-focused project header -->
+    <header class="hero developer-hero">
+      <img
+        class="logo"
+        src="/static/icons/icon.svg"
+        alt="HaniaION logo"
+      >
 
-    <nav class="topnav" aria-label="Primary navigation">
-      <a href="#converter">Converter</a>
-      <a href="#history">History</a>
-      <a href="#gps-pulse">GPS Pulse</a>
-      <a href="#architecture">Architecture</a>
-      <a href="/docs" target="_blank" rel="noopener noreferrer">API Docs</a>
-      <a href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener noreferrer">GitHub</a>
-    </nav>
+      <div>
+        <span class="project-label">OPEN SOURCE SOFTWARE PROJECT</span>
 
-    <div class="topbar-actions">
-      <a class="icon-button history-shortcut-button" href="#history" aria-label="Jump to results history" title="Results history">↺</a>
-      <a class="icon-button quick-pulse-button" href="#gps-pulse" aria-label="Jump to GPS Pulse Monitor" title="GPS Pulse Monitor">⌁</a>
-      <button id="installAppButton" class="icon-button install-icon-button" type="button" aria-label="Install HaniaION app" title="Install HaniaION">⇩</button>
-      <div id="serviceStatus" class="status-pill" role="status" aria-live="polite">
-        <span class="status-dot"></span>
-        <span id="serviceStatusText">Checking service</span>
-      </div>
-      <button id="themeToggle" class="icon-button" type="button" aria-label="Switch color theme" title="Switch color theme">
-        <span class="theme-icon" aria-hidden="true">◐</span>
-      </button>
-    </div>
-  </header>
+        <h1>HaniaION</h1>
 
-  <main id="top">
-    <section class="hero-section reveal">
-      <div class="hero-copy">
-        <div class="kicker"><span></span> OPEN-SOURCE GNSS UTILITY</div>
-        <h1>Latest ionospheric data.<br><em>Ready for RAAM.</em></h1>
-        <p class="hero-lead">
-          HaniaION retrieves the latest BRDC navigation file from NASA CDDIS,
-          extracts the GPS Klobuchar coefficients, and converts them into
-          operational RAAM values in one reliable workflow.
+        <p class="hero-subtitle">
+          GNSS Klobuchar Data API &amp; RAAM Converter
         </p>
 
-        <div class="hero-actions">
-          <button id="heroCalculateButton" class="button button-primary button-large" type="button">
-            <span class="button-icon" aria-hidden="true">↯</span>
-            Extract latest BRDC
-          </button>
-          <a class="button button-secondary button-large" href="#gps-pulse"><span aria-hidden="true">⌁</span> GPS Pulse Monitor</a>
-          <button id="heroInstallButton" class="button button-ghost button-large" type="button"><span aria-hidden="true">⇩</span> Install on phone</button>
-          <a class="button button-ghost button-large" href="#architecture">Explore architecture</a>
+        <p class="hero-description">
+          A Python and FastAPI utility that retrieves the latest BRDC
+          navigation data from NASA CDDIS, extracts Klobuchar ionospheric
+          coefficients, and converts them for GNSS and RAAM software.
+        </p>
+
+        <div class="tech-tags" aria-label="Project technologies">
+          <span>Python</span>
+          <span>FastAPI</span>
+          <span>REST API</span>
+          <span>Docker</span>
+          <span>GNSS</span>
+          <span>RINEX</span>
+          <span>NASA CDDIS</span>
         </div>
 
-        <div class="live-status-grid" aria-label="Live platform status">
-          <div id="nasaStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>NASA CDDIS</small><strong id="nasaStatus">Checking</strong><em id="nasaLatency">—</em></div>
-          <div id="apiStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>REST API</small><strong id="apiStatus">Checking</strong><em id="apiLatency">—</em></div>
-          <div id="cacheStatusCard" class="live-status-card status-neutral"><span class="live-dot cache-dot"></span><small>Cache</small><strong id="cacheStatus">Ready</strong><em id="cacheFreshness">Standby</em></div>
-        </div>
+        <nav class="developer-links" aria-label="Developer resources">
+          <a
+            class="developer-link primary-link"
+            href="https://github.com/I2005I/HaniaION"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            View Source on GitHub
+          </a>
 
-        <div class="hero-metrics" aria-label="Platform capabilities">
-          <div><strong>NASA</strong><span>CDDIS source</span></div>
-          <div><strong>RINEX</strong><span>Header parsing</span></div>
-          <div><strong>FastAPI</strong><span>REST backend</span></div>
-          <div><strong>RAAM</strong><span>Ready output</span></div>
-        </div>
+          <a
+            class="developer-link"
+            href="/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Interactive API Docs
+          </a>
+
+          <a
+            class="developer-link"
+            href="/wind"
+          >
+            Middle East Wind Map
+          </a>
+
+          <a
+            class="developer-link"
+            href="/api/health"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            API Health
+          </a>
+        </nav>
       </div>
+    </header>
 
-      <div class="orbit-visual" aria-hidden="true">
-        <div class="orbit-ring ring-one"><span class="satellite sat-one"></span></div>
-        <div class="orbit-ring ring-two"><span class="satellite sat-two"></span></div>
-        <div class="orbit-ring ring-three"></div>
-        <div class="planet">
-          <div class="planet-glow"></div>
-          <div class="planet-grid"></div>
-          <div class="planet-shine"></div>
+    <!-- Project overview -->
+    <section class="panel developer-panel">
+      <span class="eyebrow">DEVELOPER PLATFORM</span>
+      <h2>Software Development Features</h2>
+
+      <div class="feature-grid">
+        <article>
+          <strong>BRDC Retrieval</strong>
+          <p>
+            Automatically locates and downloads the latest GNSS navigation
+            file from NASA CDDIS Earthdata.
+          </p>
+        </article>
+
+        <article>
+          <strong>RINEX Parsing</strong>
+          <p>
+            Parses the navigation header and extracts the Klobuchar Alpha
+            and Beta ionospheric coefficients.
+          </p>
+        </article>
+
+        <article>
+          <strong>RAAM Conversion</strong>
+          <p>
+            Converts scientific coefficients into signed integer values
+            suitable for RAAM navigation software.
+          </p>
+        </article>
+
+        <article>
+          <strong>REST Backend</strong>
+          <p>
+            Built with Python and FastAPI, packaged with Docker, and deployed
+            as a reproducible web service.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Technical flow -->
+    <section class="panel developer-panel">
+      <span class="eyebrow">ARCHITECTURE</span>
+      <h2>Processing Pipeline</h2>
+
+      <div class="pipeline" aria-label="Application processing pipeline">
+        <div>
+          <span>1</span>
+          <strong>NASA CDDIS</strong>
+          <small>Latest BRDC file</small>
         </div>
-        <div class="telemetry-card telemetry-one">
-          <span>SOURCE</span><strong>NASA CDDIS</strong><small>Secure Earthdata session</small>
+
+        <div class="pipeline-arrow">→</div>
+
+        <div>
+          <span>2</span>
+          <strong>Python Parser</strong>
+          <small>RINEX header extraction</small>
         </div>
-        <div class="telemetry-card telemetry-two">
-          <span>MODEL</span><strong>Klobuchar</strong><small>GPS Alpha / Beta</small>
+
+        <div class="pipeline-arrow">→</div>
+
+        <div>
+          <span>3</span>
+          <strong>Converter</strong>
+          <small>Klobuchar → RAAM</small>
+        </div>
+
+        <div class="pipeline-arrow">→</div>
+
+        <div>
+          <span>4</span>
+          <strong>API Output</strong>
+          <small>Structured developer data</small>
         </div>
       </div>
     </section>
 
-    <section id="converter" class="workspace-section reveal">
-      <div class="section-heading">
-        <div>
-          <span class="section-kicker">LIVE CONVERTER</span>
-          <h2>BRDC → Klobuchar → RAAM</h2>
-        </div>
-        <p>Run the complete pipeline without uploading files or entering parameters.</p>
+    <!-- Existing working application -->
+    <section class="panel action-panel" dir="rtl">
+      <div>
+        <span class="eyebrow">CDDIS / Earthdata</span>
+        <h2>נתוני היונוספרה המעודכנים</h2>
+        <p>
+          לחיצה אחת מורידה את קובץ ה־BRDC האחרון,
+          מחלצת את מקדמי Klobuchar וממירה אותם לערכי RAAM.
+        </p>
       </div>
 
-      <div class="workspace-grid">
-        <article class="card control-card">
-          <div class="card-header">
-            <div>
-              <span class="card-label">OPERATION</span>
-              <h3>Retrieve latest data</h3>
-            </div>
-            <span class="secure-badge">Server-side credentials</span>
-          </div>
+      <button id="calculateButton" type="button">
+        הורד, המר והצג
+      </button>
+    </section>
 
-          <p class="card-description">
-            The server checks the last seven UTC days, downloads the newest valid
-            compressed BRDC navigation file, parses its RINEX header, and converts
-            the coefficients using the RAAM byte format.
+    <section
+      id="progressPanel"
+      class="panel progress-panel hidden"
+      aria-live="polite"
+      dir="rtl"
+    >
+      <div class="spinner"></div>
+
+      <div>
+        <strong>מתחבר ל־CDDIS...</strong>
+        <p>הפעולה עשויה לקחת מספר שניות.</p>
+      </div>
+    </section>
+
+    <section
+      id="errorPanel"
+      class="panel error-panel hidden"
+      role="alert"
+      dir="rtl"
+    >
+      <strong>לא ניתן להשלים את הפעולה</strong>
+      <p id="errorText"></p>
+    </section>
+
+    <section id="resultsPanel" class="panel hidden" dir="rtl">
+      <div class="results-heading">
+        <div>
+          <span class="eyebrow">RAAM DATA</span>
+          <h2>תוצאות</h2>
+        </div>
+
+        <span id="cacheBadge" class="badge"></span>
+      </div>
+
+      <div class="meta-grid">
+        <div>
+          <span>קובץ</span>
+          <strong id="fileName">—</strong>
+        </div>
+
+        <div>
+          <span>תאריך מקור</span>
+          <strong id="sourceDate">—</strong>
+        </div>
+      </div>
+
+      <div class="data-grid">
+        <article>
+          <span>Data 1</span>
+          <strong id="data1">—</strong>
+        </article>
+
+        <article>
+          <span>Data 2</span>
+          <strong id="data2">—</strong>
+        </article>
+
+        <article>
+          <span>Data 3</span>
+          <strong id="data3">—</strong>
+        </article>
+
+        <article>
+          <span>Data 4</span>
+          <strong id="data4">—</strong>
+        </article>
+
+        <article class="tls">
+          <span>tLS</span>
+          <strong id="tls">—</strong>
+        </article>
+      </div>
+
+      <details>
+        <summary>מקדמי Klobuchar ונתוני מקור</summary>
+
+        <div class="raw-values">
+          <p>
+            <b>Alpha:</b>
+            <span id="alpha">—</span>
           </p>
 
-          <div class="process-preview" aria-label="Processing steps">
-            <div><span>01</span><strong>Connect</strong><small>NASA Earthdata</small></div>
-            <i>→</i>
-            <div><span>02</span><strong>Parse</strong><small>RINEX header</small></div>
-            <i>→</i>
-            <div><span>03</span><strong>Convert</strong><small>RAAM values</small></div>
-          </div>
-
-          <button id="calculateButton" class="button button-primary full-width" type="button">
-            <span class="button-icon" aria-hidden="true">↯</span>
-            Download, convert and display
-          </button>
-
-          <p class="privacy-note">Earthdata credentials remain on the server and are never exposed to the browser.</p>
-        </article>
-
-        <article id="statusCard" class="card status-card" aria-live="polite">
-          <div id="idleState" class="state-content">
-            <div class="state-orb idle-orb"><span>◎</span></div>
-            <span class="card-label">SYSTEM READY</span>
-            <h3>Waiting for extraction</h3>
-            <p>Start the process to retrieve the latest available GNSS ionospheric data.</p>
-          </div>
-
-          <div id="loadingState" class="state-content hidden">
-            <div class="loader-orbit"><span></span></div>
-            <span class="card-label">PIPELINE ACTIVE</span>
-            <h3 id="loadingTitle">Connecting to NASA CDDIS</h3>
-            <p id="loadingDescription">Establishing a secure Earthdata session...</p>
-            <div class="progress-track"><span id="progressBar"></span></div>
-            <div class="progress-meta"><span id="progressStep">Step 1 of 4</span><span id="elapsedTime">0.0s</span></div>
-          </div>
-
-          <div id="successState" class="state-content hidden">
-            <div class="state-orb success-orb"><span>✓</span></div>
-            <span class="card-label">PIPELINE COMPLETE</span>
-            <h3>RAAM data is ready</h3>
-            <p>The latest valid source was processed successfully.</p>
-            <button id="viewResultsButton" class="text-button" type="button">View results ↓</button>
-          </div>
-
-          <div id="errorState" class="state-content hidden" role="alert">
-            <div class="state-orb error-orb"><span>!</span></div>
-            <span class="card-label">PROCESS FAILED</span>
-            <h3>Could not complete extraction</h3>
-            <p id="errorText">An unexpected error occurred.</p>
-            <button id="retryButton" class="button button-ghost" type="button">Try again</button>
-          </div>
-        </article>
-      </div>
-    </section>
-
-    <section id="resultsPanel" class="results-section hidden reveal" aria-live="polite">
-      <div class="section-heading results-heading-row">
-        <div>
-          <span class="section-kicker">LATEST RESULT</span>
-          <h2>RAAM output dashboard</h2>
-        </div>
-        <div class="result-status-group">
-          <span id="cacheBadge" class="result-badge">Updated now</span>
-          <span id="updatedAt" class="updated-at">—</span>
-        </div>
-      </div>
-
-      <div class="source-strip">
-        <div><span>Source file</span><strong id="fileName">—</strong></div>
-        <div><span>Source date (UTC)</span><strong id="sourceDate">—</strong></div>
-        <div><span>Model</span><strong>GPS Klobuchar</strong></div>
-        <div><span>Output</span><strong>RAAM integer pairs</strong></div>
-      </div>
-
-      <div class="value-grid">
-        <article class="value-card"><span>DATA 1</span><strong id="data1">—</strong><small>Alpha A0 · A1</small><button class="mini-copy" data-copy-target="data1" type="button" aria-label="Copy Data 1">Copy</button></article>
-        <article class="value-card"><span>DATA 2</span><strong id="data2">—</strong><small>Alpha A2 · A3</small><button class="mini-copy" data-copy-target="data2" type="button" aria-label="Copy Data 2">Copy</button></article>
-        <article class="value-card"><span>DATA 3</span><strong id="data3">—</strong><small>Beta B0 · B1</small><button class="mini-copy" data-copy-target="data3" type="button" aria-label="Copy Data 3">Copy</button></article>
-        <article class="value-card"><span>DATA 4</span><strong id="data4">—</strong><small>Beta B2 · B3</small><button class="mini-copy" data-copy-target="data4" type="button" aria-label="Copy Data 4">Copy</button></article>
-        <article class="value-card tls-card"><span>tLS</span><strong id="tls">—</strong><small>Leap seconds</small><button class="mini-copy" data-copy-target="tls" type="button" aria-label="Copy tLS">Copy</button></article>
-      </div>
-
-      <div class="result-actions">
-        <button id="copyButton" class="button button-primary" type="button">Copy all values</button>
-        <button id="downloadTxtButton" class="button button-secondary" type="button">Download RAAM.txt</button>
-        <button id="downloadJsonButton" class="button button-secondary" type="button">Export JSON</button>
-        <button id="downloadCsvButton" class="button button-secondary" type="button">Export CSV</button>
-        <button id="refreshButton" class="button button-ghost" type="button">Refresh source</button>
-      </div>
-
-      <details class="raw-panel">
-        <summary>
-          <span><strong>Raw Klobuchar coefficients</strong><small>Scientific values extracted directly from the RINEX header</small></span>
-          <span class="summary-icon">+</span>
-        </summary>
-        <div class="raw-grid">
-          <div><span>GPSA / Alpha</span><code id="alpha">—</code></div>
-          <div><span>GPSB / Beta</span><code id="beta">—</code></div>
+          <p>
+            <b>Beta:</b>
+            <span id="beta">—</span>
+          </p>
         </div>
       </details>
+
+      <div class="button-row">
+        <button
+          id="copyButton"
+          class="secondary"
+          type="button"
+        >
+          העתק תוצאות
+        </button>
+
+        <button
+          id="refreshButton"
+          class="secondary"
+          type="button"
+        >
+          רענן
+        </button>
+      </div>
     </section>
 
-    <section id="history" class="history-section reveal">
-      <div class="section-heading history-heading-row">
+    <!-- Technical project information -->
+    <section class="panel developer-panel">
+      <span class="eyebrow">TECHNICAL SPECIFICATION</span>
+      <h2>Developer Information</h2>
+
+      <div class="spec-grid">
         <div>
-          <span class="section-kicker">LOCAL RESULT ARCHIVE</span>
-          <h2>Results history and comparison</h2>
+          <span>Backend</span>
+          <strong>Python / FastAPI</strong>
         </div>
-        <div class="history-heading-actions">
-          <span id="historyCount" class="result-badge">0 saved results</span>
-          <button id="clearHistoryButton" class="button button-ghost history-clear-button" type="button">Clear history</button>
-        </div>
-      </div>
 
-      <p class="history-intro">Each successful extraction is stored on this device. Select any saved result to reopen it, download it, or compare it with the previous result.</p>
-
-      <div id="historyEmpty" class="card history-empty">
-        <div class="state-orb idle-orb"><span>↺</span></div>
-        <h3>No saved results yet</h3>
-        <p>Run the BRDC extraction once. The result will appear here automatically and remain available on this device.</p>
-      </div>
-
-      <div id="historyContent" class="history-content hidden">
-        <article id="comparisonCard" class="card comparison-card hidden">
-          <div class="comparison-header">
-            <div>
-              <span class="card-label">CHANGE SINCE PREVIOUS RESULT</span>
-              <h3 id="comparisonTitle">Latest comparison</h3>
-            </div>
-            <span id="comparisonSummary" class="comparison-summary">—</span>
-          </div>
-          <div id="comparisonGrid" class="comparison-grid"></div>
-        </article>
-
-        <div id="historyList" class="history-list" aria-live="polite"></div>
-      </div>
-    </section>
-
-    <section id="gps-pulse" class="pulse-section reveal">
-      <div class="section-heading">
         <div>
-          <span class="section-kicker">EXTERNAL LIVE SOURCE</span>
-          <h2>GPS Pulse Monitor</h2>
-        </div>
-        <p>Open the trusted K-69 live monitor for GPS time, the next pulse time, and its running counter.</p>
-      </div>
-
-      <article class="card pulse-card pulse-card-embedded">
-        <div class="pulse-card-copy">
-          <div class="pulse-icon" aria-hidden="true">⌁</div>
-          <div>
-            <div class="pulse-title-row">
-              <h3>K-69 Live Monitor</h3>
-              <span class="external-badge"><span></span> Live embedded source</span>
-            </div>
-            <p>The K-69 monitor is displayed directly inside HaniaION. Its GPS time, next pulse time, and running counter remain controlled by the external source.</p>
-            <div class="pulse-meta">
-              <span>GPS time</span>
-              <span>Next pulse</span>
-              <span>Live counter</span>
-            </div>
-          </div>
+          <span>Deployment</span>
+          <strong>Docker / Render</strong>
         </div>
 
-        <div class="pulse-frame-shell">
-          <div class="pulse-frame-toolbar">
-            <div class="pulse-frame-status"><span></span> K-69 live view</div>
-            <a href="https://k69.link/" target="_blank" rel="noopener noreferrer">Open separately ↗</a>
-          </div>
-          <iframe
-            class="pulse-frame"
-            src="https://k69.link/"
-            title="K-69 GPS pulse live monitor"
-            loading="eager"
-            referrerpolicy="no-referrer"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-            scrolling="no"
-          ></iframe>
-          <noscript>
-            <p class="pulse-frame-fallback">JavaScript is required for the live monitor. <a href="https://k69.link/" target="_blank" rel="noopener noreferrer">Open K-69</a>.</p>
-          </noscript>
-        </div>
-      </article>
-    </section>
-
-    <section id="architecture" class="architecture-section reveal">
-      <div class="section-heading centered-heading">
         <div>
-          <span class="section-kicker">ARCHITECTURE</span>
-          <h2>A transparent, reproducible pipeline</h2>
+          <span>Input</span>
+          <strong>BRDC RINEX Navigation File</strong>
         </div>
-        <p>Each stage has one responsibility, making the service easy to understand, validate, and extend.</p>
-      </div>
 
-      <div class="architecture-flow">
-        <article><span class="flow-number">01</span><div class="flow-icon">⌁</div><h3>NASA CDDIS</h3><p>Search the latest daily BRDC files through an authenticated Earthdata session.</p><small>HTTPS · gzip · retry policy</small></article>
-        <div class="flow-line"></div>
-        <article><span class="flow-number">02</span><div class="flow-icon">{ }</div><h3>RINEX Parser</h3><p>Read the navigation header and locate GPSA, GPSB, and leap-second records.</p><small>RINEX 2 / RINEX 3 support</small></article>
-        <div class="flow-line"></div>
-        <article><span class="flow-number">03</span><div class="flow-icon">⇄</div><h3>RAAM Conversion</h3><p>Scale and pack the Klobuchar values into four unsigned 16-bit data words.</p><small>Deterministic conversion</small></article>
-        <div class="flow-line"></div>
-        <article><span class="flow-number">04</span><div class="flow-icon">API</div><h3>Structured Output</h3><p>Return the source metadata, raw coefficients, converted values, and cache state.</p><small>FastAPI · JSON · PWA</small></article>
+        <div>
+          <span>Data Source</span>
+          <strong>NASA CDDIS Earthdata</strong>
+        </div>
+
+        <div>
+          <span>Model</span>
+          <strong>Klobuchar Ionospheric Model</strong>
+        </div>
+
+        <div>
+          <span>Output</span>
+          <strong>RAAM-Compatible Values</strong>
+        </div>
       </div>
     </section>
 
-    <section class="developer-section reveal">
-      <div class="developer-copy">
-        <span class="section-kicker">DEVELOPER READY</span>
-        <h2>Built as software, not a one-off webpage.</h2>
-        <p>Python backend, typed FastAPI routes, Docker packaging, health checks, rate limiting, retries, and a responsive installable frontend.</p>
-        <div class="developer-actions">
-          <a class="button button-primary" href="/docs" target="_blank" rel="noopener noreferrer">Open API documentation</a>
-          <a class="button button-secondary" href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener noreferrer">View source on GitHub</a>
-        </div>
-      </div>
-      <div class="history-showcase" aria-label="Recent ionosphere result history">
-        <div class="history-showcase-toolbar">
-          <div><span></span><strong>Ionosphere history</strong></div>
-          <a href="#history">Open full history ↓</a>
-        </div>
-        <div id="historyShowcaseEmpty" class="history-showcase-empty">
-          <span class="history-showcase-orb">↺</span>
-          <h3>Your latest changes will appear here</h3>
-          <p>Run two BRDC extractions to compare RAAM values across source dates.</p>
-        </div>
-        <div id="historyShowcaseContent" class="history-showcase-content hidden">
-          <div class="history-showcase-summary">
-            <div><span>LATEST SOURCE</span><strong id="showcaseLatestDate">—</strong></div>
-            <div><span>CHANGE STATUS</span><strong id="showcaseChangeStatus">—</strong></div>
-          </div>
-          <div id="historyShowcaseValues" class="history-showcase-values"></div>
-          <div class="history-showcase-footer">
-            <span id="showcaseSavedTime">—</span>
-            <a href="#history">Compare all saved results</a>
-          </div>
-        </div>
-      </div>
+    <section class="panel developer-panel">
+      <span class="eyebrow">INTENDED USE</span>
+      <h2>Built for Developers and Engineering</h2>
+
+      <ul class="developer-list">
+        <li>GNSS navigation software development</li>
+        <li>RAAM and positioning-system integration</li>
+        <li>RINEX and ionospheric-data processing</li>
+        <li>Embedded and aerospace software projects</li>
+        <li>Research, education, and technical validation</li>
+      </ul>
     </section>
+
+    <footer>
+      <strong>HaniaION — Open Source GNSS Developer Utility</strong>
+      <span>
+        Python · FastAPI · Docker · NASA CDDIS · RINEX · RAAM
+      </span>
+
+      <a
+        href="https://github.com/I2005I/HaniaION"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Source code on GitHub
+      </a>
+    </footer>
+
   </main>
 
-  <footer class="site-footer reveal">
-    <div class="footer-brand"><img src="/static/icons/icon.svg" alt="" width="36" height="36"><span><strong>HaniaION</strong><small>GNSS Ionospheric Data Platform</small></span></div>
-    <p>Open-source utility for GNSS engineering, RINEX processing, and RAAM integration.</p>
-    <nav aria-label="Footer navigation"><a href="/docs">API Docs</a><a href="/api/health">Health</a><a href="https://github.com/I2005I/HaniaION" target="_blank" rel="noopener noreferrer">GitHub</a></nav>
-  </footer>
-
-  <div id="installModal" class="install-modal hidden" role="dialog" aria-modal="true" aria-labelledby="installModalTitle">
-    <div class="install-modal-backdrop" data-close-install></div>
-    <div class="install-modal-card">
-      <button class="install-modal-close" type="button" data-close-install aria-label="Close">×</button>
-      <div class="install-app-icon"><img src="/static/icons/icon.svg" alt="" width="58" height="58"></div>
-      <span class="section-kicker">INSTALL HaniaION</span>
-      <h2 id="installModalTitle">Add it to your phone</h2>
-      <div id="installAndroidInstructions" class="install-instructions hidden">
-        <p>Install HaniaION as a standalone app with its own icon and full-screen window.</p>
-        <button id="confirmInstallButton" class="button button-primary full-width" type="button">Install app</button>
-      </div>
-      <div id="installIosInstructions" class="install-instructions hidden">
-        <p>On iPhone, open this page in <strong>Safari</strong>, tap the <strong>Share</strong> button <span class="share-symbol">□↑</span>, then choose <strong>Add to Home Screen</strong>.</p>
-        <div class="ios-install-steps"><span>1</span> Share <i>→</i><span>2</span> Add to Home Screen</div>
-      </div>
-      <div id="installFallbackInstructions" class="install-instructions hidden">
-        <p>Open your browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>
-      </div>
-    </div>
-  </div>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <div class="cursor-glow" aria-hidden="true"></div>
-  <script src="/static/app.js" defer></script>
+  <script src="/static/app.js"></script>
 </body>
 </html>
