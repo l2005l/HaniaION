@@ -8,15 +8,15 @@
   <link rel="icon" href="/static/icons/icon.svg">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="/static/wind.css?v=8">
-  <title>HaniaION — Mission Weather Center V8</title>
+  <link rel="stylesheet" href="/static/wind.css?v=8.1">
+  <title>HaniaION — Mission Weather Center V8.1</title>
 </head>
 <body class="wind-body">
   <main class="mission-shell">
     <header class="mission-header">
       <a class="mission-brand" href="/">
         <img src="/static/icons/icon.svg" alt="HaniaION logo">
-        <div><strong>HaniaION</strong><span>Mission Weather Center · V8</span></div>
+        <div><strong>HaniaION</strong><span>Mission Weather Center · V8.1</span></div>
       </a>
       <div class="mission-clock"><span>UTC</span><strong id="utcClock">--:--:--</strong></div>
       <a class="mission-back" href="/">Back to RAAM</a>
@@ -90,13 +90,14 @@
 
         <div class="planner-map-card">
           <div id="routeMap" aria-label="Route planning map"></div>
-          <div class="map-hint" id="mapHint">Select a point-setting button, then click the map.</div>
+          <div class="map-hint" id="mapHint">Select a point-setting button, then click the map. Right-click to clear the route.</div>
         </div>
 
         <aside class="route-results">
           <div class="section-kicker">ROUTE METRICS</div>
           <div class="metric"><span>Great-circle distance</span><strong id="distanceNm">—</strong></div>
           <div class="metric"><span>Initial true bearing</span><strong id="bearingDeg">—</strong></div>
+          <div class="metric"><span>Reciprocal true bearing</span><strong id="reciprocalDeg">—</strong></div>
           <div class="metric"><span>Estimated still-air time</span><strong id="estimatedTime">—</strong></div>
           <div class="metric"><span>Selected weather layer</span><strong id="routeWeatherLayer">34,000 ft · Now</strong></div>
           <button id="openWeatherView" class="secondary-button" type="button">Open wind map</button>
@@ -118,6 +119,6 @@
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/static/wind.js?v=8"></script>
+  <script src="/static/wind.js?v=8.1"></script>
 </body>
 </html>
