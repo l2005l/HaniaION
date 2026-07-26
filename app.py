@@ -13,6 +13,7 @@ import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from haniaion_ui_v2 import router as ui_v2_router
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
@@ -21,8 +22,14 @@ APP_NAME = "HaniaION RAAM"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 
-app = FastAPI(title=APP_NAME)
+app = FastAPI(
+    title=APP_NAME,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.include_router(ui_v2_router)
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {
@@ -340,14 +347,9 @@ def calculate_latest() -> dict[str, Any]:
     return result
 
 
-@app.get("/")
-def index():
-    return FileResponse("static/index.html")
 
 
-@app.get("/wind")
-def wind_page():
-    return FileResponse("static/wind.html")
+
 
 
 @app.get("/manifest.webmanifest")
