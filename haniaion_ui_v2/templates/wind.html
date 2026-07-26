@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <title>Weather · HaniaION</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/ui-static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">HaniaION V2</p>
+      <div class="status-row">
+        <span class="status-dot"></span><span>Online</span>
+        <span class="divider">•</span><time id="utcClock">UTC --:--:--</time>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a class="icon-btn link-icon" href="/" aria-label="Back to main page">←</a>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle dark or light mode">◐</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">Current conditions</p>
+      <h1>Weather</h1>
+      <p>Use device location or enter coordinates manually.</p>
+    </section>
+
+    <section class="weather-controls">
+      <button id="locateBtn" class="primary-btn" type="button">Use My Location</button>
+      <div class="coordinate-grid">
+        <label>Latitude<input id="latitude" inputmode="decimal" value="31.423"></label>
+        <label>Longitude<input id="longitude" inputmode="decimal" value="34.589"></label>
+      </div>
+      <button id="weatherBtn" class="secondary-btn full" type="button">Refresh Weather</button>
+      <p id="weatherMessage" class="message" role="status"></p>
+    </section>
+
+    <section id="weatherCard" class="weather-card hidden">
+      <div>
+        <span class="weather-label">Temperature</span>
+        <strong id="temperature">—</strong>
+      </div>
+      <div>
+        <span class="weather-label">Wind speed</span>
+        <strong id="windSpeed">—</strong>
+      </div>
+      <div>
+        <span class="weather-label">Wind direction</span>
+        <strong id="windDirection">—</strong>
+      </div>
+      <div>
+        <span class="weather-label">Conditions</span>
+        <strong id="conditions">—</strong>
+      </div>
+      <p id="weatherUpdated" class="weather-updated"></p>
+    </section>
+  </main>
+
+  <script src="/ui-static/common.js" defer></script>
+  <script src="/ui-static/wind.js" defer></script>
+</body>
+</html>

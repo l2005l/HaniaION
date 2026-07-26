@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b1020">
+  <title>HaniaION</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/ui-static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">HaniaION V2</p>
+      <div class="status-row">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="statusText">Online</span>
+        <span class="divider">•</span>
+        <time id="utcClock">UTC --:--:--</time>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div id="k69Mini" class="k69-mini" title="K69 returned by the server">
+        <span>K69</span><strong>—</strong>
+      </div>
+      <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle dark or light mode">◐</button>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="hero">
+      <h1>Latest ionosphere data</h1>
+      <p>Retrieve the current values from the existing server calculation endpoint.</p>
+      <button id="retrieveBtn" class="primary-btn" type="button">
+        <span class="btn-label">Retrieve Latest Data</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+      <p id="message" class="message" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="data-grid" aria-label="Latest data">
+      <article class="data-card"><span>Data1</span><strong id="data1">—</strong></article>
+      <article class="data-card"><span>Data2</span><strong id="data2">—</strong></article>
+      <article class="data-card"><span>Data3</span><strong id="data3">—</strong></article>
+      <article class="data-card"><span>Data4</span><strong id="data4">—</strong></article>
+      <article class="data-card wide"><span>tLS</span><strong id="tls">—</strong></article>
+    </section>
+
+    <section class="action-row" aria-label="Result actions">
+      <button id="copyBtn" class="secondary-btn" type="button" disabled>Copy</button>
+      <button id="txtBtn" class="secondary-btn" type="button" disabled>Export TXT</button>
+      <button id="jsonBtn" class="secondary-btn" type="button" disabled>Export JSON</button>
+      <a class="secondary-btn link-btn" href="/wind">Weather</a>
+    </section>
+
+    <section class="history-section">
+      <div class="section-title-row">
+        <div>
+          <p class="eyebrow">Local device</p>
+          <h2>History</h2>
+        </div>
+        <button id="clearHistoryBtn" class="text-btn" type="button">Clear</button>
+      </div>
+      <div id="historyList" class="history-list">
+        <p class="empty-state">No saved results yet.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="/ui-static/app.js" defer></script>
+</body>
+</html>
