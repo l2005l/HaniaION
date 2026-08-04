@@ -887,36 +887,87 @@ checkHealth();
 setInterval(checkHealth, 60000);
 
 
-function initializeK69Embed() {
-  const frame = byId("k69Frame");
-  const loading = byId("k69Loading");
-  const fallback = byId("k69Fallback");
-  const reload = byId("reloadK69Button");
-  if (!frame) return;
 
-  let timer;
-  const startLoading = () => {
-    loading?.classList.remove("hidden");
-    fallback?.classList.add("hidden");
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      loading?.classList.add("hidden");
-      fallback?.classList.remove("hidden");
-    }, 15000);
-  };
+const K69_INTERVAL_MS = 12.5 * 60 * 1000;
+const K69_ANCHOR_UTC = {hour: 0, minute: 9, second: 11};
 
-  frame.addEventListener("load", () => {
-    clearTimeout(timer);
-    loading?.classList.add("hidden");
-    fallback?.classList.add("hidden");
-  });
-
-  reload?.addEventListener("click", () => {
-    startLoading();
-    frame.src = `/k69-embed?refresh=${Date.now()}`;
-  });
-
-  startLoading();
+function getK69WeeklyAnchorUtc(currentTime) {
+  const dayOfWeekUtc = currentTime.getUTCDay();
+  return new Date(Date.UTC(
+    currentTime.getUTCFullYear(),
+    currentTime.getUTCMonth(),
+    currentTime.getUTCDate() - dayOfWeekUtc,
+    K69_ANCHOR_UTC.hour,
+    K69_ANCHOR_UTC.minute,
+    K69_ANCHOR_UTC.second,
+    0
+  ));
 }
 
-document.addEventListener("DOMContentLoaded", initializeK69Embed);
+function calculateNextK69(currentTime) {
+  const weeklyAnchor = getK69WeeklyAnchorUtc(currentTime);
+  const elapsed = currentTime.getTime() - weeklyAnchor.getTime();
+  const inInterval = ((elapsed % K69_INTERVAL_MS) + K69_INTERVAL_MS) % K69_INTERVAL_MS;
+  const toleranceMs = 20;
+  const remaining = inInterval <= toleranceMs ? 0 : K69_INTERVAL_MS - inInterval;
+  return {next: new Date(currentTime.getTime() + remaining), remaining, weeklyAnchor};
+}
+
+function padK69(value) { return String(value).padStart(2, "0"); }
+function formatK69Local(date) { return `${padK69(date.getHours())}:${padK69(date.getMinutes())}:${padK69(date.getSeconds())}`; }
+function formatK69Utc(date) { return `${padK69(date.getUTCHours())}:${padK69(date.getUTCMinutes())}:${padK69(date.getUTCSeconds())}`; }
+function formatK69Countdown(milliseconds) {
+  const seconds = Math.ceil(Math.max(0, milliseconds) / 1000);
+  return `${padK69(Math.floor(seconds / 60))}:${padK69(seconds % 60)}`;
+}
+
+function renderK69Timeline(nextTime) {
+  const timeline = byId("k69Timeline");
+  if (!timeline) return;
+  const items = [-2, -1, 0, 1].map((offset, index) => {
+    const eventTime = new Date(nextTime.getTime() + offset * K69_INTERVAL_MS);
+    const isNext = offset === 0;
+    const label = isNext ? "K הבא" : offset < 0 ? `K ${offset}` : "K +1";
+    return `<div class="k69-timeline-item ${isNext ? "is-next" : ""}">
+      <span class="k69-timeline-dot"></span>
+      <strong>${label}</strong>
+      <time>${formatK69Local(eventTime)}</time>
+      <small>${formatK69Utc(eventTime)} UTC</small>
+    </div>${index < 3 ? '<span class="k69-timeline-line"></span>' : ''}`;
+  }).join("");
+  timeline.innerHTML = items;
+}
+
+function updateK69Monitor() {
+  const localTime = byId("k69LocalTime");
+  if (!localTime) return;
+  const now = new Date();
+  const {next, remaining} = calculateNextK69(now);
+  const progress = Math.max(0, Math.min(1, 1 - (remaining / K69_INTERVAL_MS)));
+  const ring = byId("k69ProgressRing");
+
+  localTime.textContent = formatK69Local(now);
+  byId("k69UtcTime").textContent = formatK69Utc(now);
+  byId("k69NextLocal").textContent = formatK69Local(next);
+  byId("k69NextUtc").textContent = formatK69Utc(next);
+  byId("k69Countdown").textContent = formatK69Countdown(remaining);
+  byId("k69TimeZone").textContent = `אזור זמן: ${Intl.DateTimeFormat().resolvedOptions().timeZone || "לא ידוע"}`;
+  byId("k69NextDate").textContent = new Intl.DateTimeFormat("he-IL", {weekday:"short", day:"2-digit", month:"2-digit"}).format(next);
+  ring?.style.setProperty("--k69-progress", `${progress * 360}deg`);
+  ring?.classList.toggle("k69-warning", remaining <= 5 * 60 * 1000 && remaining > 60 * 1000);
+  ring?.classList.toggle("k69-critical", remaining <= 60 * 1000);
+
+  const marker = `${next.getTime()}`;
+  if (ring?.dataset.nextMarker !== marker) {
+    ring.dataset.nextMarker = marker;
+    renderK69Timeline(next);
+  }
+}
+
+function initializeK69Monitor() {
+  if (!byId("k69LocalTime")) return;
+  updateK69Monitor();
+  window.setInterval(updateK69Monitor, 100);
+}
+
+document.addEventListener("DOMContentLoaded", initializeK69Monitor);

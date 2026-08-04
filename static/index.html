@@ -122,10 +122,34 @@
     </section>
 
     <section id="gps-pulse" class="pulse-section reveal">
-      <div class="section-heading focused-heading"><div><span class="section-kicker">K-69</span><h2>GPS Pulse Monitor</h2></div><p>תצוגת זמן GPS, זמן הפעימה הבאה והמונֶה החי.</p></div>
-      <article class="card pulse-card pulse-card-embedded">
-        <div class="pulse-card-copy"><div class="pulse-icon">⌁</div><div><div class="pulse-title-row"><h3>K-69 Live Monitor</h3><span class="external-badge"><span></span> מקור חי</span></div><p>הנתונים מוצגים ישירות בתוך HaniaION ונשלטים על ידי המקור החיצוני.</p></div></div>
-        <div class="pulse-frame-shell"><div class="pulse-frame-toolbar"><div class="pulse-frame-status"><span></span> תצוגה חיה בתוך HaniaION</div><button id="reloadK69Button" class="pulse-reload-button" type="button">טען מחדש</button></div><div id="k69Loading" class="k69-loading">טוען את נתוני K-69…</div><iframe id="k69Frame" class="pulse-frame" src="/k69-embed" title="K-69 GPS pulse live monitor" loading="eager" scrolling="yes"></iframe><div id="k69Fallback" class="pulse-fallback hidden">לא ניתן לטעון כרגע את תצוגת K-69. לחץ על „טען מחדש”.</div></div>
+      <div class="section-heading focused-heading"><div><span class="section-kicker">K-69</span><h2>K-69 Live Monitor</h2></div><p>החישוב מתבצע מקומית לפי שעון המכשיר, ללא תלות באתר חיצוני.</p></div>
+      <article class="card k69-monitor-card">
+        <div class="k69-monitor-head">
+          <div class="pulse-card-copy"><div class="pulse-icon">⌁</div><div><div class="pulse-title-row"><h3>לוח זמנים K-69</h3><span class="external-badge k69-device-badge"><span></span> שעון המכשיר</span></div><p>אירוע K מתוזמן במחזור של 12 דקות ו־30 שניות, לפי נקודת עוגן שבועית ביום ראשון 00:09:11 UTC.</p></div></div>
+          <div class="k69-live-state"><span></span><strong>פעיל</strong></div>
+        </div>
+
+        <div class="k69-dashboard">
+          <div class="k69-countdown-wrap">
+            <div id="k69ProgressRing" class="k69-progress-ring" style="--k69-progress:0deg">
+              <div class="k69-ring-inner"><small>זמן שנותר</small><strong id="k69Countdown">--:--</strong><span>עד אירוע K הבא</span></div>
+            </div>
+          </div>
+
+          <div class="k69-time-grid">
+            <div class="k69-time-card"><span>זמן מקומי</span><strong id="k69LocalTime">--:--:--</strong><small id="k69TimeZone">אזור זמן: —</small></div>
+            <div class="k69-time-card"><span>זמן UTC</span><strong id="k69UtcTime">--:--:--</strong><small>שעון אוניברסלי מתואם</small></div>
+            <div class="k69-time-card k69-next-card"><span>K הבא — זמן מקומי</span><strong id="k69NextLocal">--:--:--</strong><small id="k69NextDate">—</small></div>
+            <div class="k69-time-card k69-next-card"><span>K הבא — UTC</span><strong id="k69NextUtc">--:--:--</strong><small>מחזור 12:30</small></div>
+          </div>
+        </div>
+
+        <div class="k69-timeline-card">
+          <div class="k69-timeline-head"><div><span class="card-label">רצף האירועים הקרוב</span><h3>לוח K</h3></div><span class="result-badge">Anchor: Sun 00:09:11 UTC</span></div>
+          <div id="k69Timeline" class="k69-timeline" aria-live="polite"></div>
+        </div>
+
+        <div class="k69-footnote"><span>ⓘ</span><p>החישוב מבוסס על שעון המכשיר בלבד ואינו קורא נתונים ישירות ממקלט GNSS או מלוויין.</p></div>
       </article>
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
@@ -142,6 +166,6 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=44" defer></script>
+  <script src="/static/app.js?v=45" defer></script>
 </body>
 </html>
