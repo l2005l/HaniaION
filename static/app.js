@@ -487,18 +487,20 @@ async function shareResult() {
   const text = buildTextExport();
   const title = `HaniaION RAAM — ${latestResult.source_date || "Latest result"}`;
   try {
-    const file = new File([text], "RAAM.txt", { type: "text/plain;charset=utf-8" });
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ title, text: "נתוני RAAM מ־HaniaION", files: [file] });
-      return;
-    }
+    // Text sharing is supported more consistently than file sharing across mobile browsers.
     if (navigator.share) {
       await navigator.share({ title, text });
       return;
     }
     await copyText(text, "הנתונים הועתקו — ניתן להדביק בוואטסאפ או במייל");
   } catch (error) {
-    if (error?.name !== "AbortError") showToast("לא ניתן לפתוח את חלון השיתוף");
+    if (error?.name === "AbortError") return;
+    // Some installed PWAs expose navigator.share but reject it. Never leave the user stuck.
+    try {
+      await copyText(text, "חלון השיתוף לא נפתח, לכן הנתונים הועתקו ללוח");
+    } catch (_) {
+      showToast("לא ניתן לשתף כרגע. ניתן להוריד RAAM.txt");
+    }
   }
 }
 
@@ -883,3 +885,38 @@ initializePremiumMotion();
 initializeNotifications();
 checkHealth();
 setInterval(checkHealth, 60000);
+
+
+function initializeK69Embed() {
+  const frame = byId("k69Frame");
+  const loading = byId("k69Loading");
+  const fallback = byId("k69Fallback");
+  const reload = byId("reloadK69Button");
+  if (!frame) return;
+
+  let timer;
+  const startLoading = () => {
+    loading?.classList.remove("hidden");
+    fallback?.classList.add("hidden");
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      loading?.classList.add("hidden");
+      fallback?.classList.remove("hidden");
+    }, 15000);
+  };
+
+  frame.addEventListener("load", () => {
+    clearTimeout(timer);
+    loading?.classList.add("hidden");
+    fallback?.classList.add("hidden");
+  });
+
+  reload?.addEventListener("click", () => {
+    startLoading();
+    frame.src = `/k69-embed?refresh=${Date.now()}`;
+  });
+
+  startLoading();
+}
+
+document.addEventListener("DOMContentLoaded", initializeK69Embed);

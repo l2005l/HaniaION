@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 import requests
 from fastapi import FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from requests.adapters import HTTPAdapter
 try:
@@ -519,6 +519,37 @@ def index():
 @app.get("/wind")
 def wind_page():
     return FileResponse("static/wind.html")
+
+
+@app.get("/k69-embed", response_class=HTMLResponse)
+def k69_embed():
+    """Render the external K-69 monitor inside HaniaION without opening a new window."""
+    try:
+        response = requests.get(
+            "https://k69.link/",
+            timeout=(10, 25),
+            headers={"User-Agent": "HaniaION-K69-Embed/1.0", "Accept": "text/html,*/*"},
+        )
+        response.raise_for_status()
+        html = response.text
+        # Resolve relative scripts, styles and images against the original site.
+        if "<head" in html.lower():
+            html = re.sub(r'(<head[^>]*>)', r'\1<base href="https://k69.link/">', html, count=1, flags=re.I)
+        else:
+            html = '<base href="https://k69.link/">' + html
+        return HTMLResponse(
+            html,
+            headers={
+                "Cache-Control": "no-store",
+                "Content-Security-Policy": "default-src 'self' https://k69.link data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://k69.link wss://k69.link; img-src 'self' https://k69.link data: blob:; frame-ancestors 'self'",
+            },
+        )
+    except requests.RequestException as error:
+        return HTMLResponse(
+            """<!doctype html><html lang='he' dir='rtl'><meta charset='utf-8'><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fff;color:#17324a;font-family:Arial,sans-serif;text-align:center;padding:24px;box-sizing:border-box}strong{font-size:1.15rem}p{color:#64748b}</style><body><div><strong>תצוגת K-69 אינה זמינה כרגע</strong><p>נסה לטעון מחדש בעוד מספר שניות.</p></div></body></html>""",
+            status_code=502,
+            headers={"Cache-Control": "no-store"},
+        )
 
 
 @app.get("/admin")

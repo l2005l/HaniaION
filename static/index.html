@@ -90,11 +90,11 @@
       <div class="section-heading results-heading-row"><div><span class="section-kicker">LATEST RESULT</span><h2>נתוני BRDC האחרונים</h2><p class="success-subtitle">✓ הומרו לערכי RAAM בהצלחה</p></div><div class="result-status-group"><span id="cacheBadge" class="result-badge">עודכן כעת</span><span id="updatedAt" class="updated-at">—</span></div></div>
       <div class="source-strip"><div><span>קובץ מקור</span><strong id="fileName">—</strong></div><div><span>תאריך מקור UTC</span><strong id="sourceDate">—</strong></div><div><span>מודל</span><strong>GPS Klobuchar</strong></div></div>
       <div class="value-grid">
-        <article class="value-card"><span>DATA 1</span><strong id="data1">—</strong><small>Alpha A0 · A1</small><button class="mini-copy" data-copy-target="data1" type="button">העתק</button></article>
-        <article class="value-card"><span>DATA 2</span><strong id="data2">—</strong><small>Alpha A2 · A3</small><button class="mini-copy" data-copy-target="data2" type="button">העתק</button></article>
-        <article class="value-card"><span>DATA 3</span><strong id="data3">—</strong><small>Beta B0 · B1</small><button class="mini-copy" data-copy-target="data3" type="button">העתק</button></article>
-        <article class="value-card"><span>DATA 4</span><strong id="data4">—</strong><small>Beta B2 · B3</small><button class="mini-copy" data-copy-target="data4" type="button">העתק</button></article>
-        <article class="value-card tls-card"><span>tLS</span><strong id="tls">—</strong><small>Leap seconds</small><button class="mini-copy" data-copy-target="tls" type="button">העתק</button></article>
+        <article class="value-card"><span>DATA 1</span><strong id="data1">—</strong><small>Alpha A0 · A1</small></article>
+        <article class="value-card"><span>DATA 2</span><strong id="data2">—</strong><small>Alpha A2 · A3</small></article>
+        <article class="value-card"><span>DATA 3</span><strong id="data3">—</strong><small>Beta B0 · B1</small></article>
+        <article class="value-card"><span>DATA 4</span><strong id="data4">—</strong><small>Beta B2 · B3</small></article>
+        <article class="value-card tls-card"><span>TLS/UTC</span><strong id="tls">—</strong><small>Leap seconds</small></article>
       </div>
       <div class="result-actions"><button id="copyButton" class="button button-primary" type="button">העתק הכול</button><button id="downloadTxtButton" class="button button-secondary" type="button">RAAM.txt</button><button id="downloadJsonButton" class="button button-secondary" type="button">JSON</button><button id="downloadCsvButton" class="button button-secondary" type="button">CSV</button><button id="shareResultButton" class="button button-secondary" type="button">שיתוף</button><button id="refreshButton" class="button button-ghost" type="button">רענן</button></div>
       <details class="raw-panel"><summary><span><strong>מקדמי Klobuchar המקוריים</strong><small>הערכים המדעיים מתוך כותרת ה־RINEX</small></span><span class="summary-icon">+</span></summary><div class="raw-grid"><div><span>GPSA / Alpha</span><code id="alpha">—</code></div><div><span>GPSB / Beta</span><code id="beta">—</code></div></div></details>
@@ -125,7 +125,7 @@
       <div class="section-heading focused-heading"><div><span class="section-kicker">K-69</span><h2>GPS Pulse Monitor</h2></div><p>תצוגת זמן GPS, זמן הפעימה הבאה והמונֶה החי.</p></div>
       <article class="card pulse-card pulse-card-embedded">
         <div class="pulse-card-copy"><div class="pulse-icon">⌁</div><div><div class="pulse-title-row"><h3>K-69 Live Monitor</h3><span class="external-badge"><span></span> מקור חי</span></div><p>הנתונים מוצגים ישירות בתוך HaniaION ונשלטים על ידי המקור החיצוני.</p></div></div>
-        <div class="pulse-frame-shell"><div class="pulse-frame-toolbar"><div class="pulse-frame-status"><span></span> תצוגה חיה</div><a href="https://k69.link/" target="_blank" rel="noopener noreferrer">פתח בנפרד ↗</a></div><iframe class="pulse-frame" src="https://k69.link/" title="K-69 GPS pulse live monitor" loading="eager" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" scrolling="no"></iframe><div class="pulse-fallback">אם התצוגה החיצונית אינה נטענת, השתמש בקישור „פתח בנפרד”.</div></div>
+        <div class="pulse-frame-shell"><div class="pulse-frame-toolbar"><div class="pulse-frame-status"><span></span> תצוגה חיה בתוך HaniaION</div><button id="reloadK69Button" class="pulse-reload-button" type="button">טען מחדש</button></div><div id="k69Loading" class="k69-loading">טוען את נתוני K-69…</div><iframe id="k69Frame" class="pulse-frame" src="/k69-embed" title="K-69 GPS pulse live monitor" loading="eager" scrolling="yes"></iframe><div id="k69Fallback" class="pulse-fallback hidden">לא ניתן לטעון כרגע את תצוגת K-69. לחץ על „טען מחדש”.</div></div>
       </article>
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
@@ -142,6 +142,6 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=43" defer></script>
+  <script src="/static/app.js?v=44" defer></script>
 </body>
 </html>

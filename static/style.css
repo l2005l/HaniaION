@@ -1098,3 +1098,20 @@ html[data-theme="light"] .install-modal-close { color:#fff !important; backgroun
     bottom: max(94px, calc(env(safe-area-inset-bottom) + 82px));
   }
 }
+
+
+/* v1.0.3 — clean result cards, reliable share/K-69 display and safer floating control */
+.mini-copy { display:none !important; }
+.pulse-reload-button {
+  appearance:none; border:1px solid rgba(91,211,255,.3); border-radius:10px;
+  background:rgba(20,80,120,.42); color:#9be5ff; font:inherit; font-weight:800;
+  padding:7px 12px; cursor:pointer;
+}
+.pulse-reload-button:hover { color:#fff; background:rgba(27,91,139,.72); }
+.k69-loading { min-height:190px; display:grid; place-items:center; color:#0e547b; background:#fff; font-weight:900; }
+.k69-loading.hidden { display:none; }
+.pulse-fallback.hidden { display:none; }
+.floating-top-button { bottom:max(122px, calc(env(safe-area-inset-bottom) + 110px)) !important; }
+@media (max-width:650px) {
+  .floating-top-button { bottom:max(142px, calc(env(safe-area-inset-bottom) + 128px)) !important; }
+}
