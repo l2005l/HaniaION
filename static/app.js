@@ -11,6 +11,7 @@ const elements = {
   downloadTxtButton: byId("downloadTxtButton"),
   downloadJsonButton: byId("downloadJsonButton"),
   downloadCsvButton: byId("downloadCsvButton"),
+  shareResultButton: byId("shareResultButton"),
   viewResultsButton: byId("viewResultsButton"),
   resultsPanel: byId("resultsPanel"),
   idleState: byId("idleState"),
@@ -23,7 +24,6 @@ const elements = {
   progressStep: byId("progressStep"),
   elapsedTime: byId("elapsedTime"),
   errorText: byId("errorText"),
-  themeToggle: byId("themeToggle"),
   serviceStatus: byId("serviceStatus"),
   serviceStatusText: byId("serviceStatusText"),
   toast: byId("toast"),
@@ -481,17 +481,35 @@ function exportCsv() {
   showToast("CSV export created");
 }
 
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem("haniaion-theme", theme);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", theme === "dark" ? "#07111f" : "#eef6fb");
-  elements.themeToggle.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
+
+async function shareResult() {
+  if (!latestResult) return;
+  const text = buildTextExport();
+  const title = `HaniaION RAAM — ${latestResult.source_date || "Latest result"}`;
+  try {
+    const file = new File([text], "RAAM.txt", { type: "text/plain;charset=utf-8" });
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ title, text: "נתוני RAAM מ־HaniaION", files: [file] });
+      return;
+    }
+    if (navigator.share) {
+      await navigator.share({ title, text });
+      return;
+    }
+    await copyText(text, "הנתונים הועתקו — ניתן להדביק בוואטסאפ או במייל");
+  } catch (error) {
+    if (error?.name !== "AbortError") showToast("לא ניתן לפתוח את חלון השיתוף");
+  }
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = "dark";
+  localStorage.setItem("haniaion-theme", "dark");
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#07111f");
 }
 
 function initializeTheme() {
-  const saved = localStorage.getItem("haniaion-theme");
-  const preferred = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-  applyTheme(saved || preferred);
+  applyTheme();
 }
 
 function setLiveStatus(cardId, labelId, detailId, state, label, detail) {
@@ -539,8 +557,8 @@ function registerEvents() {
   elements.downloadTxtButton.addEventListener("click", exportTxt);
   elements.downloadJsonButton.addEventListener("click", exportJson);
   elements.downloadCsvButton.addEventListener("click", exportCsv);
+  elements.shareResultButton?.addEventListener("click", shareResult);
   elements.viewResultsButton.addEventListener("click", () => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }));
-  elements.themeToggle.addEventListener("click", () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 
   document.querySelectorAll(".mini-copy").forEach(button => {
     button.addEventListener("click", () => {

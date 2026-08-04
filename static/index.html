@@ -7,9 +7,9 @@
   <meta name="description" content="HaniaION מורידה את קובץ BRDC העדכני, מחלצת מקדמי Klobuchar וממירה אותם לערכי RAAM.">
   <meta name="color-scheme" content="dark light">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/static/icons/icon.svg?v=42" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=42">
-  <link rel="stylesheet" href="/static/style.css?v=42">
+  <link rel="icon" href="/static/icons/icon.svg?v=43" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
+  <link rel="stylesheet" href="/static/style.css?v=43">
   <title>HaniaION — BRDC to RAAM</title>
 </head>
 <body class="focused-app">
@@ -23,7 +23,6 @@
         <span class="status-dot"></span><span id="serviceStatusText">בודק שירות</span>
       </div>
       <button id="installAppButton" class="icon-button" type="button" aria-label="התקנת האפליקציה" title="התקנה בטלפון">⇩</button>
-      <button id="themeToggle" class="icon-button" type="button" aria-label="החלפת מצב תצוגה" title="מצב בהיר/כהה"><span class="theme-icon">◐</span></button>
     </div>
   </header>
 
@@ -97,7 +96,7 @@
         <article class="value-card"><span>DATA 4</span><strong id="data4">—</strong><small>Beta B2 · B3</small><button class="mini-copy" data-copy-target="data4" type="button">העתק</button></article>
         <article class="value-card tls-card"><span>tLS</span><strong id="tls">—</strong><small>Leap seconds</small><button class="mini-copy" data-copy-target="tls" type="button">העתק</button></article>
       </div>
-      <div class="result-actions"><button id="copyButton" class="button button-primary" type="button">העתק הכול</button><button id="downloadTxtButton" class="button button-secondary" type="button">RAAM.txt</button><button id="downloadJsonButton" class="button button-secondary" type="button">JSON</button><button id="downloadCsvButton" class="button button-secondary" type="button">CSV</button><button id="refreshButton" class="button button-ghost" type="button">רענן</button></div>
+      <div class="result-actions"><button id="copyButton" class="button button-primary" type="button">העתק הכול</button><button id="downloadTxtButton" class="button button-secondary" type="button">RAAM.txt</button><button id="downloadJsonButton" class="button button-secondary" type="button">JSON</button><button id="downloadCsvButton" class="button button-secondary" type="button">CSV</button><button id="shareResultButton" class="button button-secondary" type="button">שיתוף</button><button id="refreshButton" class="button button-ghost" type="button">רענן</button></div>
       <details class="raw-panel"><summary><span><strong>מקדמי Klobuchar המקוריים</strong><small>הערכים המדעיים מתוך כותרת ה־RINEX</small></span><span class="summary-icon">+</span></summary><div class="raw-grid"><div><span>GPSA / Alpha</span><code id="alpha">—</code></div><div><span>GPSB / Beta</span><code id="beta">—</code></div></div></details>
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
@@ -143,6 +142,6 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=42" defer></script>
+  <script src="/static/app.js?v=43" defer></script>
 </body>
 </html>

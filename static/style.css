@@ -1082,3 +1082,19 @@ html[data-theme="light"] .install-modal-close { color:#fff !important; backgroun
   .history-section,.analytics-section,.pulse-section,.workspace-section.always-dark-section { padding:20px 14px; }
   .floating-top-button { width:44px; height:44px; }
 }
+
+
+/* Final mobile polish: keep the floating return control clear of the footer. */
+.focused-footer { padding-bottom: 88px; }
+.floating-top-button {
+  left: auto;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(82px, calc(env(safe-area-inset-bottom) + 70px));
+}
+@media (max-width:650px) {
+  .focused-footer { padding-bottom: 102px; }
+  .floating-top-button {
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(94px, calc(env(safe-area-inset-bottom) + 82px));
+  }
+}
