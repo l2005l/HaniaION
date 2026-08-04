@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v1-0-1-contrast-fix-20260805";
+const CACHE_NAME = "haniaion-mission-v42";
 const APP_SHELL = ["/", "/wind", "/static/style.css?v=41", "/static/app.js?v=41", "/static/wind.css?v=41", "/static/wind.js?v=41", "/static/icons/icon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", event => {

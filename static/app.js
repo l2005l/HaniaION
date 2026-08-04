@@ -198,11 +198,12 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     saveResultToHistory(payload);
     elements.progressBar.style.width = "100%";
     setState("success");
-    showToast(payload.cached ? "Cached RAAM data loaded" : "Latest RAAM data generated");
+    showToast(payload.cached ? "נתוני RAAM נטענו מהמטמון" : "הנתונים עודכנו בהצלחה");
+    setTimeout(() => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 320);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "אירעה שגיאה לא צפויה.";
     elements.errorText.textContent = rawMessage.includes("Earthdata")
-      ? "השרת עדיין אינו מחובר לחשבון Earthdata. לאחר הגדרת פרטי החיבור ב־Render, שליפת BRDC תפעל כאן כרגיל."
+      ? "מקור נתוני BRDC אינו זמין כרגע. בדוק את הגדרות החיבור בשרת ונסה שוב."
       : rawMessage;
     setState("error");
   } finally {
@@ -530,8 +531,8 @@ async function checkHealth() {
 }
 
 function registerEvents() {
-  elements.calculateButton.addEventListener("click", () => calculate());
-  elements.heroCalculateButton.addEventListener("click", () => calculate({ scrollToWorkspace: true }));
+  elements.calculateButton?.addEventListener("click", () => calculate());
+  elements.heroCalculateButton?.addEventListener("click", () => calculate({ scrollToWorkspace: true }));
   elements.refreshButton.addEventListener("click", () => calculate());
   elements.retryButton.addEventListener("click", () => calculate());
   elements.copyButton.addEventListener("click", () => latestResult && copyText(buildTextExport(), "All RAAM values copied"));
@@ -844,7 +845,17 @@ elements.exportHistoryCsvButton?.addEventListener("click", exportHistoryCsv);
 window.addEventListener("resize", () => { clearTimeout(window.__haniaChartTimer); window.__haniaChartTimer=setTimeout(renderAnalytics,150); });
 updateUtcClock(); setInterval(updateUtcClock, 1000);
 
+
+function initializeFloatingTopButton() {
+  const button = byId("floatingTopButton");
+  if (!button) return;
+  const update = () => button.classList.toggle("visible", window.scrollY > 520);
+  window.addEventListener("scroll", update, {passive: true});
+  button.addEventListener("click", () => byId("quick-menu")?.scrollIntoView({behavior: "smooth", block: "start"}));
+  update();
+}
 initializeTheme();
+initializeFloatingTopButton();
 registerEvents();
 registerHistoryEvents();
 renderHistory();

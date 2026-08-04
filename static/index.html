@@ -7,9 +7,9 @@
   <meta name="description" content="HaniaION מורידה את קובץ BRDC העדכני, מחלצת מקדמי Klobuchar וממירה אותם לערכי RAAM.">
   <meta name="color-scheme" content="dark light">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/static/icons/icon.svg?v=41" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=41">
-  <link rel="stylesheet" href="/static/style.css?v=41">
+  <link rel="icon" href="/static/icons/icon.svg?v=42" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=42">
+  <link rel="stylesheet" href="/static/style.css?v=42">
   <title>HaniaION — BRDC to RAAM</title>
 </head>
 <body class="focused-app">
@@ -28,6 +28,7 @@
   </header>
 
   <main id="top" class="focused-main">
+    <span id="quick-menu" class="anchor-target" aria-hidden="true"></span>
     <section class="focused-hero reveal">
       <div class="focused-hero-copy">
         <span class="section-kicker">IONOSPHERIC DATA</span>
@@ -39,21 +40,21 @@
         </div>
       </div>
 
-      <div class="focused-tools" aria-label="כלים מהירים">
+      <nav class="focused-tools" aria-label="תפריט מהיר">
+        <a href="#system-status"><span>◉</span><strong>מצב ועדכון</strong><small>BRDC, שרת והתראות</small></a>
         <a href="#history"><span>↺</span><strong>היסטוריה</strong><small>תוצאות והשוואה</small></a>
-        <a href="#gps-pulse"><span>⌁</span><strong>K-69</strong><small>GPS Pulse Monitor</small></a>
-        <button id="heroInstallButton" type="button"><span>⇩</span><strong>התקנה</strong><small>הוסף למסך הבית</small></button>
-        <a href="/wind"><span>🌬</span><strong>מפת רוחות</strong><small>גובה ותכנון מסלול</small></a>
-      </div>
+        <a href="#analytics"><span>⌁</span><strong>גרפים</strong><small>ניתוח מגמות ושינויים</small></a>
+        <a href="#gps-pulse"><span>◷</span><strong>K-69</strong><small>GPS Pulse Monitor</small></a>
+      </nav>
     </section>
 
-    <section class="focused-status-row" aria-label="מצב המערכת">
+    <section id="system-status" class="focused-status-row" aria-label="מצב המערכת">
       <div id="nasaStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>NASA CDDIS</small><strong id="nasaStatus">בודק</strong><em id="nasaLatency">—</em></div>
       <div id="apiStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>API</small><strong id="apiStatus">בודק</strong><em id="apiLatency">—</em></div>
       <div id="cacheStatusCard" class="live-status-card status-neutral"><span class="live-dot cache-dot"></span><small>Cache</small><strong id="cacheStatus">מוכן</strong><em id="cacheFreshness">בהמתנה</em></div>
     </section>
 
-    <section class="overview-grid reveal" aria-label="לוח מצב BRDC והתראות">
+    <section class="overview-grid reveal always-dark-section" aria-label="לוח מצב BRDC והתראות">
       <article class="card overview-card">
         <div class="overview-card-head"><div><span class="section-kicker">BRDC STATUS</span><h2>מצב העדכון</h2></div><span id="monitorBadge" class="result-badge">ממתין</span></div>
         <div class="overview-metrics">
@@ -70,39 +71,24 @@
         <button id="notificationButton" class="button button-secondary" type="button">הפעל התראות</button>
       </article>
     </section>
+    <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
 
-    <section id="converter" class="workspace-section reveal">
+    <section id="converter" class="workspace-section reveal always-dark-section">
       <div class="section-heading focused-heading">
-        <div><span class="section-kicker">LIVE CONVERTER</span><h2>BRDC → Klobuchar → RAAM</h2></div>
-        <p>ללא העלאת קבצים וללא הזנת פרמטרים.</p>
+        <div><span class="section-kicker">פעולה אחת</span><h2>שליפה, המרה והצגה</h2></div>
+        <p>הפעולה התחילה מהכפתור העליון. אין צורך ללחוץ שוב.</p>
       </div>
-
-      <div class="workspace-grid focused-workspace-grid">
-        <article class="card control-card focused-control-card">
-          <div class="card-header">
-            <div><span class="card-label">פעולה</span><h3>שליפת הנתונים העדכניים</h3></div>
-            <span class="secure-badge">הגישה נשמרת בשרת</span>
-          </div>
-          <p class="card-description">השרת בודק את הימים האחרונים, מוריד את קובץ ה־BRDC התקין והחדש ביותר, קורא את כותרת ה־RINEX וממיר את הנתונים לפורמט RAAM.</p>
-          <div class="process-preview" aria-label="שלבי הפעולה">
-            <div><span>01</span><strong>הורדה</strong><small>NASA Earthdata</small></div><i>←</i>
-            <div><span>02</span><strong>חילוץ</strong><small>RINEX Header</small></div><i>←</i>
-            <div><span>03</span><strong>המרה</strong><small>RAAM Values</small></div>
-          </div>
-          <button id="calculateButton" class="button button-primary full-width" type="button"><span class="button-icon">↯</span> הורד, המר והצג</button>
-        </article>
-
-        <article id="statusCard" class="card status-card" aria-live="polite">
-          <div id="idleState" class="state-content"><div class="state-orb idle-orb"><span>◎</span></div><span class="card-label">המערכת מוכנה</span><h3>ממתין להפעלה</h3><p>לחץ על הכפתור כדי לקבל את הנתונים העדכניים.</p></div>
-          <div id="loadingState" class="state-content hidden"><div class="loader-orbit"><span></span></div><span class="card-label">הפעולה מתבצעת</span><h3 id="loadingTitle">מתחבר ל־NASA CDDIS</h3><p id="loadingDescription">יוצר חיבור מאובטח...</p><div class="progress-track"><span id="progressBar"></span></div><div class="progress-meta"><span id="progressStep">שלב 1 מתוך 4</span><span id="elapsedTime">0.0s</span></div></div>
-          <div id="successState" class="state-content hidden"><div class="state-orb success-orb"><span>✓</span></div><span class="card-label">הפעולה הושלמה</span><h3>נתוני RAAM מוכנים</h3><p>המקור התקין והחדש ביותר עובד בהצלחה.</p><button id="viewResultsButton" class="text-button" type="button">הצג תוצאות ↓</button></div>
-          <div id="errorState" class="state-content hidden" role="alert"><div class="state-orb error-orb"><span>!</span></div><span class="card-label">הפעולה נכשלה</span><h3>לא ניתן להשלים את השליפה</h3><p id="errorText">אירעה שגיאה לא צפויה.</p><button id="retryButton" class="button button-ghost" type="button">נסה שוב</button></div>
-        </article>
-      </div>
+      <article id="statusCard" class="card status-card compact-status-card" aria-live="polite">
+        <div id="idleState" class="state-content"><div class="state-orb idle-orb"><span>◎</span></div><span class="card-label">המערכת מוכנה</span><h3>ממתין להפעלה</h3><p>לחץ למעלה על „הורד והצג נתונים”.</p></div>
+        <div id="loadingState" class="state-content hidden"><div class="loader-orbit"><span></span></div><span class="card-label">הפעולה מתבצעת</span><h3 id="loadingTitle">מתחבר למקור הנתונים</h3><p id="loadingDescription">יוצר חיבור מאובטח...</p><div class="progress-track"><span id="progressBar"></span></div><div class="progress-meta"><span id="progressStep">שלב 1 מתוך 4</span><span id="elapsedTime">0.0s</span></div></div>
+        <div id="successState" class="state-content hidden"><div class="state-orb success-orb"><span>✓</span></div><span class="card-label">הפעולה הושלמה</span><h3>נתוני RAAM מוכנים</h3><p>הקובץ האחרון הורד והומר בהצלחה.</p><button id="viewResultsButton" class="text-button" type="button">הצג תוצאות ↓</button></div>
+        <div id="errorState" class="state-content hidden" role="alert"><div class="state-orb error-orb"><span>!</span></div><span class="card-label">לא ניתן להשלים כרגע</span><h3>השליפה לא הושלמה</h3><p id="errorText">אירעה שגיאה לא צפויה.</p><button id="retryButton" class="button button-ghost" type="button">נסה שוב</button></div>
+      </article>
+      <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
 
     <section id="resultsPanel" class="results-section hidden reveal" aria-live="polite">
-      <div class="section-heading results-heading-row"><div><span class="section-kicker">LATEST RESULT</span><h2>תוצאות RAAM</h2></div><div class="result-status-group"><span id="cacheBadge" class="result-badge">עודכן כעת</span><span id="updatedAt" class="updated-at">—</span></div></div>
+      <div class="section-heading results-heading-row"><div><span class="section-kicker">LATEST RESULT</span><h2>נתוני BRDC האחרונים</h2><p class="success-subtitle">✓ הומרו לערכי RAAM בהצלחה</p></div><div class="result-status-group"><span id="cacheBadge" class="result-badge">עודכן כעת</span><span id="updatedAt" class="updated-at">—</span></div></div>
       <div class="source-strip"><div><span>קובץ מקור</span><strong id="fileName">—</strong></div><div><span>תאריך מקור UTC</span><strong id="sourceDate">—</strong></div><div><span>מודל</span><strong>GPS Klobuchar</strong></div></div>
       <div class="value-grid">
         <article class="value-card"><span>DATA 1</span><strong id="data1">—</strong><small>Alpha A0 · A1</small><button class="mini-copy" data-copy-target="data1" type="button">העתק</button></article>
@@ -113,6 +99,7 @@
       </div>
       <div class="result-actions"><button id="copyButton" class="button button-primary" type="button">העתק הכול</button><button id="downloadTxtButton" class="button button-secondary" type="button">RAAM.txt</button><button id="downloadJsonButton" class="button button-secondary" type="button">JSON</button><button id="downloadCsvButton" class="button button-secondary" type="button">CSV</button><button id="refreshButton" class="button button-ghost" type="button">רענן</button></div>
       <details class="raw-panel"><summary><span><strong>מקדמי Klobuchar המקוריים</strong><small>הערכים המדעיים מתוך כותרת ה־RINEX</small></span><span class="summary-icon">+</span></summary><div class="raw-grid"><div><span>GPSA / Alpha</span><code id="alpha">—</code></div><div><span>GPSB / Beta</span><code id="beta">—</code></div></div></details>
+      <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
 
     <section id="history" class="history-section reveal">
@@ -120,6 +107,7 @@
       <p class="history-intro">כל תוצאה מוצלחת נשמרת במכשיר הזה. ניתן לפתוח תוצאה קודמת, להוריד אותה ולהשוות מול התוצאה שלפניה.</p>
       <div id="historyEmpty" class="card history-empty"><div class="state-orb idle-orb"><span>↺</span></div><h3>עדיין אין תוצאות שמורות</h3><p>לאחר ההפעלה הראשונה התוצאה תישמר כאן אוטומטית.</p></div>
       <div id="historyContent" class="history-content hidden"><article id="comparisonCard" class="card comparison-card hidden"><div class="comparison-header"><div><span class="card-label">שינוי מהתוצאה הקודמת</span><h3 id="comparisonTitle">השוואה אחרונה</h3></div><span id="comparisonSummary" class="comparison-summary">—</span></div><div id="comparisonGrid" class="comparison-grid"></div></article><div id="historyList" class="history-list" aria-live="polite"></div></div>
+      <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
 
     <section id="analytics" class="analytics-section reveal">
@@ -131,6 +119,7 @@
         <canvas id="historyChart" class="history-chart hidden" width="1100" height="360" aria-label="גרף היסטוריית RAAM"></canvas>
         <div class="analytics-summary"><div><span>מספר תוצאות</span><strong id="analyticsCount">0</strong></div><div><span>שינויים שזוהו</span><strong id="analyticsChanges">0</strong></div><div><span>השעה הנפוצה</span><strong id="analyticsCommonHour">—</strong></div><div><span>רצף ללא שינוי</span><strong id="analyticsStableRun">0</strong></div></div>
       </article>
+      <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
 
     <section id="gps-pulse" class="pulse-section reveal">
@@ -139,6 +128,7 @@
         <div class="pulse-card-copy"><div class="pulse-icon">⌁</div><div><div class="pulse-title-row"><h3>K-69 Live Monitor</h3><span class="external-badge"><span></span> מקור חי</span></div><p>הנתונים מוצגים ישירות בתוך HaniaION ונשלטים על ידי המקור החיצוני.</p></div></div>
         <div class="pulse-frame-shell"><div class="pulse-frame-toolbar"><div class="pulse-frame-status"><span></span> תצוגה חיה</div><a href="https://k69.link/" target="_blank" rel="noopener noreferrer">פתח בנפרד ↗</a></div><iframe class="pulse-frame" src="https://k69.link/" title="K-69 GPS pulse live monitor" loading="eager" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" scrolling="no"></iframe><div class="pulse-fallback">אם התצוגה החיצונית אינה נטענת, השתמש בקישור „פתח בנפרד”.</div></div>
       </article>
+      <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
   </main>
 
@@ -151,7 +141,8 @@
       <div id="installFallbackInstructions" class="install-instructions hidden"><p>פתח את תפריט הדפדפן ובחר <strong>התקנת אפליקציה</strong> או <strong>הוספה למסך הבית</strong>.</p></div>
     </div>
   </div>
+  <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=41" defer></script>
+  <script src="/static/app.js?v=42" defer></script>
 </body>
 </html>
