@@ -58,3 +58,25 @@ In the Render service, add these secret environment variables:
 - `EARTHDATA_PASSWORD`
 
 Do not commit Earthdata credentials to GitHub.
+
+
+## GPS Pulse Monitor
+
+The frontend includes a clearly labelled external-source card linking to the trusted K-69 live GPS pulse monitor. The external page opens in a separate tab and HaniaION does not alter its values.
+
+
+## v2.6
+- Smart Android PWA install prompt
+- iPhone Add to Home Screen guidance
+- Top and hero shortcuts to the embedded K-69 GPS Pulse Monitor
+
+## v2.8 update
+The decorative API response example on the homepage was replaced with a live **Ionosphere History** summary. It uses the same local result archive as the full History section and shows the latest source date, change count, Data1–Data4, tLS, and deltas from the previous saved result. API documentation remains available through `/docs`.
+
+
+## Final integrated interface
+
+The main dashboard retains local result history, install-to-phone support and the embedded K-69 GPS Pulse monitor. A separate `/wind` workspace adds the animated Windy map, route planner and mission summary without replacing the main RAAM page.
+
+## Focused main interface v30
+The main page is focused on the operational workflow: BRDC extraction, RAAM output, local result history, phone installation, K-69 display, and a dedicated `/wind` mission weather workspace. Developer-marketing sections, architecture showcase, GitHub links, and API documentation links were removed from the user-facing home screen.

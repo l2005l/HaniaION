@@ -346,7 +346,7 @@ def index():
 
 
 @app.get("/wind")
-def wind_page():
+def wind_dashboard():
     return FileResponse("static/wind.html")
 
 
