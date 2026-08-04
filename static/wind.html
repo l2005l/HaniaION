@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" dir="ltr">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -8,7 +8,7 @@
   <link rel="icon" href="/static/icons/icon.svg">
   <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
-  <link rel="stylesheet" href="/static/wind.css?v=8.1">
+  <link rel="stylesheet" href="/static/wind.css?v=40">
   <title>HaniaION — Mission Weather Center V8.1</title>
 </head>
 <body class="wind-body">
@@ -16,21 +16,21 @@
     <header class="mission-header">
       <a class="mission-brand" href="/">
         <img src="/static/icons/icon.svg" alt="HaniaION logo">
-        <div><strong>HaniaION</strong><span>Mission Weather Center · V8.1</span></div>
+        <div><strong>HaniaION</strong><span>מרכז רוחות ותכנון מסלול · v1.0</span></div>
       </a>
       <div class="mission-clock"><span>UTC</span><strong id="utcClock">--:--:--</strong></div>
-      <a class="mission-back" href="/">Back to RAAM</a>
+      <a class="mission-back" href="/">חזרה ל־RAAM</a>
     </header>
 
-    <section class="mission-toolbar" aria-label="Weather controls">
+    <section class="mission-toolbar" aria-label="פקדי מזג אוויר">
       <div class="mission-intro">
-        <span>ATMOSPHERIC OVERVIEW</span>
-        <h1>Animated winds and route workspace</h1>
-        <p>Windy supplies the weather display. The route planner runs locally in your browser.</p>
+        <span>WIND & מסלול</span>
+        <h1>מפת רוחות ותכנון מסלול</h1>
+        <p>מפת Windy מציגה את שכבת הרוח. כלי המסלול פועל מקומית בדפדפן.</p>
       </div>
-      <label><span>Altitude</span>
+      <label><span>גובה</span>
         <select id="altitudeSelect">
-          <option value="surface">Surface</option><option value="850h">~5,000 ft</option>
+          <option value="surface">פני הקרקע</option><option value="850h">~5,000 ft</option>
           <option value="700h">~10,000 ft</option><option value="600h">~14,000 ft</option>
           <option value="500h">~18,000 ft</option><option value="400h">~24,000 ft</option>
           <option value="300h">~30,000 ft</option><option value="250h" selected>~34,000 ft</option>
@@ -38,31 +38,31 @@
           <option value="100h">~52,000 ft</option>
         </select>
       </label>
-      <label><span>Forecast</span>
+      <label><span>תחזית</span>
         <select id="forecastSelect">
-          <option value="0">Now</option><option value="3">+3 hours</option><option value="6">+6 hours</option>
-          <option value="12">+12 hours</option><option value="24">+24 hours</option><option value="36">+36 hours</option>
-          <option value="48">+48 hours</option><option value="72">+72 hours</option>
+          <option value="0">עכשיו</option><option value="3">+3 שעות</option><option value="6">+6 שעות</option>
+          <option value="12">+12 שעות</option><option value="24">+24 שעות</option><option value="36">+36 שעות</option>
+          <option value="48">+48 שעות</option><option value="72">+72 שעות</option>
         </select>
       </label>
-      <button id="refreshWind" type="button">Refresh wind</button>
+      <button id="refreshWind" type="button">עדכן רוחות</button>
     </section>
 
-    <nav class="mission-tabs" aria-label="Dashboard views">
-      <button class="tab-button active" data-tab="weather">Wind map</button>
-      <button class="tab-button" data-tab="planner">Route planner</button>
-      <button class="tab-button" data-tab="summary">Mission summary</button>
+    <nav class="mission-tabs" aria-label="מסכי המערכת">
+      <button class="tab-button active" data-tab="weather">מפת רוחות</button>
+      <button class="tab-button" data-tab="planner">תכנון מסלול</button>
+      <button class="tab-button" data-tab="summary">סיכום מסלול</button>
     </nav>
 
     <section id="weatherTab" class="tab-panel active">
       <div class="weather-card">
         <div class="panel-heading">
-          <div><span id="levelLabel">250 hPa · approximately 34,000 ft</span><strong id="mapSummary">Current model time</strong></div>
-          <small>Pan, zoom and click inside Windy for local weather values.</small>
+          <div><span id="levelLabel">250 hPa · approximately 34,000 ft</span><strong id="mapSummary">זמן המודל הנוכחי</strong></div>
+          <small>ניתן להזיז, להגדיל וללחוץ בתוך Windy לקבלת נתונים מקומיים.</small>
         </div>
         <div class="wind-frame-wrap">
           <iframe id="windFrame" title="Animated Middle East wind map" loading="eager" allowfullscreen></iframe>
-          <div id="windLoading" class="wind-loading"><div class="spinner"></div><strong>Loading wind map…</strong></div>
+          <div id="windLoading" class="wind-loading"><div class="spinner"></div><strong>טוען מפת רוחות…</strong></div>
         </div>
       </div>
     </section>
@@ -70,55 +70,55 @@
     <section id="plannerTab" class="tab-panel">
       <div class="planner-layout">
         <aside class="planner-controls">
-          <div class="section-kicker">ROUTE WORKSPACE</div>
-          <h2>Build a route</h2>
-          <p>Enter coordinates or use the map. Click “Set start,” then “Set destination.”</p>
+          <div class="section-kicker">מסלול PLANNER</div>
+          <h2>בניית מסלול</h2>
+          <p>הזן קואורדינטות או סמן נקודות על המפה.</p>
 
-          <div class="point-card"><div class="point-title"><span class="dot start-dot"></span>Start</div>
-            <div class="coord-grid"><input id="startLat" inputmode="decimal" placeholder="Latitude"><input id="startLon" inputmode="decimal" placeholder="Longitude"></div>
-            <button class="secondary-button map-mode" data-mode="start" type="button">Set start on map</button>
+          <div class="point-card"><div class="point-title"><span class="dot start-dot"></span>נקודת התחלה</div>
+            <div class="coord-grid"><input id="startLat" inputmode="decimal" placeholder="קו רוחב"><input id="startLon" inputmode="decimal" placeholder="קו אורך"></div>
+            <button class="secondary-button map-mode" data-mode="start" type="button">סמן התחלה במפה</button>
           </div>
-          <div class="point-card"><div class="point-title"><span class="dot end-dot"></span>Destination</div>
-            <div class="coord-grid"><input id="endLat" inputmode="decimal" placeholder="Latitude"><input id="endLon" inputmode="decimal" placeholder="Longitude"></div>
-            <button class="secondary-button map-mode" data-mode="end" type="button">Set destination on map</button>
+          <div class="point-card"><div class="point-title"><span class="dot end-dot"></span>יעד</div>
+            <div class="coord-grid"><input id="endLat" inputmode="decimal" placeholder="קו רוחב"><input id="endLon" inputmode="decimal" placeholder="קו אורך"></div>
+            <button class="secondary-button map-mode" data-mode="end" type="button">סמן יעד במפה</button>
           </div>
 
-          <label class="speed-field"><span>Planned true airspeed (kt)</span><input id="speedKt" type="number" min="1" max="999" value="420"></label>
-          <div class="planner-actions"><button id="calculateRoute" type="button">Calculate route</button><button id="clearRoute" class="secondary-button" type="button">Clear</button></div>
-          <div id="plannerStatus" class="planner-status">Ready.</div>
+          <label class="speed-field"><span>מהירות מתוכננת (קשר)</span><input id="speedKt" type="number" min="1" max="999" value="420"></label>
+          <div class="planner-actions"><button id="calculateRoute" type="button">חשב מסלול</button><button id="clearRoute" class="secondary-button" type="button">נקה</button></div>
+          <div id="plannerStatus" class="planner-status">מוכן.</div>
         </aside>
 
         <div class="planner-map-card">
-          <div id="routeMap" aria-label="Route planning map"></div>
-          <div class="map-hint" id="mapHint">Select a point-setting button, then click the map. Right-click to clear the route.</div>
+          <div id="routeMap" aria-label="מפת תכנון מסלול"></div>
+          <div class="map-hint" id="mapHint">בחר נקודת התחלה או יעד ולאחר מכן לחץ על המפה. לחיצה ימנית מנקה.</div>
         </div>
 
         <aside class="route-results">
-          <div class="section-kicker">ROUTE METRICS</div>
-          <div class="metric"><span>Great-circle distance</span><strong id="distanceNm">—</strong></div>
-          <div class="metric"><span>Initial true bearing</span><strong id="bearingDeg">—</strong></div>
-          <div class="metric"><span>Reciprocal true bearing</span><strong id="reciprocalDeg">—</strong></div>
-          <div class="metric"><span>Estimated still-air time</span><strong id="estimatedTime">—</strong></div>
-          <div class="metric"><span>Selected weather layer</span><strong id="routeWeatherLayer">34,000 ft · Now</strong></div>
-          <button id="openWeatherView" class="secondary-button" type="button">Open wind map</button>
-          <p class="result-note">Wind correction, fuel, terrain, airspace and operational constraints are not calculated.</p>
+          <div class="section-kicker">נתוני המסלול</div>
+          <div class="metric"><span>מרחק מעגל גדול</span><strong id="distanceNm">—</strong></div>
+          <div class="metric"><span>כיוון אמיתי התחלתי</span><strong id="bearingDeg">—</strong></div>
+          <div class="metric"><span>כיוון אמיתי חוזר</span><strong id="reciprocalDeg">—</strong></div>
+          <div class="metric"><span>זמן משוער ללא תיקון רוח</span><strong id="estimatedTime">—</strong></div>
+          <div class="metric"><span>שכבת הרוח שנבחרה</span><strong id="routeWeatherLayer">34,000 ft · עכשיו</strong></div>
+          <button id="openWeatherView" class="secondary-button" type="button">פתח מפת רוחות</button>
+          <p class="result-note">הכלי אינו מחשב תיקון רוח, דלק, תוואי שטח או מגבלות מרחב אווירי.</p>
         </aside>
       </div>
     </section>
 
     <section id="summaryTab" class="tab-panel">
       <div class="summary-grid">
-        <article><span>GNSS / RAAM</span><strong>Main HaniaION workspace</strong><p>Return to the original dashboard for BRDC and RAAM extraction.</p><a href="/">Open RAAM dashboard</a></article>
-        <article><span>WEATHER</span><strong id="summaryWeather">34,000 ft · Now</strong><p>Animated external weather layer focused on the Middle East.</p><button class="link-button" data-open-tab="weather">Open wind map</button></article>
-        <article><span>ROUTE</span><strong id="summaryRoute">No route selected</strong><p id="summaryRouteDetail">Set start and destination points to create a summary.</p><button class="link-button" data-open-tab="planner">Open route planner</button></article>
-        <article><span>STATUS</span><strong>Informational workspace</strong><p>Not an official aviation briefing or a certified flight-planning system.</p></article>
+        <article><span>GNSS / RAAM</span><strong>המסך הראשי של HaniaION</strong><p>חזרה למסך הראשי לחילוץ BRDC ונתוני RAAM.</p><a href="/">פתח מסך RAAM</a></article>
+        <article><span>רוחות</span><strong id="summaryWeather">34,000 ft · עכשיו</strong><p>שכבת רוח חיצונית מונפשת באזור המזרח התיכון.</p><button class="link-button" data-open-tab="weather">פתח מפת רוחות</button></article>
+        <article><span>מסלול</span><strong id="summaryRoute">לא נבחר מסלול</strong><p id="summaryRouteDetail">סמן התחלה ויעד כדי ליצור סיכום.</p><button class="link-button" data-open-tab="planner">Open route planner</button></article>
+        <article><span>מצב</span><strong>כלי מידע</strong><p>אינו תחליף למידע תעופתי רשמי או למערכת תכנון מוסמכת.</p></article>
       </div>
     </section>
 
-    <aside class="mission-warning"><strong>Planning note</strong><p>Pressure levels are approximate altitude above mean sea level. This dashboard is for visualization and software development only. Use authorized aviation weather, navigation, terrain and airspace sources for real-world decisions.</p></aside>
+    <aside class="mission-warning"><strong>הערת שימוש</strong><p>רמות הלחץ מייצגות גובה משוער מעל פני הים. יש להשתמש במקורות תעופתיים מוסמכים לכל החלטה מעשית.</p></aside>
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/static/wind.js?v=8.1"></script>
+  <script src="/static/wind.js?v=40"></script>
 </body>
 </html>

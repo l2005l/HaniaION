@@ -1,82 +1,83 @@
-# HaniaION
+# HaniaION v1.0
 
-HaniaION is an open-source GNSS ionospheric-data platform built with Python and FastAPI.
+מערכת ממוקדת לחילוץ קובץ BRDC העדכני, קריאת מקדמי Klobuchar והמרתם לערכי RAAM.
 
-It retrieves the latest BRDC navigation file from NASA CDDIS Earthdata, extracts the GPS Klobuchar Alpha/Beta coefficients and leap-second value, and converts them into RAAM-compatible integer data words.
+## מה כלול
 
-## Features
+- חילוץ והצגת Data 1–4 ו־tLS
+- היסטוריה מקומית והשוואה בין תוצאות
+- גרפים וייצוא היסטוריה ל־CSV
+- התקנה בטלפון כ־PWA
+- תצוגת K-69 בתוך האתר
+- עמוד `/wind` עם מפת רוחות, תכנון מסלול וסיכום
+- התראות Push אופציונליות בלבד
+- בדיקת BRDC אוטומטית כל 3 שעות באמצעות GitHub Actions
+- שמירת היסטוריה מרכזית ומנויי Push ב־PostgreSQL/Neon
 
-- Automatic search across the latest seven UTC daily BRDC directories
-- NASA Earthdata authenticated download
-- RINEX 2 and RINEX 3 Klobuchar header parsing
-- RAAM conversion into Data1, Data2, Data3, Data4, and tLS
-- Fifteen-minute server cache
-- Retry strategy and request rate limiting
-- FastAPI interactive documentation
-- Responsive dashboard with dark/light themes
-- Copy, TXT, JSON, and CSV export
-- Installable PWA shell
-- Docker and Render deployment configuration
+האתר הראשי והחילוץ הידני עובדים גם ללא מסד נתונים וללא Push.
 
-## Local run
+## משתני סביבה בסיסיים ב־Render
 
-1. Create a Python virtual environment.
-2. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-3. Set environment variables:
+חובה לחילוץ BRDC:
 
 ```text
-EARTHDATA_USERNAME=your_username
-EARTHDATA_PASSWORD=your_password
+EARTHDATA_USERNAME
+EARTHDATA_PASSWORD
 ```
 
-4. Start the app:
+להיסטוריה מרכזית, ניטור והתראות:
+
+```text
+DATABASE_URL
+VAPID_PUBLIC_KEY
+VAPID_PRIVATE_KEY
+VAPID_SUBJECT
+CRON_SECRET
+APP_VERSION=1.0.0
+```
+
+`VAPID_SUBJECT` יכול להיות לדוגמה:
+
+```text
+mailto:your-email@example.com
+```
+
+## יצירת מפתחות Push
+
+לאחר התקנת הדרישות:
 
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 8000
+python scripts/generate_vapid_keys.py
 ```
 
-5. Open `http://localhost:8000`.
+שמור את המפתח הפרטי רק ב־Render. אין להעלות אותו ל־GitHub.
 
-## API
+## GitHub Actions — בדיקה כל 3 שעות
 
-- `GET /api/health` — service health
-- `POST /api/calculate` — retrieve and convert the latest available BRDC data
-- `GET /docs` — interactive OpenAPI documentation
+ב־GitHub, תחת **Settings → Secrets and variables → Actions**, הוסף:
 
-## Render deployment
+```text
+HANIAION_APP_URL=https://haniaion.onrender.com
+HANIAION_CRON_SECRET=<אותו ערך של CRON_SECRET ב-Render>
+```
 
-The repository includes `render.yaml` and a Dockerfile.
+הקובץ `.github/workflows/monitor.yml` מפעיל את `/api/monitor/run` כל שלוש שעות.
 
-In the Render service, add these secret environment variables:
+## Neon
 
-- `EARTHDATA_USERNAME`
-- `EARTHDATA_PASSWORD`
+צור PostgreSQL חינמי ב־Neon והעתק את מחרוזת החיבור המלאה אל `DATABASE_URL` ב־Render. הטבלאות נוצרות אוטומטית בזמן עליית השירות.
 
-Do not commit Earthdata credentials to GitHub.
+## כתובות מרכזיות
 
+```text
+/                 האתר הראשי
+/wind             מפת רוחות ותכנון מסלול
+/api/health       בדיקת שירות
+/api/history      היסטוריה מרכזית
+/api/monitor/status מצב הניטור
+/admin            מסך ניהול
+```
 
-## GPS Pulse Monitor
+## הערה
 
-The frontend includes a clearly labelled external-source card linking to the trusted K-69 live GPS pulse monitor. The external page opens in a separate tab and HaniaION does not alter its values.
-
-
-## v2.6
-- Smart Android PWA install prompt
-- iPhone Add to Home Screen guidance
-- Top and hero shortcuts to the embedded K-69 GPS Pulse Monitor
-
-## v2.8 update
-The decorative API response example on the homepage was replaced with a live **Ionosphere History** summary. It uses the same local result archive as the full History section and shows the latest source date, change count, Data1–Data4, tLS, and deltas from the previous saved result. API documentation remains available through `/docs`.
-
-
-## Final integrated interface
-
-The main dashboard retains local result history, install-to-phone support and the embedded K-69 GPS Pulse monitor. A separate `/wind` workspace adds the animated Windy map, route planner and mission summary without replacing the main RAAM page.
-
-## Focused main interface v30
-The main page is focused on the operational workflow: BRDC extraction, RAAM output, local result history, phone installation, K-69 display, and a dedicated `/wind` mission weather workspace. Developer-marketing sections, architecture showcase, GitHub links, and API documentation links were removed from the user-facing home screen.
+מפת הרוחות וכלי המסלול מיועדים לתצוגה כללית בלבד ואינם תחליף למידע תעופתי רשמי או למערכת תכנון מוסמכת.

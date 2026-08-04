@@ -9,3 +9,17 @@ services:
         sync: false
       - key: EARTHDATA_PASSWORD
         sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      - key: APP_VERSION
+        value: 1.0.0

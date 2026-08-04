@@ -7,9 +7,9 @@
   <meta name="description" content="HaniaION מורידה את קובץ BRDC העדכני, מחלצת מקדמי Klobuchar וממירה אותם לערכי RAAM.">
   <meta name="color-scheme" content="dark light">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/static/icons/icon.svg?v=30" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=30">
-  <link rel="stylesheet" href="/static/style.css?v=30">
+  <link rel="icon" href="/static/icons/icon.svg?v=40" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=40">
+  <link rel="stylesheet" href="/static/style.css?v=40">
   <title>HaniaION — BRDC to RAAM</title>
 </head>
 <body class="focused-app">
@@ -18,7 +18,7 @@
       <img src="/static/icons/icon.svg" alt="" width="44" height="44">
       <span><strong>HaniaION</strong><small>BRDC → Klobuchar → RAAM</small></span>
     </a>
-    <div class="focused-header-actions">
+    <div class="focused-header-actions"><div class="utc-header"><small>UTC</small><strong id="utcClock">--:--:--</strong></div>
       <div id="serviceStatus" class="status-pill" role="status" aria-live="polite">
         <span class="status-dot"></span><span id="serviceStatusText">בודק שירות</span>
       </div>
@@ -35,7 +35,7 @@
         <p>המערכת מאתרת את קובץ ה־BRDC האחרון, מחלצת את מקדמי Klobuchar ומציגה את ארבעת ערכי ה־RAAM ואת tLS.</p>
         <div class="focused-primary-actions">
           <button id="heroCalculateButton" class="button button-primary button-large" type="button"><span class="button-icon">↯</span> הורד והצג נתונים</button>
-          <a class="button button-secondary button-large" href="/wind"><span>🌬</span> מפת רוחות ומסלול</a>
+          <a class="button button-secondary button-large" href="/wind"><span>🌬</span> מפת רוחות ותכנון מסלול</a>
         </div>
       </div>
 
@@ -43,7 +43,7 @@
         <a href="#history"><span>↺</span><strong>היסטוריה</strong><small>תוצאות והשוואה</small></a>
         <a href="#gps-pulse"><span>⌁</span><strong>K-69</strong><small>GPS Pulse Monitor</small></a>
         <button id="heroInstallButton" type="button"><span>⇩</span><strong>התקנה</strong><small>הוסף למסך הבית</small></button>
-        <a href="/wind"><span>🌬</span><strong>רוחות</strong><small>גובה, תחזית ומסלול</small></a>
+        <a href="/wind"><span>🌬</span><strong>מפת רוחות</strong><small>גובה ותכנון מסלול</small></a>
       </div>
     </section>
 
@@ -51,6 +51,24 @@
       <div id="nasaStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>NASA CDDIS</small><strong id="nasaStatus">בודק</strong><em id="nasaLatency">—</em></div>
       <div id="apiStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>API</small><strong id="apiStatus">בודק</strong><em id="apiLatency">—</em></div>
       <div id="cacheStatusCard" class="live-status-card status-neutral"><span class="live-dot cache-dot"></span><small>Cache</small><strong id="cacheStatus">מוכן</strong><em id="cacheFreshness">בהמתנה</em></div>
+    </section>
+
+    <section class="overview-grid reveal" aria-label="לוח מצב BRDC והתראות">
+      <article class="card overview-card">
+        <div class="overview-card-head"><div><span class="section-kicker">BRDC STATUS</span><h2>מצב העדכון</h2></div><span id="monitorBadge" class="result-badge">ממתין</span></div>
+        <div class="overview-metrics">
+          <div><span>הקובץ האחרון</span><strong id="latestMonitorFile">טרם נבדק</strong></div>
+          <div><span>בדיקה אחרונה</span><strong id="lastMonitorCheck">—</strong></div>
+          <div><span>בדיקה הבאה</span><strong id="nextMonitorCheck">—</strong></div>
+          <div><span>שינוי אחרון</span><strong id="lastMonitorChange">—</strong></div>
+        </div>
+        <p id="monitorStatus" class="overview-note">לאחר חיבור מסד הנתונים, המערכת תבדוק אוטומטית כל 3 שעות.</p>
+      </article>
+      <article class="card notification-card">
+        <div class="notification-icon">🔔</div>
+        <div><span class="section-kicker">PUSH</span><h2>התראות על עדכון</h2><p id="notificationDescription">קבלת התראה רק כאשר מתפרסם קובץ BRDC חדש. ההפעלה נעשית רק לאחר אישור מפורש.</p><strong id="notificationStatus">ההתראות כבויות</strong></div>
+        <button id="notificationButton" class="button button-secondary" type="button">הפעל התראות</button>
+      </article>
     </section>
 
     <section id="converter" class="workspace-section reveal">
@@ -104,16 +122,27 @@
       <div id="historyContent" class="history-content hidden"><article id="comparisonCard" class="card comparison-card hidden"><div class="comparison-header"><div><span class="card-label">שינוי מהתוצאה הקודמת</span><h3 id="comparisonTitle">השוואה אחרונה</h3></div><span id="comparisonSummary" class="comparison-summary">—</span></div><div id="comparisonGrid" class="comparison-grid"></div></article><div id="historyList" class="history-list" aria-live="polite"></div></div>
     </section>
 
+    <section id="analytics" class="analytics-section reveal">
+      <div class="section-heading history-heading-row"><div><span class="section-kicker">ANALYTICS</span><h2>גרפים וניתוח שינויים</h2></div><button id="exportHistoryCsvButton" class="button button-secondary" type="button">ייצוא היסטוריה ל־CSV</button></div>
+      <p class="history-intro">הגרפים מבוססים על התוצאות שנשמרו במכשיר. לאחר חיבור המסד, ניתן יהיה לצבור היסטוריה גם כשהאתר סגור.</p>
+      <article class="card analytics-card">
+        <div class="analytics-controls"><label>ערך<select id="chartMetric"><option value="data1">Data 1</option><option value="data2">Data 2</option><option value="data3">Data 3</option><option value="data4">Data 4</option><option value="tls">tLS</option></select></label><label>טווח<select id="chartRange"><option value="30">30 תוצאות</option><option value="14">14 תוצאות</option><option value="7">7 תוצאות</option><option value="all">כל ההיסטוריה</option></select></label></div>
+        <div id="chartEmpty" class="chart-empty">הגרף יוצג לאחר שמירת שתי תוצאות לפחות.</div>
+        <canvas id="historyChart" class="history-chart hidden" width="1100" height="360" aria-label="גרף היסטוריית RAAM"></canvas>
+        <div class="analytics-summary"><div><span>מספר תוצאות</span><strong id="analyticsCount">0</strong></div><div><span>שינויים שזוהו</span><strong id="analyticsChanges">0</strong></div><div><span>השעה הנפוצה</span><strong id="analyticsCommonHour">—</strong></div><div><span>רצף ללא שינוי</span><strong id="analyticsStableRun">0</strong></div></div>
+      </article>
+    </section>
+
     <section id="gps-pulse" class="pulse-section reveal">
       <div class="section-heading focused-heading"><div><span class="section-kicker">K-69</span><h2>GPS Pulse Monitor</h2></div><p>תצוגת זמן GPS, זמן הפעימה הבאה והמונֶה החי.</p></div>
       <article class="card pulse-card pulse-card-embedded">
         <div class="pulse-card-copy"><div class="pulse-icon">⌁</div><div><div class="pulse-title-row"><h3>K-69 Live Monitor</h3><span class="external-badge"><span></span> מקור חי</span></div><p>הנתונים מוצגים ישירות בתוך HaniaION ונשלטים על ידי המקור החיצוני.</p></div></div>
-        <div class="pulse-frame-shell"><div class="pulse-frame-toolbar"><div class="pulse-frame-status"><span></span> תצוגה חיה</div><a href="https://k69.link/" target="_blank" rel="noopener noreferrer">פתח בנפרד ↗</a></div><iframe class="pulse-frame" src="https://k69.link/" title="K-69 GPS pulse live monitor" loading="eager" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" scrolling="no"></iframe></div>
+        <div class="pulse-frame-shell"><div class="pulse-frame-toolbar"><div class="pulse-frame-status"><span></span> תצוגה חיה</div><a href="https://k69.link/" target="_blank" rel="noopener noreferrer">פתח בנפרד ↗</a></div><iframe class="pulse-frame" src="https://k69.link/" title="K-69 GPS pulse live monitor" loading="eager" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" scrolling="no"></iframe><div class="pulse-fallback">אם התצוגה החיצונית אינה נטענת, השתמש בקישור „פתח בנפרד”.</div></div>
       </article>
     </section>
   </main>
 
-  <footer class="focused-footer"><img src="/static/icons/icon.svg" alt="" width="32" height="32"><div><strong>HaniaION</strong><small>BRDC · Klobuchar · RAAM</small></div><a href="/wind">מפת רוחות</a></footer>
+  <footer class="focused-footer"><img src="/static/icons/icon.svg" alt="" width="32" height="32"><div><strong>HaniaION v1.0</strong><small>BRDC · Klobuchar · RAAM</small></div><a href="/wind">מפת רוחות ותכנון מסלול</a></footer>
 
   <div id="installModal" class="install-modal hidden" role="dialog" aria-modal="true" aria-labelledby="installModalTitle">
     <div class="install-modal-backdrop" data-close-install></div><div class="install-modal-card"><button class="install-modal-close" type="button" data-close-install aria-label="סגירה">×</button><div class="install-app-icon"><img src="/static/icons/icon.svg" alt="" width="58" height="58"></div><span class="section-kicker">INSTALL HaniaION</span><h2 id="installModalTitle">הוספה לטלפון</h2>
@@ -123,6 +152,6 @@
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=30" defer></script>
+  <script src="/static/app.js?v=40" defer></script>
 </body>
 </html>

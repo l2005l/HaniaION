@@ -49,6 +49,25 @@ const elements = {
   comparisonTitle: byId("comparisonTitle"),
   comparisonSummary: byId("comparisonSummary"),
   comparisonGrid: byId("comparisonGrid"),
+  notificationButton: byId("notificationButton"),
+  notificationStatus: byId("notificationStatus"),
+  notificationDescription: byId("notificationDescription"),
+  monitorStatus: byId("monitorStatus"),
+  monitorBadge: byId("monitorBadge"),
+  latestMonitorFile: byId("latestMonitorFile"),
+  lastMonitorCheck: byId("lastMonitorCheck"),
+  nextMonitorCheck: byId("nextMonitorCheck"),
+  lastMonitorChange: byId("lastMonitorChange"),
+  utcClock: byId("utcClock"),
+  historyChart: byId("historyChart"),
+  chartEmpty: byId("chartEmpty"),
+  chartMetric: byId("chartMetric"),
+  chartRange: byId("chartRange"),
+  analyticsCount: byId("analyticsCount"),
+  analyticsChanges: byId("analyticsChanges"),
+  analyticsCommonHour: byId("analyticsCommonHour"),
+  analyticsStableRun: byId("analyticsStableRun"),
+  exportHistoryCsvButton: byId("exportHistoryCsvButton"),
 };
 
 let latestResult = null;
@@ -181,7 +200,10 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     setState("success");
     showToast(payload.cached ? "Cached RAAM data loaded" : "Latest RAAM data generated");
   } catch (error) {
-    elements.errorText.textContent = error instanceof Error ? error.message : "An unexpected error occurred.";
+    const rawMessage = error instanceof Error ? error.message : "אירעה שגיאה לא צפויה.";
+    elements.errorText.textContent = rawMessage.includes("Earthdata")
+      ? "השרת עדיין אינו מחובר לחשבון Earthdata. לאחר הגדרת פרטי החיבור ב־Render, שליפת BRDC תפעל כאן כרגיל."
+      : rawMessage;
     setState("error");
   } finally {
     stopLoadingPresentation();
@@ -262,20 +284,20 @@ function renderComparison(history, selectedIndex = 0) {
   const changes = keys.map(key => ({ key, ...deltaDetails(current, previous, key) }));
   const changedCount = changes.filter(item => item.changed).length;
   elements.comparisonCard.classList.remove("hidden");
-  elements.comparisonTitle.textContent = `${current.source_date} compared with ${previous.source_date}`;
-  elements.comparisonSummary.textContent = changedCount ? `${changedCount} value${changedCount === 1 ? "" : "s"} changed` : "No RAAM value changes";
+  elements.comparisonTitle.textContent = `${current.source_date} לעומת ${previous.source_date}`;
+  elements.comparisonSummary.textContent = changedCount ? `${changedCount} ערכים השתנו` : "לא חל שינוי בערכי RAAM";
   elements.comparisonSummary.classList.toggle("no-change", changedCount === 0);
   elements.comparisonGrid.innerHTML = changes.map(item => {
     const sign = item.delta > 0 ? "+" : "";
     const direction = item.delta > 0 ? "up" : item.delta < 0 ? "down" : "same";
-    return `<div class="comparison-value ${direction}"><span>${item.key.toUpperCase()}</span><strong>${item.now}</strong><small>${item.changed ? `${sign}${item.delta} from ${item.before}` : `unchanged from ${item.before}`}</small></div>`;
+    return `<div class="comparison-value ${direction}"><span>${item.key.toUpperCase()}</span><strong>${item.now}</strong><small>${item.changed ? `${sign}${item.delta} from ${item.before}` : `ללא שינוי לעומת ${item.before}`}</small></div>`;
   }).join("");
 }
 
 function renderHistory() {
   if (!elements.historyList) return;
   const history = loadHistory();
-  elements.historyCount.textContent = `${history.length} saved result${history.length === 1 ? "" : "s"}`;
+  elements.historyCount.textContent = `${history.length} תוצאות`;
   elements.historyEmpty.classList.toggle("hidden", history.length > 0);
   elements.historyContent.classList.toggle("hidden", history.length === 0);
   elements.clearHistoryButton.disabled = history.length === 0;
@@ -284,6 +306,7 @@ function renderHistory() {
     elements.comparisonCard.classList.add("hidden");
     elements.historyShowcaseEmpty?.classList.remove("hidden");
     elements.historyShowcaseContent?.classList.add("hidden");
+    renderAnalytics();
     return;
   }
 
@@ -295,7 +318,7 @@ function renderHistory() {
   const showcaseChanged = previousLatest ? showcaseKeys.filter(key => Number(latest[key]) !== Number(previousLatest[key])).length : null;
   if (elements.showcaseLatestDate) elements.showcaseLatestDate.textContent = latest.source_date || "—";
   if (elements.showcaseChangeStatus) {
-    elements.showcaseChangeStatus.textContent = previousLatest ? (showcaseChanged ? `${showcaseChanged} value${showcaseChanged === 1 ? "" : "s"} changed` : "No changes") : "First saved result";
+    elements.showcaseChangeStatus.textContent = previousLatest ? (showcaseChanged ? `${showcaseChanged} value${showcaseChanged === 1 ? "" : "s"} changed` : "ללא שינוי") : "תוצאת בסיס";
     elements.showcaseChangeStatus.classList.toggle("no-change", showcaseChanged === 0);
   }
   if (elements.showcaseSavedTime) elements.showcaseSavedTime.textContent = `Saved ${formatSavedTime(latest.saved_at)}`;
@@ -314,7 +337,7 @@ function renderHistory() {
   elements.historyList.innerHTML = history.map((entry, index) => {
     const previous = history[index + 1];
     const changed = previous ? ["data1", "data2", "data3", "data4", "tls"].filter(key => Number(entry[key]) !== Number(previous[key])).length : null;
-    const changeText = previous ? (changed ? `${changed} changed` : "No changes") : "First saved result";
+    const changeText = previous ? (changed ? `${changed} השתנו` : "ללא שינוי") : "תוצאת בסיס";
     return `<article class="card history-item" data-history-index="${index}">
       <div class="history-item-main">
         <div class="history-date-block"><span>Source date</span><strong>${entry.source_date || "—"}</strong><small>${formatSavedTime(entry.saved_at)}</small></div>
@@ -325,16 +348,17 @@ function renderHistory() {
       <div class="history-item-footer">
         <span class="history-change ${changed === 0 ? "no-change" : ""}">${changeText}</span>
         <div class="history-actions">
-          ${previous ? `<button type="button" class="text-button history-compare" data-index="${index}">Compare</button>` : ""}
-          <button type="button" class="text-button history-open" data-index="${index}">Open</button>
+          ${previous ? `<button type="button" class="text-button history-compare" data-index="${index}">השווה</button>` : ""}
+          <button type="button" class="text-button history-open" data-index="${index}">פתח</button>
           <button type="button" class="text-button history-download" data-index="${index}">JSON</button>
-          <button type="button" class="text-button history-delete" data-index="${index}" aria-label="Delete saved result">Delete</button>
+          <button type="button" class="text-button history-delete" data-index="${index}" aria-label="Delete saved result">מחק</button>
         </div>
       </div>
     </article>`;
   }).join("");
 
   renderComparison(history, 0);
+  renderAnalytics();
 }
 
 function openHistoryResult(index) {
@@ -343,7 +367,7 @@ function openHistoryResult(index) {
   displayResult(entry);
   setState("success");
   elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-  showToast(`Opened result from ${entry.source_date}`);
+  showToast(`נפתחה תוצאה מתאריך ${entry.source_date}`);
 }
 
 function downloadHistoryResult(index) {
@@ -642,6 +666,184 @@ function registerServiceWorker() {
   }
 }
 
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(character => character.charCodeAt(0)));
+}
+
+async function currentPushSubscription() {
+  if (!("serviceWorker" in navigator)) return null;
+  const registration = await navigator.serviceWorker.ready;
+  return registration.pushManager.getSubscription();
+}
+
+async function refreshNotificationUi() {
+  if (!elements.notificationButton) return;
+  const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  if (!supported) {
+    elements.notificationStatus.textContent = "הדפדפן הזה אינו תומך בהתראות Push";
+    elements.notificationButton.disabled = true;
+    return;
+  }
+  const subscription = await currentPushSubscription();
+  const enabled = Boolean(subscription) && Notification.permission === "granted";
+  elements.notificationStatus.textContent = enabled ? "ההתראות פעילות" : "ההתראות כבויות";
+  elements.notificationButton.textContent = enabled ? "בטל התראות" : "הפעל התראות";
+  elements.notificationButton.dataset.enabled = enabled ? "true" : "false";
+}
+
+async function toggleNotifications() {
+  elements.notificationButton.disabled = true;
+  try {
+    const existing = await currentPushSubscription();
+    if (existing) {
+      await fetch("/api/push/unsubscribe", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({endpoint: existing.endpoint})});
+      await existing.unsubscribe();
+      showToast("ההתראות בוטלו");
+    } else {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("לא ניתן אישור לקבלת התראות");
+      const keyResponse = await fetch("/api/push/public-key");
+      if (!keyResponse.ok) throw new Error("שירות ההתראות עדיין לא הוגדר בשרת");
+      const {public_key: publicKey} = await keyResponse.json();
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey)});
+      const saveResponse = await fetch("/api/push/subscribe", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(subscription)});
+      if (!saveResponse.ok) {
+        await subscription.unsubscribe();
+        throw new Error("לא ניתן לשמור את רישום ההתראות");
+      }
+      showToast("ההתראות הופעלו");
+    }
+  } catch (error) {
+    showToast(error.message || "הפעלת ההתראות נכשלה");
+  } finally {
+    elements.notificationButton.disabled = false;
+    await refreshNotificationUi();
+  }
+}
+
+async function refreshMonitorStatus() {
+  if (!elements.monitorStatus) return;
+  try {
+    const response = await fetch("/api/monitor/status", {cache: "no-store"});
+    const payload = await response.json();
+    if (!response.ok) throw new Error("monitor unavailable");
+    const state = payload.state || {};
+    const format = value => value ? formatDateTime(value) : "—";
+    const lastFile = state.last_remote_file_name || state.last_file_name || "טרם נקבע קובץ בסיס";
+    elements.latestMonitorFile.textContent = lastFile;
+    elements.lastMonitorCheck.textContent = format(state.last_check_at);
+    elements.nextMonitorCheck.textContent = format(payload.next_check_at);
+    elements.lastMonitorChange.textContent = format(state.last_change_at || state.last_notification_at);
+    const databaseEnabled = Boolean(payload.database?.enabled);
+    const pushConfigured = Boolean(payload.push?.configured);
+    elements.monitorBadge.textContent = databaseEnabled ? "ניטור פעיל" : "מוכן להגדרה";
+    elements.monitorStatus.textContent = databaseEnabled
+      ? `הבדיקה מתבצעת כל 3 שעות. ${pushConfigured ? "שירות Push מוכן." : "יש להוסיף מפתחות Push ב־Render."}`
+      : "האתר עובד כרגיל. להפעלת ניטור אוטומטי והתראות יש לחבר DATABASE_URL ומפתחות VAPID ב־Render.";
+    if (elements.notificationDescription) {
+      elements.notificationDescription.textContent = pushConfigured
+        ? "קבלת התראה רק כאשר מתפרסם קובץ BRDC חדש. ניתן להפעיל או לבטל בכל עת."
+        : "הכפתור יהיה זמין לאחר הגדרת מסד הנתונים ומפתחות ההתראות ב־Render.";
+    }
+    if (!pushConfigured && elements.notificationButton) {
+      elements.notificationButton.disabled = true;
+      elements.notificationStatus.textContent = "שירות ההתראות ממתין להגדרה";
+    } else if (elements.notificationButton) {
+      elements.notificationButton.disabled = false;
+      refreshNotificationUi().catch(() => {});
+    }
+  } catch {
+    elements.monitorStatus.textContent = "מצב הניטור אינו זמין כרגע. פעולת RAAM הידנית ממשיכה לעבוד.";
+    elements.monitorBadge.textContent = "לא זמין";
+  }
+}
+
+function initializeNotifications() {
+  elements.notificationButton?.addEventListener("click", toggleNotifications);
+  refreshNotificationUi().catch(() => {});
+  refreshMonitorStatus();
+  setInterval(refreshMonitorStatus, 60000);
+}
+
+
+function updateUtcClock() {
+  if (elements.utcClock) elements.utcClock.textContent = new Date().toISOString().slice(11, 19);
+}
+
+function historyChangeCount(history) {
+  let count = 0;
+  for (let i = 0; i < history.length - 1; i += 1) {
+    if (!["data1", "data2", "data3", "data4", "tls"].every(key => Number(history[i][key]) === Number(history[i + 1][key]))) count += 1;
+  }
+  return count;
+}
+
+function renderAnalytics() {
+  if (!elements.historyChart) return;
+  const allHistory = loadHistory();
+  const rangeValue = elements.chartRange?.value || "30";
+  const limit = rangeValue === "all" ? allHistory.length : Number(rangeValue);
+  const history = allHistory.slice(0, limit).reverse();
+  const metric = elements.chartMetric?.value || "data1";
+  elements.analyticsCount.textContent = String(allHistory.length);
+  elements.analyticsChanges.textContent = String(historyChangeCount(allHistory));
+  const hourCounts = {};
+  allHistory.forEach(item => { const d = new Date(item.saved_at); if (!Number.isNaN(d.getTime())) hourCounts[d.getUTCHours()] = (hourCounts[d.getUTCHours()] || 0) + 1; });
+  const commonHour = Object.entries(hourCounts).sort((a,b)=>b[1]-a[1])[0]?.[0];
+  elements.analyticsCommonHour.textContent = commonHour === undefined ? "—" : `${String(commonHour).padStart(2,"0")}:00 UTC`;
+  let stableRun = 0;
+  for (let i = 0; i < allHistory.length - 1; i += 1) {
+    if (sameResult(allHistory[i], allHistory[i+1])) stableRun += 1; else break;
+  }
+  elements.analyticsStableRun.textContent = String(stableRun);
+  const canvas = elements.historyChart;
+  const empty = elements.chartEmpty;
+  if (history.length < 2) { canvas.classList.add("hidden"); empty.classList.remove("hidden"); return; }
+  canvas.classList.remove("hidden"); empty.classList.add("hidden");
+  const ratio = Math.max(1, window.devicePixelRatio || 1);
+  const cssWidth = Math.max(620, canvas.parentElement.clientWidth - 44);
+  const cssHeight = 330;
+  canvas.width = cssWidth * ratio; canvas.height = cssHeight * ratio;
+  canvas.style.width = `${cssWidth}px`; canvas.style.height = `${cssHeight}px`;
+  const ctx = canvas.getContext("2d"); ctx.scale(ratio, ratio);
+  const values = history.map(item => Number(item[metric]));
+  const min = Math.min(...values), max = Math.max(...values), spread = max - min || 1;
+  const pad = {left:58,right:24,top:28,bottom:48};
+  const w = cssWidth-pad.left-pad.right, h=cssHeight-pad.top-pad.bottom;
+  const isLight = document.documentElement.dataset.theme === "light";
+  ctx.clearRect(0,0,cssWidth,cssHeight);
+  ctx.strokeStyle = isLight ? "rgba(30,70,100,.16)" : "rgba(120,210,255,.14)";
+  ctx.fillStyle = isLight ? "#52677c" : "#9cb7cc";
+  ctx.font = "12px system-ui";
+  for(let i=0;i<=4;i++){const y=pad.top+h*i/4;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+w,y);ctx.stroke();const val=max-spread*i/4;ctx.fillText(Math.round(val).toString(),8,y+4);}
+  const points=values.map((v,i)=>({x:pad.left+(history.length===1?0:w*i/(history.length-1)),y:pad.top+(max-v)/spread*h}));
+  const gradient=ctx.createLinearGradient(0,pad.top,0,pad.top+h);gradient.addColorStop(0,"rgba(57,211,255,.30)");gradient.addColorStop(1,"rgba(57,211,255,0)");
+  ctx.beginPath();ctx.moveTo(points[0].x,pad.top+h);points.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(points.at(-1).x,pad.top+h);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();
+  ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle="#39d3ff";ctx.lineWidth=3;ctx.stroke();
+  points.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle="#65dcff";ctx.fill();if(i===0||i===points.length-1){const label=history[i].source_date||"";ctx.fillStyle=isLight?"#52677c":"#9cb7cc";ctx.fillText(label,p.x-28,cssHeight-18);}});
+}
+
+function exportHistoryCsv() {
+  const history = loadHistory();
+  if (!history.length) { showToast("אין היסטוריה לייצוא"); return; }
+  const header=["saved_at","file_name","source_date","data1","data2","data3","data4","tls"];
+  const rows=[header,...history.map(item=>header.map(key=>item[key]??""))];
+  const csv=rows.map(row=>row.map(value=>`"${String(value).replaceAll('"','""')}"`).join(",")).join("\n");
+  downloadBlob(csv,"HaniaION-history.csv","text/csv;charset=utf-8");
+  showToast("קובץ ההיסטוריה נוצר");
+}
+
+elements.chartMetric?.addEventListener("change", renderAnalytics);
+elements.chartRange?.addEventListener("change", renderAnalytics);
+elements.exportHistoryCsvButton?.addEventListener("click", exportHistoryCsv);
+window.addEventListener("resize", () => { clearTimeout(window.__haniaChartTimer); window.__haniaChartTimer=setTimeout(renderAnalytics,150); });
+updateUtcClock(); setInterval(updateUtcClock, 1000);
+
 initializeTheme();
 registerEvents();
 registerHistoryEvents();
@@ -649,5 +851,6 @@ renderHistory();
 registerServiceWorker();
 initializeInstallExperience();
 initializePremiumMotion();
+initializeNotifications();
 checkHealth();
 setInterval(checkHealth, 60000);

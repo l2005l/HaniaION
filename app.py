@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import json
 import os
 import re
 import threading
@@ -10,19 +11,55 @@ from typing import Any
 from urllib.parse import urlparse
 
 import requests
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from requests.adapters import HTTPAdapter
+try:
+    from pywebpush import WebPushException, webpush
+except ImportError:  # The main RAAM application can still run before push dependencies are installed.
+    WebPushException = Exception
+    webpush = None
 from urllib3.util.retry import Retry
+
+from database import (
+    DATABASE_ENABLED,
+    database_status,
+    get_history,
+    get_monitor_state,
+    initialize_database,
+    save_raam_result,
+    set_state_values,
+    upsert_push_subscription,
+    remove_push_subscription,
+    list_push_subscriptions,
+    mark_push_success,
+    delete_push_subscription_by_id,
+    push_subscription_count,
+    add_monitor_log,
+    get_monitor_logs,
+    get_admin_statistics,
+)
 
 
 APP_NAME = "HaniaION RAAM"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "").replace("\\n", "\n").strip()
+VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com").strip()
+CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
+APP_VERSION = os.getenv("APP_VERSION", "1.0.0").strip()
 
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.on_event("startup")
+def startup_database() -> None:
+    """Create the small monitoring schema when DATABASE_URL is configured."""
+    initialize_database()
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {
@@ -214,6 +251,140 @@ def download_latest_brdc(
     )
 
 
+
+
+def discover_latest_brdc(session: EarthdataSession) -> dict[str, Any]:
+    """Find the newest daily BRDC using a streamed request, without downloading its body."""
+    today = datetime.now(timezone.utc).date()
+    errors: list[str] = []
+    for offset in range(7):
+        target_day = today - timedelta(days=offset)
+        base_url = directory_url(target_day)
+        for file_name in candidate_file_names(target_day):
+            response = None
+            try:
+                response = session.get(base_url + file_name, timeout=(20, 60), allow_redirects=True, stream=True)
+                if response.status_code == 404:
+                    continue
+                response.raise_for_status()
+                content_type = response.headers.get("Content-Type", "").lower()
+                if "text/html" in content_type:
+                    continue
+                fingerprint = "|".join([
+                    response.headers.get("ETag", ""),
+                    response.headers.get("Last-Modified", ""),
+                    response.headers.get("Content-Length", ""),
+                ])
+                return {"file_name": file_name, "source_day": target_day, "fingerprint": fingerprint, "url": base_url + file_name}
+            except requests.RequestException as error:
+                errors.append(f"{file_name}: {error}")
+            finally:
+                if response is not None:
+                    response.close()
+    raise RuntimeError("לא נמצא קובץ BRDC זמין בשבעת הימים האחרונים." + (f" {errors[-1]}" if errors else ""))
+
+
+def send_push_to_all(payload: dict[str, Any]) -> dict[str, int]:
+    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        return {"sent": 0, "failed": 0, "removed": 0}
+    stats = {"sent": 0, "failed": 0, "removed": 0}
+    data = json.dumps(payload, ensure_ascii=False)
+    for subscription in list_push_subscriptions():
+        try:
+            webpush(
+                subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
+                data=data,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_SUBJECT},
+                ttl=3600,
+            )
+            mark_push_success(subscription["id"])
+            stats["sent"] += 1
+        except WebPushException as error:
+            status = getattr(getattr(error, "response", None), "status_code", None)
+            if status in (404, 410):
+                delete_push_subscription_by_id(subscription["id"])
+                stats["removed"] += 1
+            else:
+                stats["failed"] += 1
+    return stats
+
+
+
+def require_admin(x_admin_secret: str | None) -> None:
+    if not ADMIN_SECRET:
+        raise HTTPException(status_code=503, detail="ADMIN_SECRET is not configured")
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+def next_scheduled_check(now: datetime | None = None) -> str:
+    now = now or datetime.now(timezone.utc)
+    next_hour = ((now.hour // 3) + 1) * 3
+    day = now.date()
+    if next_hour >= 24:
+        next_hour = 0
+        day += timedelta(days=1)
+    return datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc).replace(hour=next_hour).isoformat()
+
+
+def run_monitor() -> dict[str, Any]:
+    if not DATABASE_ENABLED:
+        raise RuntimeError("DATABASE_URL is required for automatic monitoring")
+    started = datetime.now(timezone.utc)
+    add_monitor_log("info", "monitor_started", "Automatic BRDC check started")
+    set_state_values({"monitor_status": "checking", "last_monitor_started_at": started.isoformat()})
+    try:
+        session = create_session()
+        remote = discover_latest_brdc(session)
+        state = get_monitor_state()
+        same_file = state.get("last_remote_file_name") == remote["file_name"]
+        same_fingerprint = bool(remote["fingerprint"]) and state.get("last_remote_fingerprint") == remote["fingerprint"]
+
+        if same_file and (same_fingerprint or not remote["fingerprint"]):
+            finished = datetime.now(timezone.utc)
+            set_state_values({
+                "monitor_status": "idle", "last_check_at": finished.isoformat(),
+                "last_monitor_result": "no_new_file", "last_remote_file_name": remote["file_name"],
+                "last_remote_fingerprint": remote["fingerprint"],
+            })
+            add_monitor_log("info", "monitor_no_change", f"No new BRDC file: {remote['file_name']}", duration_ms=int((finished-started).total_seconds()*1000))
+            return {"ok": True, "action": "no_new_file", "file_name": remote["file_name"], "checked_at": finished.isoformat()}
+
+        # A new name, or a silent replacement with changed HTTP metadata, triggers the full download and parse.
+        with _cache_lock:
+            _cache["result"] = None
+            _cache["expires_at"] = 0.0
+        result = calculate_latest()
+        database_result = save_raam_result(result)
+        is_baseline = not bool(state.get("last_remote_file_name"))
+        should_notify = not is_baseline and result["file_name"] != state.get("last_remote_file_name")
+        push = {"sent": 0, "failed": 0, "removed": 0}
+        if should_notify:
+            push = send_push_to_all({
+                "title": "HaniaION — New BRDC file",
+                "body": f"{result['file_name']} is now available. Tap to view RAAM data.",
+                "url": "/#extractor",
+                "tag": "haniaion-brdc-update",
+                "data": {"file_name": result["file_name"], "source_date": result["source_date"]},
+            })
+        finished = datetime.now(timezone.utc)
+        set_state_values({
+            "monitor_status": "idle", "last_check_at": finished.isoformat(),
+            "last_monitor_result": "new_file" if should_notify else "baseline",
+            "last_remote_file_name": remote["file_name"], "last_remote_fingerprint": remote["fingerprint"],
+            "last_notification_at": finished.isoformat() if should_notify else state.get("last_notification_at", ""),
+            "last_push_stats": push,
+        })
+        event = "monitor_new_file" if should_notify else "monitor_baseline"
+        add_monitor_log("info", event, f"Processed {result['file_name']}", {"push": push, "database": database_result}, int((finished-started).total_seconds()*1000))
+        return {"ok": True, "action": "new_file" if should_notify else "baseline", "result": result, "database": database_result, "push": push}
+    except Exception as error:
+        failed_at = datetime.now(timezone.utc)
+        set_state_values({"monitor_status": "error", "last_monitor_error": str(error)[:500], "last_check_at": failed_at.isoformat()})
+        add_monitor_log("error", "monitor_error", str(error)[:500], duration_ms=int((failed_at-started).total_seconds()*1000))
+        raise
+
+
 def parse_klobuchar(rinex_text: str) -> dict[str, Any]:
     alpha: list[float] = []
     beta: list[float] = []
@@ -346,8 +517,13 @@ def index():
 
 
 @app.get("/wind")
-def wind_dashboard():
+def wind_page():
     return FileResponse("static/wind.html")
+
+
+@app.get("/admin")
+def admin_page():
+    return FileResponse("static/admin.html")
 
 
 @app.get("/manifest.webmanifest")
@@ -368,7 +544,105 @@ def service_worker():
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    db = database_status()
+    return {
+        "status": "ok" if (not db["enabled"] or db["connected"]) else "degraded",
+        "database": db,
+    }
+
+
+@app.get("/api/history")
+def history(limit: int = Query(default=30, ge=1, le=100)):
+    return {
+        "database_enabled": DATABASE_ENABLED,
+        "count": len(items := get_history(limit)),
+        "items": items,
+    }
+
+
+@app.get("/api/monitor/status")
+def monitor_status():
+    return {
+        "database": database_status(),
+        "state": get_monitor_state(),
+        "schedule": "Every 3 hours via GitHub Actions",
+        "next_check_at": next_scheduled_check(),
+        "version": APP_VERSION,
+        "push": {"configured": bool(webpush and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY), "subscribers": push_subscription_count() if DATABASE_ENABLED else 0},
+    }
+
+
+@app.get("/api/admin/overview")
+def admin_overview(x_admin_secret: str | None = Header(default=None)):
+    require_admin(x_admin_secret)
+    return {
+        "version": APP_VERSION, "database": database_status(), "state": get_monitor_state(),
+        "statistics": get_admin_statistics(), "next_check_at": next_scheduled_check(),
+        "push_configured": bool(webpush and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY),
+        "cron_configured": bool(CRON_SECRET),
+    }
+
+@app.get("/api/admin/logs")
+def admin_logs(limit: int = Query(default=100, ge=1, le=500), x_admin_secret: str | None = Header(default=None)):
+    require_admin(x_admin_secret)
+    return {"items": get_monitor_logs(limit)}
+
+@app.post("/api/admin/run-now")
+def admin_run_now(x_admin_secret: str | None = Header(default=None)):
+    require_admin(x_admin_secret)
+    try:
+        return run_monitor()
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+
+@app.post("/api/admin/test-push")
+def admin_test_push(x_admin_secret: str | None = Header(default=None)):
+    require_admin(x_admin_secret)
+    stats = send_push_to_all({
+        "title": "HaniaION test notification",
+        "body": "Push notifications are configured correctly.",
+        "url": "/admin", "tag": "haniaion-test",
+    })
+    add_monitor_log("info", "test_push", "Admin sent a test push", stats)
+    return {"ok": True, "push": stats}
+
+
+@app.get("/api/push/public-key")
+def push_public_key():
+    if not VAPID_PUBLIC_KEY:
+        raise HTTPException(status_code=503, detail="Push notifications are not configured")
+    return {"public_key": VAPID_PUBLIC_KEY}
+
+
+@app.post("/api/push/subscribe")
+async def push_subscribe(request: Request):
+    body = await request.json()
+    try:
+        upsert_push_subscription(body, request.headers.get("user-agent"))
+    except (KeyError, ValueError) as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"ok": True}
+
+
+@app.post("/api/push/unsubscribe")
+async def push_unsubscribe(request: Request):
+    body = await request.json()
+    endpoint = str(body.get("endpoint", "")).strip()
+    if not endpoint:
+        raise HTTPException(status_code=400, detail="Missing endpoint")
+    return {"ok": True, "removed": remove_push_subscription(endpoint)}
+
+
+@app.post("/api/monitor/run")
+def monitor_run(authorization: str | None = Header(default=None)):
+    if not CRON_SECRET:
+        raise HTTPException(status_code=503, detail="CRON_SECRET is not configured")
+    if authorization != f"Bearer {CRON_SECRET}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        return run_monitor()
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
 
 
 @app.post("/api/calculate")
@@ -382,7 +656,17 @@ def calculate(request: Request):
     check_rate_limit(client_ip)
 
     try:
-        return calculate_latest()
+        result = calculate_latest()
+        try:
+            result["database"] = save_raam_result(result)
+        except Exception as database_error:
+            # Extraction must keep working even if the external database is temporarily unavailable.
+            result["database"] = {
+                "saved": False,
+                "reason": "database_error",
+                "message": str(database_error)[:240],
+            }
+        return result
 
     except requests.Timeout as error:
         raise HTTPException(
