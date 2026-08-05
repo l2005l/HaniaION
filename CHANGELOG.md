@@ -1,16 +1,8 @@
-# HaniaION v2.6.0
+# HaniaION v2.7.0 — Command Center
 
-- Fixed full Y-axis labels on mobile charts.
-- Added no-change insight for flat datasets.
-- Added minimum, maximum and range delta summaries.
-- Added safe spacing above the fixed system-status bar.
-- Updated PWA cache version.
-
-# Changelog
-
-## v2.5.0
-- Cloud PostgreSQL history sync into the existing history and analytics views.
-- Mobile-safe chart width; no forced 620px canvas.
-- Manual cloud sync control and visible sync status.
-- Satellite source outage is shown as waiting/degraded instead of a red application failure.
+- Added a compact Command Center that keeps NASA first and K69 second.
+- Added live K69 countdown to the main dashboard.
+- Fixed Satellite Live to consume the API `objects` collection.
+- Satellite cached data is now yellow/warning instead of red/error.
+- Live satellite data remains green; true absence of all data remains neutral/offline.
 - Updated PWA cache versions.

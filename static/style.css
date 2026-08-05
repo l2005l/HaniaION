@@ -1342,3 +1342,11 @@ iframe {
   .history-chart{margin-inline:auto}
   .analytics-section{padding-bottom:118px!important}
 }
+
+/* v2.7 Command Center and satellite source states */
+.command-center{margin:18px 0 24px;padding:18px;border:1px solid rgba(74,177,229,.2);border-radius:22px;background:linear-gradient(145deg,rgba(8,28,48,.76),rgba(5,18,32,.76))}
+.command-center-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:14px}.command-center-heading h2{margin:.2rem 0 0}.command-center-heading>small{color:var(--text-dim)}
+.command-priority-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:12px}.command-priority-card{min-width:0;border:1px solid rgba(113,207,255,.25);border-radius:18px;padding:18px;background:linear-gradient(145deg,rgba(15,45,72,.96),rgba(8,25,42,.97));color:#fff;text-decoration:none;display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;text-align:right;cursor:pointer;font:inherit}.command-priority-card:hover{transform:translateY(-2px);border-color:rgba(66,215,255,.58)}.command-priority-card small,.command-priority-card em{display:block;color:#9fc8df;font-style:normal}.command-priority-card strong{display:block;font-size:1.06rem;margin:4px 0}.command-priority-card b{color:#70e6ff}.command-icon{font-size:1.65rem}.nasa-command-card{border-color:rgba(72,221,161,.44);background:linear-gradient(145deg,rgba(18,72,61,.94),rgba(8,32,39,.98))}.k69-command-card{border-color:rgba(66,215,255,.42)}
+.focused-status-row .status-warning{border-color:rgba(255,190,85,.48);background:linear-gradient(145deg,rgba(85,61,19,.92),rgba(39,29,12,.98))}.focused-status-row .status-warning .live-dot{background:#ffbe55!important;box-shadow:0 0 0 5px rgba(255,190,85,.13),0 0 18px rgba(255,190,85,.5)!important}
+@media(max-width:950px){.command-priority-grid{grid-template-columns:1fr 1fr}.nasa-command-card{grid-column:1/-1}}
+@media(max-width:650px){.command-center{padding:14px 10px}.command-center-heading{align-items:start;flex-direction:column}.command-priority-grid{grid-template-columns:1fr}.nasa-command-card{grid-column:auto}.command-priority-card{padding:15px 13px}.command-secondary-tools>a{min-height:96px!important}}

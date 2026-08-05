@@ -9,7 +9,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/icon.svg?v=43" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
-  <link rel="stylesheet" href="/static/style.css?v=51">
+  <link rel="stylesheet" href="/static/style.css?v=52">
   <title>HaniaION — BRDC to RAAM</title>
   <link rel="stylesheet" href="/static/data-status.css?v=4">
 </head>
@@ -40,14 +40,27 @@
         </div>
       </div>
 
-      <nav class="focused-tools" aria-label="תפריט מהיר">
-        <a href="#gps-pulse"><span>◷</span><strong>K-69</strong><small>GPS Pulse Monitor</small></a>
-        <a href="#history"><span>↺</span><strong>היסטוריה</strong><small>תוצאות והשוואה</small></a>
-        <a href="/wind"><span>🌬</span><strong>מפת רוחות</strong><small>רוח ותכנון מסלול</small></a>
-        <a href="/satellite"><span>◉</span><strong>Satellite Live</strong><small>מעקב לוויינים</small></a>
-        <a href="#system-status"><span>●</span><strong>מצב המערכת</strong><small>מקורות ועדכונים</small></a>
-        <a href="#analytics"><span>⌁</span><strong>גרפים</strong><small>ניתוח מגמות</small></a>
+      <nav class="focused-tools command-secondary-tools" aria-label="כלים נוספים">
+        <a href="#history"><span>↺</span><strong>היסטוריה</strong><small>תוצאות שמורות</small></a>
+        <a href="#analytics"><span>⌁</span><strong>גרפים</strong><small>מגמות והשוואה</small></a>
+        <a href="/wind"><span>🌬</span><strong>מפת רוחות</strong><small>מפה ותכנון מסלול</small></a>
+        <a href="/satellite"><span>◉</span><strong>לוויינים</strong><small>מסלולים מעל ישראל</small></a>
       </nav>
+    </section>
+
+    <section class="command-center reveal" aria-label="מרכז הפעלה">
+      <div class="command-center-heading"><div><span class="section-kicker">COMMAND CENTER</span><h2>גישה מהירה</h2></div><small>NASA ראשון · K69 שני · שאר הכלים אחריהם</small></div>
+      <div class="command-priority-grid">
+        <button id="commandCalculateButton" class="command-priority-card nasa-command-card" type="button">
+          <span class="command-icon">↯</span><div><small>עדיפות ראשונה</small><strong>נתוני NASA / RAAM</strong><em>הורד את קובץ ה־BRDC האחרון והצג DATA1–DATA4</em></div><b>הפעל</b>
+        </button>
+        <a class="command-priority-card k69-command-card" href="#gps-pulse">
+          <span class="command-icon">◷</span><div><small>עדיפות שנייה · חישוב מקומי</small><strong>K69 הבא בעוד <span id="k69QuickCountdown">--:--</span></strong><em>זמן מקומי: <span id="k69QuickNext">--:--:--</span></em></div><b>פתח</b>
+        </a>
+        <a class="command-priority-card status-command-card" href="#system-status">
+          <span class="command-icon">●</span><div><small>מצב מקורות</small><strong>מצב המערכת</strong><em>NASA, היסטוריה, רוח ולוויינים במקום אחד</em></div><b>בדוק</b>
+        </a>
+      </div>
     </section>
 
     <section id="system-status" class="system-health-section" aria-label="מצב המערכת">
@@ -179,7 +192,7 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=51" defer></script>
+  <script src="/static/app.js?v=52" defer></script>
   <script src="/static/data-status.js?v=4"></script>
 </body>
 </html>

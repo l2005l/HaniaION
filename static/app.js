@@ -625,7 +625,8 @@ async function checkHealth() {
     if (!response.ok) throw new Error("offline");
     const payload = await response.json();
     const live = payload.source_mode === "live";
-    setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", live ? "online" : "neutral", live ? "חי" : "נתונים שמורים", payload.tle_fetched_at ? `עודכן ${formatDateTime(payload.tle_fetched_at)}` : "מקור מסלולים");
+    const hasObjects = Number(payload.counts?.total || 0) > 0;
+    setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", live ? "online" : hasObjects ? "warning" : "neutral", live ? "חי" : hasObjects ? "מטמון פעיל" : "ממתין לעדכון", payload.tle_fetched_at ? `TLE: ${formatDateTime(payload.tle_fetched_at)}` : "מקור מסלולים");
   } catch {
     setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", "neutral", "ממתין לעדכון", "מקור המסלולים אינו זמין כרגע");
   }
@@ -634,6 +635,7 @@ async function checkHealth() {
 function registerEvents() {
   elements.calculateButton?.addEventListener("click", () => calculate());
   elements.heroCalculateButton?.addEventListener("click", () => calculate({ scrollToWorkspace: true }));
+  byId("commandCalculateButton")?.addEventListener("click", () => calculate({ scrollToWorkspace: true }));
   elements.refreshButton.addEventListener("click", () => calculate());
   elements.retryButton.addEventListener("click", () => calculate());
   elements.copyButton.addEventListener("click", () => latestResult && copyText(buildTextExport(), "All RAAM values copied"));
@@ -1131,6 +1133,8 @@ function updateK69Monitor() {
   byId("k69NextLocal").textContent = formatK69Local(next);
   byId("k69NextUtc").textContent = formatK69Utc(next);
   byId("k69Countdown").textContent = formatK69Countdown(remaining);
+  if (byId("k69QuickCountdown")) byId("k69QuickCountdown").textContent = formatK69Countdown(remaining);
+  if (byId("k69QuickNext")) byId("k69QuickNext").textContent = formatK69Local(next);
   byId("k69TimeZone").textContent = `אזור זמן: ${Intl.DateTimeFormat().resolvedOptions().timeZone || "לא ידוע"}`;
   byId("k69NextDate").textContent = new Intl.DateTimeFormat("he-IL", {weekday:"short", day:"2-digit", month:"2-digit"}).format(next);
   ring?.style.setProperty("--k69-progress", `${progress * 360}deg`);
