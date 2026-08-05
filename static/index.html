@@ -9,9 +9,9 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/icon.svg?v=43" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
-  <link rel="stylesheet" href="/static/style.css?v=43">
+  <link rel="stylesheet" href="/static/style.css?v=46">
   <title>HaniaION — BRDC to RAAM</title>
-  <link rel="stylesheet" href="/static/data-status.css?v=1">
+  <link rel="stylesheet" href="/static/data-status.css?v=2">
 </head>
 <body class="focused-app">
   <header class="focused-header">
@@ -35,17 +35,18 @@
         <h1>הנתונים העדכניים ל־RAAM,<br><em>בפעולה אחת.</em></h1>
         <p>המערכת מאתרת את קובץ ה־BRDC האחרון, מחלצת את מקדמי Klobuchar ומציגה את ארבעת ערכי ה־RAAM ואת tLS.</p>
         <div class="focused-primary-actions">
-          <button id="heroCalculateButton" class="button button-primary button-large" type="button"><span class="button-icon">↯</span> הורד והצג נתונים</button>
-          <a class="button button-secondary button-large" href="/wind"><span>🌬</span> מפת רוחות ותכנון מסלול</a>
+          <button id="heroCalculateButton" class="button button-primary button-large" type="button"><span class="button-icon">↯</span> הורד והצג נתוני NASA</button>
+          <a class="button button-secondary button-large k69-priority-button" href="#gps-pulse"><span>◷</span> מעבר מהיר ל־K69</a>
         </div>
       </div>
 
       <nav class="focused-tools" aria-label="תפריט מהיר">
-        <a href="#system-status"><span>◉</span><strong>מצב ועדכון</strong><small>BRDC, שרת והתראות</small></a>
-        <a href="#history"><span>↺</span><strong>היסטוריה</strong><small>תוצאות והשוואה</small></a>
-        <a href="#analytics"><span>⌁</span><strong>גרפים</strong><small>ניתוח מגמות ושינויים</small></a>
         <a href="#gps-pulse"><span>◷</span><strong>K-69</strong><small>GPS Pulse Monitor</small></a>
-        <a href="/satellite"><span>◉</span><strong>Satellite Live</strong><small>הדמיית תצפית תלת־ממדית</small></a>
+        <a href="#history"><span>↺</span><strong>היסטוריה</strong><small>תוצאות והשוואה</small></a>
+        <a href="/wind"><span>🌬</span><strong>מפת רוחות</strong><small>רוח ותכנון מסלול</small></a>
+        <a href="/satellite"><span>◉</span><strong>Satellite Live</strong><small>מעקב לוויינים</small></a>
+        <a href="#system-status"><span>●</span><strong>מצב המערכת</strong><small>מקורות ועדכונים</small></a>
+        <a href="#analytics"><span>⌁</span><strong>גרפים</strong><small>ניתוח מגמות</small></a>
       </nav>
     </section>
 

@@ -1177,3 +1177,105 @@ html[data-theme="light"] .install-modal-close { color:#fff !important; backgroun
   .k69-timeline-line { min-width:28px; }
   .k69-timeline-item { min-width:96px; }
 }
+
+
+/* v2.2.0 — mobile viewport lock and task priority */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+body.focused-app,
+.focused-header,
+.focused-main,
+.focused-hero,
+.focused-hero-copy,
+.focused-tools,
+.focused-status-row,
+.overview-grid,
+.workspace-section,
+.results-section,
+.history-section,
+.analytics-section,
+.pulse-section,
+.site-footer,
+.focused-footer {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.focused-main > *,
+.focused-hero > *,
+.overview-grid > *,
+.workspace-section > *,
+.results-section > *,
+.history-section > *,
+.analytics-section > *,
+.pulse-section > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+img,
+svg,
+canvas,
+video,
+iframe {
+  max-width: 100%;
+}
+
+.pulse-frame-shell,
+.k69-monitor-card,
+.k69-dashboard,
+.k69-timeline-card {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.k69-timeline {
+  max-width: 100%;
+  overscroll-behavior-inline: contain;
+}
+
+.k69-priority-button {
+  border-color: rgba(52, 211, 153, .38);
+  background: linear-gradient(135deg, rgba(16,185,129,.16), rgba(14,116,144,.18));
+}
+
+@media (max-width: 650px) {
+  body { min-width: 0; }
+  .focused-header,
+  .focused-main,
+  .focused-footer {
+    width: calc(100% - 18px);
+    max-width: calc(100% - 18px);
+  }
+  .focused-header { gap: 8px; }
+  .focused-brand { min-width: 0; flex: 1 1 auto; }
+  .focused-brand span { min-width: 0; }
+  .focused-brand strong { white-space: nowrap; }
+  .focused-header-actions { flex: 0 0 auto; min-width: 0; }
+  .focused-hero { width: 100%; }
+  .focused-hero-copy { overflow: hidden; }
+  .focused-hero h1,
+  .focused-hero-copy > p { overflow-wrap: anywhere; }
+  .focused-tools { grid-template-columns: 1fr 1fr; width: 100%; }
+  .focused-tools > a,
+  .focused-tools > button { min-width: 0; overflow-wrap: anywhere; }
+  .button { max-width: 100%; white-space: normal; }
+  .overview-grid { grid-template-columns: 1fr; }
+  .pulse-frame { max-width: none; }
+}
+
+@media (max-width: 380px) {
+  .focused-main,
+  .focused-header,
+  .focused-footer { width: calc(100% - 12px); max-width: calc(100% - 12px); }
+  .focused-hero-copy { padding-inline: 15px; }
+  .focused-tools > a,
+  .focused-tools > button { padding-inline: 10px; }
+  .utc-header { min-width: 76px; }
+}
