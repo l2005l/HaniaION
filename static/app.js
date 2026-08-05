@@ -163,13 +163,24 @@ function displayResult(data) {
   animateValue(byId("tls"), data.tls, 650);
   byId("alpha").textContent = data.alpha.map(formatCoefficient).join("  ·  ");
   byId("beta").textContent = data.beta.map(formatCoefficient).join("  ·  ");
-  byId("cacheBadge").textContent = data.stale ? "נתונים אחרונים שמורים" : (data.cached ? "Cached result" : "Updated now");
+  byId("cacheBadge").textContent = data.stale
+    ? "נתונים אחרונים שמורים"
+    : (data.cached ? `נתון שמור מהשרת · ${formatDateTime(data.updated_at)}` : "עודכן עכשיו");
   setLiveStatus("cacheStatusCard", "cacheStatus", "cacheFreshness", data.stale ? "warning" : "online", data.stale ? "Stale" : (data.cached ? "Warm" : "Fresh"), data.stale ? "מקור NASA אינו זמין — מוצגים הנתונים האחרונים" : (data.cached ? "Served from cache" : "Latest source loaded"));
   if (window.HaniaDataStatus) {
     if (data.stale) HaniaDataStatus.report("raam", {title:"נתוני DATA1–DATA4 / RAAM אינם מעודכנים", message:data.stale_reason || "מקור NASA CDDIS אינו זמין כרגע. מוצגים הנתונים האחרונים שנשמרו.", lastUpdated:data.updated_at, severity:"error"});
     else if (data.cached) HaniaDataStatus.report("raam", {title:"נתוני RAAM מוצגים מהמטמון", message:"הנתונים תקינים אך לא נמשכו מחדש בבקשה זו.", lastUpdated:data.updated_at});
     else HaniaDataStatus.clear("raam");
-    if (data.database && data.database.saved === false) HaniaDataStatus.report("database", {title:"שמירת ההיסטוריה בענן נכשלה", message:"החישוב עצמו הצליח, אך מסד הנתונים אינו זמין כרגע.", lastUpdated:data.updated_at}); else HaniaDataStatus.clear("database");
+    // Database/history failures are secondary and must not look like a NASA data failure.
+    HaniaDataStatus.clear("database");
+    const historyWarning = byId("historyCloudWarning");
+    if (historyWarning) {
+      const saveFailed = data.database && data.database.saved === false;
+      historyWarning.classList.toggle("hidden", !saveFailed);
+      historyWarning.innerHTML = saveFailed
+        ? `<strong>⚠️ השמירה להיסטוריה בענן לא הצליחה</strong><span>נתוני NASA והחישוב תקינים. התוצאה נשמרה במכשיר בלבד וייתכן שלא תהיה זמינה ממכשיר אחר.</span>`
+        : "";
+    }
   }
   byId("updatedAt").textContent = formatDateTime(data.updated_at);
   elements.resultsPanel.classList.remove("hidden");

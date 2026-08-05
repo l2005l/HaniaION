@@ -1279,3 +1279,21 @@ iframe {
   .focused-tools > button { padding-inline: 10px; }
   .utc-header { min-width: 76px; }
 }
+
+
+/* v2.2.1 — secondary cloud-history warning */
+.history-cloud-warning {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(251, 191, 36, .38);
+  border-radius: 14px;
+  background: rgba(120, 72, 8, .18);
+  color: #f7d38a;
+  display: grid;
+  gap: 4px;
+  font-size: .82rem;
+  line-height: 1.55;
+}
+.history-cloud-warning strong { color: #ffe1a3; }
+.history-cloud-warning span { color: #d7c4a0; }
+.history-cloud-warning.hidden { display: none; }
