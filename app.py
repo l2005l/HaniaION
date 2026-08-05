@@ -717,10 +717,12 @@ def calculate(request: Request):
         return result
 
     except requests.Timeout as error:
-        raise HTTPException(
-            status_code=504,
-            detail="החיבור ל-CDDIS ארך יותר מדי זמן.",
-        ) from error
+        with _cache_lock:
+            stale = dict(_cache["result"]) if _cache["result"] is not None else None
+        if stale:
+            stale.update(cached=True, stale=True, stale_reason="החיבור ל-CDDIS ארך יותר מדי זמן; מוצגים הנתונים האחרונים שנשמרו בשרת.")
+            return stale
+        raise HTTPException(status_code=504, detail="החיבור ל-CDDIS ארך יותר מדי זמן ואין נתונים שמורים.") from error
 
     except requests.HTTPError as error:
         status = (

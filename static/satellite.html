@@ -1,69 +1,15 @@
-<!doctype html>
-<html lang="he" dir="rtl" data-theme="dark">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#050b16">
-  <meta name="description" content="HaniaION Satellite Live — הדמיית כיסוי לוויינים מעל ישראל.">
-  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/satellite.css?v=3">
-  <title>Satellite Live — HaniaION</title>
-</head>
-<body>
-  <header class="sat-header">
-    <a class="brand" href="/"><img src="/static/icons/icon.svg" alt=""><span><strong>HaniaION</strong><small>Satellite Live</small></span></a>
-    <div class="header-actions"><span class="demo-badge live-badge">LIVE ORBITS</span><div class="clock"><small>UTC</small><strong id="utcClock">--:--:--</strong></div><a href="/" class="back-link">חזרה למערכת</a></div>
-  <p id="sourceWarning" class="source-warning" hidden></p>
-</header>
-
-  <main class="sat-shell">
-    <section class="hero-copy">
-      <div><span class="eyebrow">SATELLITE AWARENESS</span><h1>מי מסוגל לצפות בישראל<br><em>ברגע זה?</em></h1></div>
-      <p>מיקומי המסלול מחושבים מנתוני TLE ציבוריים בזמן אמת. יכולת התצפית היא הערכה גאומטרית בלבד ואינה מעידה שהחיישן פעיל או מכוון לישראל.</p>
-    </section>
-
-    <section class="dashboard">
-      <aside class="side-panel stats-panel">
-        <div class="panel-title"><span class="live-dot"></span><div><small>LIVE GEOMETRY</small><h2>כיסוי מעל ישראל</h2></div></div>
-        <div class="main-count"><strong id="visibleCount">—</strong><span>לוויינים בעלי אפשרות גאומטרית לתצפית</span></div>
-        <div class="stat-grid">
-          <div><small>אופטי</small><strong id="opticalCount">—</strong></div>
-          <div><small>SAR</small><strong id="sarCount">—</strong></div>
-          <div><small>מדעי</small><strong id="scienceCount">—</strong></div>
-          <div><small>קרובים</small><strong id="nearCount">—</strong></div>
-        </div>
-        <div class="coverage-card"><div class="coverage-head"><span>Coverage Score</span><strong id="coverageScore">—</strong></div><div class="coverage-track"><span id="coverageBar"></span></div><small>מדד הדגמה המבוסס על מספר הלוויינים הפעילים במסך.</small></div>
-        <div class="window-card"><small>החלון הבא ללא לווייני תצפית ידועים</small><strong id="windowTime">—</strong><span><b id="windowCountdown">—</b></span></div>
-        <button id="resetCamera" class="primary-button" type="button">מרכז את ישראל</button>
-      </aside>
-
-      <div class="globe-card">
-        <div id="globe" aria-label="כדור הארץ תלת ממדי עם מסלולי לוויינים"></div>
-        <div class="globe-overlay top-left"><span class="pulse"></span><strong>ישראל</strong><small>31.5°N · 34.8°E</small></div>
-        <div class="globe-overlay bottom-left"><span><i class="legend green"></i> בטווח</span><span><i class="legend yellow"></i> מתקרב</span><span><i class="legend gray"></i> מחוץ לטווח</span></div>
-        <div class="globe-help">גרור לסיבוב · גלגלת לזום · לחץ על לוויין</div>
-      </div>
-
-      <aside class="side-panel list-panel">
-        <div class="list-head"><div><small>OBJECTS</small><h2>לווייני תצפית ציבוריים</h2></div><span id="objectCount">—</span></div>
-        <div class="filter-row"><button class="filter active" data-filter="all">הכול</button><button class="filter" data-filter="visible">בטווח</button><button class="filter" data-filter="optical">אופטי</button><button class="filter" data-filter="sar">SAR</button></div>
-        <div id="satelliteList" class="satellite-list"></div>
-      </aside>
-    </section>
-
-    <section class="timeline-panel">
-      <div class="timeline-heading"><div><span class="eyebrow">NEXT 90 MINUTES</span><h2>ציר מעבר מעל ישראל</h2></div><div class="now-marker"><span></span>עכשיו</div></div>
-      <div id="timeline" class="timeline"></div>
-    </section>
-
-    <section class="notice"><strong>חשוב:</strong> נתוני המסלול אמיתיים ומבוססי TLE/SGP4, אך “בטווח” הוא אומדן לפי קטגוריית משימה וטווח קרקע טיפוסי. אין אישור שהחיישן פעיל, מכוון לישראל או אוסף תמונה. <span id="sourceStamp"></span> · <span id="dataState">מתחבר…</span></section>
-  </main>
-
-  <div id="satelliteModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-backdrop" data-close></div><article class="modal-card"><button class="modal-close" data-close>×</button><span id="modalType" class="eyebrow">OPTICAL</span><h2 id="modalName">Sentinel-2B</h2><div class="modal-grid"><div><small>מפעיל</small><strong id="modalOperator">ESA</strong></div><div><small>גובה מסלול</small><strong id="modalAltitude">786 ק״מ</strong></div><div><small>מצב גאומטרי</small><strong id="modalStatus">בטווח</strong></div><div><small>עזיבה משוערת</small><strong id="modalExit">עוד 6 דקות</strong></div></div><p id="modalNote"></p></article>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.152.2/three.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/three@0.152.2/build/three.min.js'"></script>
-  <script src="/static/satellite.js?v=3" defer></script>
-</body>
-</html>
+<!doctype html><html lang="he" dir="rtl" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#040914"><meta name="description" content="HaniaION Satellite Mission Control"><link rel="icon" href="/static/icons/icon.svg"><link rel="stylesheet" href="/static/satellite.css?v=20"><title>Satellite Mission Control — HaniaION</title>  <link rel="stylesheet" href="/static/data-status.css?v=1">
+</head><body>
+<header class="sat-header"><a class="brand" href="/"><img src="/static/icons/icon.svg" alt=""><span><strong>HaniaION</strong><small>Satellite Mission Control</small></span></a><div class="header-actions"><span id="liveBadge" class="live-badge">מתחבר</span><div class="clock"><small>UTC</small><strong id="utcClock">--:--:--</strong></div><a href="/" class="back-link">חזרה למערכת</a></div></header>
+<main class="sat-shell"><section class="hero-copy"><div><span class="eyebrow">ISRAEL SATELLITE AWARENESS</span><h1>מרכז בקרה לווייני<br><em>מעל ישראל</em></h1></div><p>מיקום מסלולי המבוסס על נתוני TLE/SGP4. הסימון “בטווח” הוא אפשרות גאומטרית משוערת בלבד, ולא אישור שהלוויין מצלם.</p></section>
+<nav class="mode-tabs" aria-label="מצבי תצוגה"><button class="mode-tab active" data-mode="globe">🌍 גלובוס</button><button class="mode-tab" data-mode="sky">🛰 Israel Sky</button><button class="mode-tab" data-mode="mission">▦ Mission Control</button></nav>
+<p id="sourceWarning" class="source-warning" hidden></p>
+<section id="globeMode" class="mode-panel active"><div class="dashboard"><aside class="side-panel stats-panel"><div class="panel-title"><span class="live-dot"></span><div><small>LIVE GEOMETRY</small><h2>כיסוי מעל ישראל</h2></div></div><div class="main-count"><strong id="visibleCount">—</strong><span>לוויינים בעלי אפשרות גאומטרית לתצפית</span></div><div class="stat-grid"><div><small>אופטי</small><strong id="opticalCount">—</strong></div><div><small>SAR</small><strong id="sarCount">—</strong></div><div><small>מדעי</small><strong id="scienceCount">—</strong></div><div><small>קרובים</small><strong id="nearCount">—</strong></div></div><div class="coverage-card"><div class="coverage-head"><span>Coverage Score</span><strong id="coverageScore">—</strong></div><div class="coverage-track"><span id="coverageBar"></span></div><small>מדד יחסי לפי מספר העצמים והמצב הגאומטרי.</small></div><div class="window-card"><small>החלון הבא ללא לווייני תצפית ידועים</small><strong id="windowTime">—</strong><span id="windowCountdown">—</span></div><button id="resetCamera" class="primary-button">🎯 מרכז את ישראל</button></aside>
+<div class="globe-card"><canvas id="globeCanvas" aria-label="גלובוס תלת ממדי עם לוויינים"></canvas><div class="earth-label">🌍 <b>כדור הארץ</b></div><div class="israel-label"><span></span><b>ישראל</b><small>31.5°N · 34.8°E</small></div><div class="globe-legend"><span><i class="green"></i> בטווח</span><span><i class="yellow"></i> מתקרב</span><span><i class="gray"></i> מחוץ לטווח</span></div><div class="globe-help">גרור לסיבוב · גלגלת לזום · לחץ על לוויין</div></div>
+<aside class="side-panel list-panel"><div class="list-head"><div><small>OBJECTS</small><h2>לווייני תצפית ציבוריים</h2></div><span id="objectCount">—</span></div><div class="filter-row"><button class="filter active" data-filter="all">הכול</button><button class="filter" data-filter="visible">בטווח</button><button class="filter" data-filter="optical">אופטי</button><button class="filter" data-filter="sar">SAR</button></div><div id="satelliteList" class="satellite-list"></div></aside></div></section>
+<section id="skyMode" class="mode-panel"><div class="sky-layout"><div class="sky-card"><canvas id="skyCanvas"></canvas><div class="sky-title"><span>ISRAEL SKY</span><strong>מבט מהקרקע בישראל</strong><small>צפון למעלה · האופק בשפה החיצונית · מרכז המעגל הוא מעל הראש</small></div><button id="enableMotion" class="motion-button">הפעל כיוון לפי הטלפון</button></div><aside class="side-panel"><h2>מה רואים?</h2><p class="explain">כל נקודה מייצגת כיוון משוער של לוויין ביחס לצופה בישראל. נקודה קרובה למרכז נמצאת גבוה יותר בשמיים; נקודה ליד השפה קרובה לאופק.</p><div id="skyList" class="sky-list"></div></aside></div></section>
+<section id="missionMode" class="mode-panel"><div class="mission-grid"><article class="mission-main"><div class="mission-heading"><div><span class="eyebrow">MISSION CONTROL</span><h2>תמונת מצב מבצעית</h2></div><strong id="missionClock">--:--:-- UTC</strong></div><div class="mission-kpis"><div><small>בטווח כעת</small><strong id="mVisible">—</strong></div><div><small>מעבר הבא</small><strong id="mNext">—</strong></div><div><small>מקור נתונים</small><strong id="mSource">—</strong></div><div><small>עצמים במעקב</small><strong id="mTotal">—</strong></div></div><div class="mission-map-wrap"><canvas id="missionCanvas"></canvas></div></article><aside class="side-panel"><div class="list-head"><div><small>NEXT 90 MINUTES</small><h2>מעברים צפויים</h2></div></div><div id="timeline" class="timeline"></div></aside></div></section>
+<section class="notice"><strong>חשוב:</strong> המסלולים מחושבים מנתוני TLE ציבוריים. “בטווח” הוא אומדן המבוסס על גאומטריה וטווח משימה טיפוסי; אין אישור שהחיישן פעיל, מכוון לישראל או אוסף תמונה. <span id="sourceStamp"></span> · <span id="dataState">מתחבר…</span></section></main>
+<div id="satelliteModal" class="modal hidden"><div class="modal-backdrop" data-close></div><article class="modal-card"><button class="modal-close" data-close>×</button><span id="modalType" class="eyebrow"></span><h2 id="modalName"></h2><div class="modal-grid"><div><small>NORAD</small><strong id="modalNorad"></strong></div><div><small>גובה</small><strong id="modalAltitude"></strong></div><div><small>מצב</small><strong id="modalStatus"></strong></div><div><small>חלון קרוב</small><strong id="modalExit"></strong></div></div><p id="modalNote"></p></article></div>
+<script src="/static/satellite.js?v=20" defer></script>  <script src="/static/data-status.js?v=1"></script>
+</body></html>

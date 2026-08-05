@@ -61,3 +61,18 @@ $("calculateRoute").addEventListener("click",()=>{const a=readPoint("start"),b=r
 $("clearRoute").addEventListener("click",clearRoute);$("speedKt").addEventListener("change",()=>drawRoute(false));
 
 initPlanner();loadWindMap();
+
+// Unified source freshness reporting.
+let windyLoadTimer=null;
+const originalLoadWindMap=loadWindMap;
+loadWindMap=function(){
+  if(window.HaniaDataStatus) HaniaDataStatus.report("windy",{title:"מפת הרוחות מתעדכנת",message:"ממתין לנתונים עדכניים מ־Windy."});
+  clearTimeout(windyLoadTimer);
+  originalLoadWindMap();
+  windyLoadTimer=setTimeout(()=>{
+    if(window.HaniaDataStatus) HaniaDataStatus.report("windy",{title:"תקלה במקור מפת הרוחות",message:"לא התקבל אישור שמפת Windy נטענה. המידע המוצג, אם קיים, עלול להיות הנתון האחרון שנשמר בדפדפן.",lastUpdated:localStorage.getItem("haniaion-windy-last-success"),severity:"error"});
+  },15000);
+};
+windFrame.addEventListener("load",()=>{clearTimeout(windyLoadTimer);const now=new Date().toISOString();localStorage.setItem("haniaion-windy-last-success",now);if(window.HaniaDataStatus)HaniaDataStatus.clear("windy")});
+window.addEventListener("offline",()=>{if(window.HaniaDataStatus)HaniaDataStatus.report("windy",{title:"מפת הרוחות אינה מתעדכנת",message:"אין חיבור למקור Windy. המפה המוצגת עשויה להיות שמורה מהטעינה האחרונה.",lastUpdated:localStorage.getItem("haniaion-windy-last-success"),severity:"error"})});
+if(!navigator.onLine && window.HaniaDataStatus) window.dispatchEvent(new Event("offline"));

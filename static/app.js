@@ -163,8 +163,14 @@ function displayResult(data) {
   animateValue(byId("tls"), data.tls, 650);
   byId("alpha").textContent = data.alpha.map(formatCoefficient).join("  ·  ");
   byId("beta").textContent = data.beta.map(formatCoefficient).join("  ·  ");
-  byId("cacheBadge").textContent = data.cached ? "Cached result" : "Updated now";
-  setLiveStatus("cacheStatusCard", "cacheStatus", "cacheFreshness", "online", data.cached ? "Warm" : "Fresh", data.cached ? "Served from cache" : "Latest source loaded");
+  byId("cacheBadge").textContent = data.stale ? "נתונים אחרונים שמורים" : (data.cached ? "Cached result" : "Updated now");
+  setLiveStatus("cacheStatusCard", "cacheStatus", "cacheFreshness", data.stale ? "warning" : "online", data.stale ? "Stale" : (data.cached ? "Warm" : "Fresh"), data.stale ? "מקור NASA אינו זמין — מוצגים הנתונים האחרונים" : (data.cached ? "Served from cache" : "Latest source loaded"));
+  if (window.HaniaDataStatus) {
+    if (data.stale) HaniaDataStatus.report("raam", {title:"נתוני DATA1–DATA4 / RAAM אינם מעודכנים", message:data.stale_reason || "מקור NASA CDDIS אינו זמין כרגע. מוצגים הנתונים האחרונים שנשמרו.", lastUpdated:data.updated_at, severity:"error"});
+    else if (data.cached) HaniaDataStatus.report("raam", {title:"נתוני RAAM מוצגים מהמטמון", message:"הנתונים תקינים אך לא נמשכו מחדש בבקשה זו.", lastUpdated:data.updated_at});
+    else HaniaDataStatus.clear("raam");
+    if (data.database && data.database.saved === false) HaniaDataStatus.report("database", {title:"שמירת ההיסטוריה בענן נכשלה", message:"החישוב עצמו הצליח, אך מסד הנתונים אינו זמין כרגע.", lastUpdated:data.updated_at}); else HaniaDataStatus.clear("database");
+  }
   byId("updatedAt").textContent = formatDateTime(data.updated_at);
   elements.resultsPanel.classList.remove("hidden");
 }
@@ -202,10 +208,20 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     setTimeout(() => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 320);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "אירעה שגיאה לא צפויה.";
-    elements.errorText.textContent = rawMessage.includes("Earthdata")
-      ? "מקור נתוני BRDC אינו זמין כרגע. בדוק את הגדרות החיבור בשרת ונסה שוב."
-      : rawMessage;
-    setState("error");
+    const previous = loadHistory()[0];
+    if (previous) {
+      const stale = {...previous, stale:true, cached:true, stale_reason:"מקור NASA CDDIS אינו זמין כרגע. מוצגים הנתונים האחרונים שנשמרו במכשיר."};
+      displayResult(stale);
+      setState("success");
+      if (window.HaniaDataStatus) HaniaDataStatus.report("raam", {title:"תקלה במקור NASA — DATA1–DATA4 אינם מעודכנים", message:"מוצגים הנתונים האחרונים שנשמרו במכשיר.", lastUpdated:previous.updated_at || previous.saved_at, severity:"error"});
+      showToast("מוצגים נתוני RAAM אחרונים שמורים");
+    } else {
+      elements.errorText.textContent = rawMessage.includes("Earthdata") || rawMessage.includes("CDDIS")
+        ? "מקור נתוני BRDC אינו זמין כרגע ולא נמצאו נתונים שמורים להצגה."
+        : rawMessage;
+      setState("error");
+      if (window.HaniaDataStatus) HaniaDataStatus.report("raam", {title:"תקלה במקור NASA — אין נתונים מעודכנים", message:elements.errorText.textContent, severity:"error"});
+    }
   } finally {
     stopLoadingPresentation();
     setButtonsDisabled(false);
@@ -940,6 +956,13 @@ function renderK69Timeline(nextTime) {
 
 function updateK69Monitor() {
   const localTime = byId("k69LocalTime");
+  const nowCheck = Date.now();
+  if (!Number.isFinite(nowCheck) || nowCheck < 1577836800000) {
+    if (window.HaniaDataStatus) HaniaDataStatus.report("k69", {title:"שעון המכשיר אינו תקין — K69 אינו מעודכן", message:"לא ניתן לחשב את אירוע K הבא עד לתיקון התאריך והשעה במכשיר.", severity:"error"});
+    if (window.HaniaDataStatus) HaniaDataStatus.setNote("k69SourceNote", {state:"error", title:"בעיה בשעון המכשיר", text:"חישוב K69 הופסק משום שהתאריך או השעה אינם תקינים."});
+    return;
+  }
+  if (window.HaniaDataStatus) { HaniaDataStatus.clear("k69"); HaniaDataStatus.setNote("k69SourceNote", {state:"ok", title:"מקור K69: שעון המכשיר", text:"החישוב מקומי ואינו תלוי בחיבור ל־NASA, ל־Windy או למקור לוויינים.", lastUpdated:new Date(nowCheck).toISOString()}); }
   if (!localTime) return;
   const now = new Date();
   const {next, remaining} = calculateNextK69(now);

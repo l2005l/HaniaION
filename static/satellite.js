@@ -1,105 +1,27 @@
-(() => {
-  const colors = { visible: 0x46f0a5, near: 0xffd166, away: 0x66768b };
-  const labels = { optical: 'צילום אופטי', sar: 'מכ״ם SAR', science: 'מדעי', observation: 'תצפית משאבים' };
-  const host = document.getElementById('globe');
-  const list = document.getElementById('satelliteList');
-  const modal = document.getElementById('satelliteModal');
-  let sats = [];
-  let activeFilter = 'all';
-  let globeApi = null;
-
-  const fmtTime = iso => new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC', hour12: false }).format(new Date(iso));
-  const statusText = s => s === 'visible' ? 'בטווח משוער' : s === 'near' ? 'מתקרב' : 'מחוץ לטווח';
-
-  function openModal(s) {
-    document.getElementById('modalType').textContent = (labels[s.type] || s.type).toUpperCase();
-    document.getElementById('modalName').textContent = s.name;
-    document.getElementById('modalOperator').textContent = `NORAD ${s.norad_id}`;
-    document.getElementById('modalAltitude').textContent = `${Math.round(s.alt_km)} ק״מ`;
-    document.getElementById('modalStatus').textContent = statusText(s.status);
-    document.getElementById('modalExit').textContent = s.windows?.[0] ? `${fmtTime(s.windows[0].start)}–${fmtTime(s.windows[0].end)} UTC` : (s.next_entry_minutes != null ? `בעוד ${s.next_entry_minutes} דקות` : 'לא נמצא בטווח החישוב');
-    document.getElementById('modalNote').textContent = `${s.mission}. מרחק נקודת הקרקע מישראל: ${Math.round(s.distance_km)} ק״מ. טווח הכיסוי הוא אומדן קטגוריאלי בלבד.`;
-    modal.classList.remove('hidden');
-  }
-  modal.querySelectorAll('[data-close]').forEach(x => x.onclick = () => modal.classList.add('hidden'));
-
-  function renderList() {
-    const filtered = sats.filter(s => activeFilter === 'all' || activeFilter === s.status || activeFilter === s.type).slice(0, 60);
-    list.innerHTML = filtered.map((s, i) => `<button class="sat-item" data-index="${sats.indexOf(s)}"><span class="sat-status" style="background:#${colors[s.status].toString(16).padStart(6,'0')}"></span><span><strong>${s.name}</strong><small>${labels[s.type] || s.type} · NORAD ${s.norad_id}</small></span><time>${s.status === 'visible' ? 'כעת' : s.next_entry_minutes != null ? `+${s.next_entry_minutes} דק׳` : '—'}</time></button>`).join('') || '<p class="empty-state">אין לוויינים במסנן זה.</p>';
-    list.querySelectorAll('.sat-item').forEach(b => b.onclick = () => openModal(sats[Number(b.dataset.index)]));
-  }
-  document.querySelectorAll('.filter').forEach(btn => btn.onclick = () => {
-    document.querySelectorAll('.filter').forEach(x => x.classList.remove('active'));
-    btn.classList.add('active'); activeFilter = btn.dataset.filter; renderList();
-  });
-
-  function renderTimeline() {
-    const rows = sats.filter(s => s.windows?.length).slice(0, 14);
-    const now = Date.now(), horizon = 90 * 60 * 1000;
-    document.getElementById('timeline').innerHTML = rows.map(s => {
-      const w = s.windows[0]; const start = Math.max(0, (new Date(w.start).getTime() - now) / horizon * 100);
-      const width = Math.max(2, (new Date(w.end).getTime() - new Date(w.start).getTime()) / horizon * 100);
-      return `<div class="timeline-row"><div class="timeline-label"><strong>${s.name}</strong><small>${labels[s.type] || s.type}</small></div><div class="timeline-track"><span class="timeline-pass" style="right:${Math.min(98,start)}%;width:${Math.min(100-start,width)}%"></span></div><div class="timeline-time">${fmtTime(w.start)}</div></div>`;
-    }).join('') || '<p class="empty-state">לא נמצאו חלונות מועמדים ב־90 הדקות הקרובות.</p>';
-  }
-
-  function applyStats(data) {
-    const c = data.counts;
-    document.getElementById('visibleCount').textContent = c.visible;
-    document.getElementById('opticalCount').textContent = c.optical;
-    document.getElementById('sarCount').textContent = c.sar;
-    document.getElementById('scienceCount').textContent = c.science;
-    document.getElementById('nearCount').textContent = c.near;
-    document.getElementById('objectCount').textContent = c.total;
-    const score = Math.min(100, Math.round((c.visible / Math.max(1, c.total)) * 250));
-    document.getElementById('coverageScore').textContent = `${score}%`;
-    document.getElementById('coverageBar').style.width = `${score}%`;
-    const gap = data.no_coverage_windows?.[0];
-    document.getElementById('windowTime').textContent = gap ? `${fmtTime(gap.start)}–${fmtTime(gap.end)} UTC` : 'לא נמצא בטווח החישוב';
-    document.getElementById('windowCountdown').textContent = gap ? `${Math.max(0, Math.round((new Date(gap.start)-Date.now())/60000))} דקות · משך ${gap.duration_minutes} דקות` : '—';
-    document.getElementById('sourceStamp').textContent = `TLE עודכן: ${fmtTime(data.tle_fetched_at)} UTC`;
-  }
-
-  async function loadData() {
-    document.getElementById('dataState').textContent = 'טוען נתוני מסלול…';
-    try {
-      const response = await fetch('/api/satellites/coverage?minutes=90', { cache: 'no-store' });
-      if (!response.ok) throw new Error((await response.json()).detail || `HTTP ${response.status}`);
-      const data = await response.json(); sats = data.objects; applyStats(data); renderList(); renderTimeline();
-      document.getElementById('dataState').textContent = data.source_mode === 'live' ? 'נתוני מסלול ציבוריים פעילים' : 'מצב גיבוי — נתוני מסלול שמורים';
-      if (globeApi) globeApi.setSatellites(sats); else globeApi = createGlobe(sats);
-    } catch (error) {
-      document.getElementById('dataState').textContent = 'טעינת הנתונים נכשלה';
-      const state = document.getElementById('sourceWarning'); if (state) { state.hidden = false; state.textContent = `לא ניתן לעדכן נתונים: ${String(error.message || error)}`; }
-    }
-  }
-
-  function createGlobe(initial) {
-    if (!window.THREE) { host.innerHTML = '<div class="globe-error"><strong>מנוע התלת־ממד לא נטען</strong><small>הדפדפן או הרשת חסמו את Three.js.</small></div>'; return null; }
-    const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(42,1,.1,100), renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2)); host.innerHTML=''; host.appendChild(renderer.domElement); camera.position.set(.2,1.15,4.2);
-    scene.add(new THREE.AmbientLight(0x7db8ff,1.15)); const sun = new THREE.DirectionalLight(0xffffff,2.2); sun.position.set(5,3,5); scene.add(sun);
-    const group = new THREE.Group(); scene.add(group);
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(1.25,64,64),new THREE.MeshPhongMaterial({color:0x0d4f7c,emissive:0x03182a,shininess:18})));
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(1.257,32,20),new THREE.MeshBasicMaterial({color:0x55bfe8,wireframe:true,transparent:true,opacity:.075})));
-    const ll=(lat,lon,r=1.27)=>{const p=(90-lat)*Math.PI/180,t=(lon+180)*Math.PI/180;return new THREE.Vector3(-r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t));};
-    const israel=ll(31.5,34.8), marker=new THREE.Mesh(new THREE.SphereGeometry(.04,16,16),new THREE.MeshBasicMaterial({color:0x43d9ff})); marker.position.copy(israel); group.add(marker);
-    let meshes=[];
-    function clearSats(){meshes.forEach(m=>group.remove(m));meshes=[];}
-    function setSatellites(items){clearSats();items.slice(0,120).forEach(s=>{const m=new THREE.Mesh(new THREE.SphereGeometry(s.status==='visible'?.038:.026,10,10),new THREE.MeshBasicMaterial({color:colors[s.status]}));m.position.copy(ll(s.lat,s.lon,1.34+Math.min(.65,s.alt_km/2200)));m.userData.sat=s;group.add(m);meshes.push(m);});}
-    setSatellites(initial);
-    let dragging=false,lastX=0,lastY=0,targetX=.15,targetY=-.55;
-    host.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY}); addEventListener('pointerup',()=>dragging=false);
-    addEventListener('pointermove',e=>{if(!dragging)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;lastX=e.clientX;lastY=e.clientY});
-    host.addEventListener('wheel',e=>{e.preventDefault();camera.position.z=Math.max(2.7,Math.min(7,camera.position.z+e.deltaY*.003))},{passive:false});
-    document.getElementById('resetCamera').onclick=()=>{targetX=.15;targetY=-.55;camera.position.z=4.2};
-    const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();host.addEventListener('click',e=>{const r=host.getBoundingClientRect();mouse.x=(e.clientX-r.left)/r.width*2-1;mouse.y=-((e.clientY-r.top)/r.height*2-1);ray.setFromCamera(mouse,camera);const hit=ray.intersectObjects(meshes)[0];if(hit)openModal(hit.object.userData.sat)});
-    function resize(){renderer.setSize(host.clientWidth,host.clientHeight,false);camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
-    (function animate(){requestAnimationFrame(animate);group.rotation.x+=(targetX-group.rotation.x)*.06;group.rotation.y+=(targetY-group.rotation.y)*.06;renderer.render(scene,camera)})();
-    return {setSatellites};
-  }
-
-  setInterval(()=>document.getElementById('utcClock').textContent=new Date().toISOString().slice(11,19),1000);
-  globeApi = createGlobe([]);
-  loadData(); setInterval(loadData, 5*60*1000);
+(()=>{'use strict';
+const $=id=>document.getElementById(id), colors={visible:'#46f0a5',near:'#ffd166',away:'#748399'}, labels={optical:'צילום אופטי',sar:'מכ״ם SAR',science:'מדעי',observation:'תצפית משאבים'};let sats=[],dataCache=null,filter='all',yaw=-.6,pitch=.18,zoom=1,drag=false,lastX=0,lastY=0,selected=null,heading=0;
+const fmt=iso=>iso?new Intl.DateTimeFormat('he-IL',{hour:'2-digit',minute:'2-digit',timeZone:'UTC',hour12:false}).format(new Date(iso)):'—';
+function statusText(s){return s==='visible'?'בטווח משוער':s==='near'?'מתקרב':'מחוץ לטווח'}
+function openModal(s){selected=s;$('modalType').textContent=labels[s.type]||s.type;$('modalName').textContent=s.name;$('modalNorad').textContent=s.norad_id;$('modalAltitude').textContent=`${Math.round(s.alt_km||0)} ק״מ`;$('modalStatus').textContent=statusText(s.status);$('modalExit').textContent=s.windows?.[0]?`${fmt(s.windows[0].start)}–${fmt(s.windows[0].end)} UTC`:s.next_entry_minutes!=null?`בעוד ${s.next_entry_minutes} דקות`:'לא נמצא';$('modalNote').textContent=`${s.mission||'משימת תצפית'}. מרחק נקודת הקרקע מישראל: ${Math.round(s.distance_km||0)} ק״מ. הנתון מתאר אפשרות גאומטרית בלבד.`;$('satelliteModal').classList.remove('hidden')}
+document.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=> $('satelliteModal').classList.add('hidden'));
+function setMode(mode){document.querySelectorAll('.mode-tab').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));document.querySelectorAll('.mode-panel').forEach(p=>p.classList.remove('active'));$(`${mode}Mode`).classList.add('active');resizeAll();drawAll()}
+document.querySelectorAll('.mode-tab').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+function renderList(){const a=sats.filter(s=>filter==='all'||s.status===filter||s.type===filter).slice(0,80);$('satelliteList').innerHTML=a.map(s=>`<button class="sat-item" data-n="${s.norad_id}"><i class="sat-status" style="background:${colors[s.status]}"></i><span><strong>${s.name}</strong><small>${labels[s.type]||s.type} · NORAD ${s.norad_id}</small></span><time>${s.status==='visible'?'כעת':s.next_entry_minutes!=null?`+${s.next_entry_minutes} דק׳`:'—'}</time></button>`).join('')||'<p class="empty-state">אין לוויינים במסנן זה.</p>';document.querySelectorAll('.sat-item').forEach(b=>b.onclick=()=>openModal(sats.find(s=>String(s.norad_id)===b.dataset.n)))}
+document.querySelectorAll('.filter').forEach(b=>b.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));b.classList.add('active');filter=b.dataset.filter;renderList()});
+function renderTimeline(){const rows=sats.filter(s=>s.windows?.length).sort((a,b)=>new Date(a.windows[0].start)-new Date(b.windows[0].start)).slice(0,18);$('timeline').innerHTML=rows.map(s=>{const w=s.windows[0],start=Math.max(0,(new Date(w.start)-Date.now())/5400000*100),dur=Math.max(3,(new Date(w.end)-new Date(w.start))/5400000*100);return `<div class="timeline-row"><header><strong>${s.name}</strong><small>${fmt(w.start)} UTC</small></header><small>${labels[s.type]||s.type} · ${statusText(s.status)}</small><div class="timeline-track"><span style="margin-right:${Math.min(95,start)}%;width:${Math.min(100-start,dur)}%"></span></div></div>`}).join('')||'<p class="empty-state">לא נמצאו מעברים ב־90 הדקות הקרובות.</p>'}
+function skyValues(s){const lat1=31.5*Math.PI/180,lon1=34.8*Math.PI/180,lat2=(s.lat||0)*Math.PI/180,lon2=(s.lon||0)*Math.PI/180,dl=lon2-lon1;let br=Math.atan2(Math.sin(dl)*Math.cos(lat2),Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dl))*180/Math.PI;br=(br+360)%360;const d=(s.distance_km||800),alt=Math.max(100,s.alt_km||600),el=Math.max(-8,Math.min(90,Math.atan2(alt,d)*180/Math.PI));return{bearing:br,elevation:el}}
+function renderSkyList(){const a=sats.map(s=>({...s,...skyValues(s)})).filter(s=>s.elevation>-2).sort((a,b)=>b.elevation-a.elevation).slice(0,16);$('skyList').innerHTML=a.map(s=>`<div class="sky-item"><i class="sat-status" style="background:${colors[s.status]}"></i><span><strong>${s.name}</strong><small>אזימוט ${Math.round(s.bearing)}° · גובה ${Math.round(s.elevation)}°</small></span><b>${s.elevation>20?'גבוה':'אופק'}</b></div>`).join('')||'<p class="empty-state">אין לוויינים מעל האופק בחישוב הנוכחי.</p>'}
+function applyStats(d){const c=d.counts||{};[['visibleCount','visible'],['opticalCount','optical'],['sarCount','sar'],['scienceCount','science'],['nearCount','near'],['objectCount','total']].forEach(([id,k])=>$(id).textContent=c[k]??0);const score=Math.min(100,Math.round(((c.visible||0)*18+(c.near||0)*5)/Math.max(1,c.total||1)*10));$('coverageScore').textContent=`${score}%`;$('coverageBar').style.width=`${score}%`;const gap=d.no_coverage_windows?.[0];$('windowTime').textContent=gap?`${fmt(gap.start)}–${fmt(gap.end)} UTC`:'לא נמצא בטווח החישוב';$('windowCountdown').textContent=gap?`בעוד ${Math.max(0,Math.round((new Date(gap.start)-Date.now())/60000))} דקות · משך ${gap.duration_minutes} דקות`:'—';$('sourceStamp').textContent=d.tle_fetched_at?`TLE עודכן: ${fmt(d.tle_fetched_at)} UTC`:'';$('mVisible').textContent=c.visible??0;$('mTotal').textContent=c.total??0;$('mSource').textContent=d.source_mode==='live'?'LIVE':'CACHE';const next=sats.filter(s=>s.windows?.length).sort((a,b)=>new Date(a.windows[0].start)-new Date(b.windows[0].start))[0];$('mNext').textContent=next?`${fmt(next.windows[0].start)} · ${next.name}`:'—'}
+async function loadData(){try{$('dataState').textContent='טוען נתוני מסלול…';const r=await fetch('/api/satellites/coverage?minutes=90',{cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);const d=await r.json();dataCache=d;sats=d.satellites||[];applyStats(d);renderList();renderTimeline();renderSkyList();$('dataState').textContent=d.source_mode==='live'?'נתוני מסלול חיים':'נתוני גיבוי שמורים';$('liveBadge').textContent=d.source_mode==='live'?'LIVE ORBITS':'CACHE ORBITS';$('sourceWarning').hidden=d.source_mode==='live';$('sourceWarning').textContent=d.source_mode==='live'?'':`מקור TLE חי לא היה זמין. מוצגים נתוני גיבוי: ${d.source_note||d.source_warning||''}`;if(window.HaniaDataStatus){if(d.source_mode==='live')HaniaDataStatus.clear('satellite');else HaniaDataStatus.report('satellite',{title:'נתוני הלוויינים אינם מעודכנים כרגע',message:'מקור CelesTrak אינו זמין. מוצגים נתוני המסלול האחרונים שנשמרו.',lastUpdated:d.tle_fetched_at,severity:'error'});}drawAll()}catch(e){$('dataState').textContent='לא ניתן לטעון נתונים';$('liveBadge').textContent='OFFLINE';$('sourceWarning').hidden=false;$('sourceWarning').textContent=`הגלובוס פעיל, אך נתוני הלוויינים לא נטענו: ${e.message}`;if(window.HaniaDataStatus)HaniaDataStatus.report('satellite',{title:'תקלה בנתוני הלוויינים',message:'לא ניתן לקבל נתוני מסלול מעודכנים ולא נמצא מטמון זמין.',severity:'error'});sats=[];renderList();drawAll()}}
+function fitCanvas(c){const dpr=Math.min(2,devicePixelRatio||1),r=c.getBoundingClientRect(),w=Math.max(1,Math.round(r.width*dpr)),h=Math.max(1,Math.round(r.height*dpr));if(c.width!==w||c.height!==h){c.width=w;c.height=h}const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);return{x,w:r.width,h:r.height}}
+function project(lat,lon,alt=0,w,h){const la=lat*Math.PI/180,lo=lon*Math.PI/180+yaw,cp=Math.cos(pitch),sp=Math.sin(pitch);let X=Math.cos(la)*Math.sin(lo),Y=Math.sin(la),Z=Math.cos(la)*Math.cos(lo);const y=Y*cp-Z*sp,z=Y*sp+Z*cp;const R=Math.min(w,h)*.31*zoom*(1+Math.min(.22,alt/40000));return{x:w/2+X*R,y:h/2-y*R,z,R}}
+function drawGlobe(){const c=$('globeCanvas'),{x,w,h}=fitCanvas(c);x.clearRect(0,0,w,h);const R=Math.min(w,h)*.31*zoom,cx=w/2,cy=h/2;const g=x.createRadialGradient(cx-R*.35,cy-R*.4,R*.08,cx,cy,R*1.1);g.addColorStop(0,'#37b8ff');g.addColorStop(.55,'#0872c8');g.addColorStop(1,'#00345f');x.fillStyle=g;x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.fill();x.save();x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.clip();x.strokeStyle='#8dd8ff22';x.lineWidth=1;for(let lat=-60;lat<=60;lat+=20){x.beginPath();for(let lon=-180;lon<=180;lon+=4){const p=project(lat,lon,0,w,h);if(lon===-180)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y)}x.stroke()}for(let lon=-180;lon<180;lon+=20){x.beginPath();for(let lat=-90;lat<=90;lat+=3){const p=project(lat,lon,0,w,h);if(lat===-90)x.moveTo(p.x,p.y);else x.lineTo(p.x,p.y)}x.stroke()}x.fillStyle='#52b98b55';[[18,15,30,42],[-12,23,24,38],[48,55,28,18],[80,35,36,18],[-75,-15,28,30],[115,-25,32,22]].forEach(([lo,la,rx,ry])=>{const p=project(la,lo,0,w,h);if(p.z>-.2){x.beginPath();x.ellipse(p.x,p.y,rx*zoom,ry*zoom,.2,0,Math.PI*2);x.fill()}});x.restore();x.strokeStyle='#66cfff88';x.lineWidth=2;x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.stroke();const ip=project(31.5,34.8,0,w,h);if(ip.z>0){x.fillStyle='#46f0a5';x.shadowColor='#46f0a5';x.shadowBlur=16;x.beginPath();x.arc(ip.x,ip.y,6,0,Math.PI*2);x.fill();x.shadowBlur=0;x.fillStyle='white';x.font='bold 13px Arial';x.fillText('ישראל',ip.x+10,ip.y-8)}
+const clickable=[];sats.slice(0,120).sort((a,b)=>project(a.lat||0,a.lon||0,a.alt_km||0,w,h).z-project(b.lat||0,b.lon||0,b.alt_km||0,w,h).z).forEach(s=>{const p=project(s.lat||0,s.lon||0,s.alt_km||0,w,h);if(p.z<-.28)return;const a=(Number(s.norad_id)||1)%130;x.strokeStyle=colors[s.status]+'55';x.beginPath();for(let i=-36;i<=36;i++){const q=project((s.lat||0)+Math.sin((i+a)*.07)*8,(s.lon||0)+i*1.9,s.alt_km||0,w,h);i===-36?x.moveTo(q.x,q.y):x.lineTo(q.x,q.y)}x.stroke();x.save();x.translate(p.x,p.y);x.rotate((a%30)/30);x.fillStyle=colors[s.status];x.shadowColor=colors[s.status];x.shadowBlur=s.status==='visible'?15:5;x.fillRect(-4,-4,8,8);x.fillStyle='#73b9ff';x.fillRect(-13,-2,7,4);x.fillRect(6,-2,7,4);x.restore();clickable.push({s,x:p.x,y:p.y})});c._clickable=clickable}
+function drawSky(){const c=$('skyCanvas'),{x,w,h}=fitCanvas(c),cx=w/2,cy=h/2,R=Math.min(w,h)*.4;x.clearRect(0,0,w,h);const g=x.createRadialGradient(cx,cy,0,cx,cy,R);g.addColorStop(0,'#173d67');g.addColorStop(1,'#030915');x.fillStyle=g;x.beginPath();x.arc(cx,cy,R,0,Math.PI*2);x.fill();x.strokeStyle='#8ccfff44';for(let e=0;e<=60;e+=20){x.beginPath();x.arc(cx,cy,R*(1-e/90),0,Math.PI*2);x.stroke()}x.fillStyle='#b9d5e8';x.font='bold 14px Arial';[['צפון',0,-R-12],['דרום',0,R+22],['מזרח',R+28,5],['מערב',-R-38,5]].forEach(([t,dx,dy])=>x.fillText(t,cx+dx-15,cy+dy));sats.forEach(s=>{const v=skyValues(s);if(v.elevation<0)return;const ang=(v.bearing-heading-90)*Math.PI/180,r=R*(1-v.elevation/90),px=cx+Math.cos(ang)*r,py=cy+Math.sin(ang)*r;x.fillStyle=colors[s.status];x.shadowColor=colors[s.status];x.shadowBlur=12;x.beginPath();x.arc(px,py,s.status==='visible'?6:4,0,Math.PI*2);x.fill();x.shadowBlur=0;if(v.elevation>20){x.fillStyle='white';x.font='11px Arial';x.fillText(s.name.slice(0,18),px+7,py-7)}})}
+function drawMission(){const c=$('missionCanvas'),{x,w,h}=fitCanvas(c);x.clearRect(0,0,w,h);x.fillStyle='#04101e';x.fillRect(0,0,w,h);x.strokeStyle='#43d9ff1f';for(let i=0;i<=12;i++){x.beginPath();x.moveTo(i*w/12,0);x.lineTo(i*w/12,h);x.stroke()}for(let i=0;i<=6;i++){x.beginPath();x.moveTo(0,i*h/6);x.lineTo(w,i*h/6);x.stroke()}const map=(lat,lon)=>({x:(lon+180)/360*w,y:(90-lat)/180*h});x.fillStyle='#2d765c66';[[18,15,35,50],[75,45,40,25],[-70,-15,30,40],[115,-25,35,25]].forEach(([lo,la,rx,ry])=>{const p=map(la,lo);x.beginPath();x.ellipse(p.x,p.y,rx/180*w,ry/180*h,.1,0,Math.PI*2);x.fill()});const ip=map(31.5,34.8);x.fillStyle='#46f0a5';x.beginPath();x.arc(ip.x,ip.y,6,0,Math.PI*2);x.fill();x.fillStyle='white';x.fillText('ישראל',ip.x+9,ip.y-8);sats.forEach(s=>{const p=map(s.lat||0,s.lon||0);x.fillStyle=colors[s.status];x.beginPath();x.arc(p.x,p.y,s.status==='visible'?5:3,0,Math.PI*2);x.fill()})}
+function drawAll(){drawGlobe();drawSky();drawMission()}
+function resizeAll(){setTimeout(drawAll,30)}addEventListener('resize',resizeAll);
+const gc=$('globeCanvas');gc.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;lastY=e.clientY;gc.setPointerCapture(e.pointerId)});gc.addEventListener('pointermove',e=>{if(!drag)return;yaw+=(e.clientX-lastX)*.008;pitch=Math.max(-1.1,Math.min(1.1,pitch+(e.clientY-lastY)*.006));lastX=e.clientX;lastY=e.clientY;drawGlobe()});gc.addEventListener('pointerup',()=>drag=false);gc.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.65,Math.min(1.5,zoom-e.deltaY*.001));drawGlobe()},{passive:false});gc.addEventListener('click',e=>{if(drag)return;const r=gc.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top,hit=(gc._clickable||[]).find(q=>Math.hypot(q.x-px,q.y-py)<14);if(hit)openModal(hit.s)});$('resetCamera').onclick=()=>{yaw=-.6;pitch=.18;zoom=1;drawGlobe()};
+$('enableMotion').onclick=async()=>{try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')await DeviceOrientationEvent.requestPermission();addEventListener('deviceorientation',e=>{if(e.alpha!=null){heading=e.alpha;drawSky()}});$('enableMotion').textContent='כיוון הטלפון פעיל'}catch{$('enableMotion').textContent='לא ניתן להפעיל חיישן'}};
+setInterval(()=>{const t=new Date().toISOString().slice(11,19);$('utcClock').textContent=t;$('missionClock').textContent=`${t} UTC`},1000);loadData();setInterval(loadData,300000);setInterval(drawAll,10000);drawAll();
 })();

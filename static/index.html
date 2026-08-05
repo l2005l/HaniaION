@@ -11,6 +11,7 @@
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
   <link rel="stylesheet" href="/static/style.css?v=43">
   <title>HaniaION — BRDC to RAAM</title>
+  <link rel="stylesheet" href="/static/data-status.css?v=1">
 </head>
 <body class="focused-app">
   <header class="focused-header">
@@ -124,6 +125,7 @@
 
     <section id="gps-pulse" class="pulse-section reveal">
       <div class="section-heading focused-heading"><div><span class="section-kicker">K-69</span><h2>K-69 Live Monitor</h2></div><p>החישוב מתבצע מקומית לפי שעון המכשיר, ללא תלות באתר חיצוני.</p></div>
+      <div id="k69SourceNote" class="source-state-note"><strong>מקור K69: שעון המכשיר</strong><span>החישוב מקומי ואינו תלוי בחיבור ל־NASA, ל־Windy או למקור לוויינים.</span></div>
       <article class="card k69-monitor-card">
         <div class="k69-monitor-head">
           <div class="pulse-card-copy"><div class="pulse-icon">⌁</div><div><div class="pulse-title-row"><h3>לוח זמנים K-69</h3><span class="external-badge k69-device-badge"><span></span> שעון המכשיר</span></div><p>אירוע K מתוזמן במחזור של 12 דקות ו־30 שניות, לפי נקודת עוגן שבועית ביום ראשון 00:09:11 UTC.</p></div></div>
@@ -167,6 +169,7 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=45" defer></script>
+  <script src="/static/app.js?v=46" defer></script>
+  <script src="/static/data-status.js?v=1"></script>
 </body>
 </html>
