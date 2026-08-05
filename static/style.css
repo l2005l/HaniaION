@@ -1297,3 +1297,11 @@ iframe {
 .history-cloud-warning strong { color: #ffe1a3; }
 .history-cloud-warning span { color: #d7c4a0; }
 .history-cloud-warning.hidden { display: none; }
+
+/* v2.3 compact system health center */
+.system-health-section{margin-bottom:26px;padding:18px;border:1px solid rgba(74,177,229,.2);border-radius:22px;background:linear-gradient(145deg,rgba(8,28,48,.76),rgba(5,18,32,.76))}
+.system-health-heading{display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:14px}
+.system-health-heading h2{margin:.2rem 0 0}.system-health-heading>small{color:var(--text-dim)}
+.system-health-section .focused-status-row{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:0}
+@media(max-width:1050px){.system-health-section .focused-status-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.system-health-section{padding:14px 10px}.system-health-heading{align-items:start;flex-direction:column}.system-health-section .focused-status-row{grid-template-columns:1fr}.system-health-section .live-status-card{width:100%;min-width:0}}

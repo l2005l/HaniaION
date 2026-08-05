@@ -9,9 +9,9 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/icon.svg?v=43" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
-  <link rel="stylesheet" href="/static/style.css?v=46">
+  <link rel="stylesheet" href="/static/style.css?v=48">
   <title>HaniaION — BRDC to RAAM</title>
-  <link rel="stylesheet" href="/static/data-status.css?v=2">
+  <link rel="stylesheet" href="/static/data-status.css?v=4">
 </head>
 <body class="focused-app">
   <header class="focused-header">
@@ -50,10 +50,15 @@
       </nav>
     </section>
 
-    <section id="system-status" class="focused-status-row" aria-label="מצב המערכת">
-      <div id="nasaStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>NASA CDDIS</small><strong id="nasaStatus">בודק</strong><em id="nasaLatency">—</em></div>
-      <div id="apiStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>API</small><strong id="apiStatus">בודק</strong><em id="apiLatency">—</em></div>
-      <div id="cacheStatusCard" class="live-status-card status-neutral"><span class="live-dot cache-dot"></span><small>Cache</small><strong id="cacheStatus">מוכן</strong><em id="cacheFreshness">בהמתנה</em></div>
+    <section id="system-status" class="system-health-section" aria-label="מצב המערכת">
+      <div class="system-health-heading"><div><span class="section-kicker">SYSTEM STATUS</span><h2>מצב המערכת</h2></div><small>ירוק: תקין · צהוב: נתונים שמורים/לא מוגדר · אדום: לא זמין</small></div>
+      <div class="focused-status-row">
+        <div id="nasaStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>NASA / DATA1–DATA4</small><strong id="nasaStatus">בודק</strong><em id="nasaLatency">—</em></div>
+        <div id="k69StatusCard" class="live-status-card status-online"><span class="live-dot"></span><small>K69</small><strong id="k69Status">מחושב מקומית</strong><em id="k69Detail">שעון המכשיר</em></div>
+        <div id="databaseStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>היסטוריה בענן</small><strong id="databaseStatus">בודק</strong><em id="databaseDetail">—</em></div>
+        <div id="satelliteStatusCard" class="live-status-card status-checking"><span class="live-dot"></span><small>לוויינים</small><strong id="satelliteStatus">בודק</strong><em id="satelliteDetail">—</em></div>
+        <div id="windStatusCard" class="live-status-card status-neutral"><span class="live-dot cache-dot"></span><small>מפת רוח</small><strong id="windStatus">זמין</strong><em id="windDetail">נפתח בנפרד</em></div>
+      </div>
     </section>
 
     <section class="overview-grid reveal always-dark-section" aria-label="לוח מצב BRDC והתראות">
@@ -171,7 +176,7 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=46" defer></script>
-  <script src="/static/data-status.js?v=1"></script>
+  <script src="/static/app.js?v=48" defer></script>
+  <script src="/static/data-status.js?v=4"></script>
 </body>
 </html>

@@ -169,17 +169,20 @@ function displayResult(data) {
   setLiveStatus("cacheStatusCard", "cacheStatus", "cacheFreshness", data.stale ? "warning" : "online", data.stale ? "Stale" : (data.cached ? "Warm" : "Fresh"), data.stale ? "מקור NASA אינו זמין — מוצגים הנתונים האחרונים" : (data.cached ? "Served from cache" : "Latest source loaded"));
   if (window.HaniaDataStatus) {
     if (data.stale) HaniaDataStatus.report("raam", {title:"נתוני DATA1–DATA4 / RAAM אינם מעודכנים", message:data.stale_reason || "מקור NASA CDDIS אינו זמין כרגע. מוצגים הנתונים האחרונים שנשמרו.", lastUpdated:data.updated_at, severity:"error"});
-    else if (data.cached) HaniaDataStatus.report("raam", {title:"נתוני RAAM מוצגים מהמטמון", message:"הנתונים תקינים אך לא נמשכו מחדש בבקשה זו.", lastUpdated:data.updated_at});
     else HaniaDataStatus.clear("raam");
     // Database/history failures are secondary and must not look like a NASA data failure.
     HaniaDataStatus.clear("database");
     const historyWarning = byId("historyCloudWarning");
     if (historyWarning) {
-      const saveFailed = data.database && data.database.saved === false;
-      historyWarning.classList.toggle("hidden", !saveFailed);
+      const databaseReason = data.database?.reason || "";
+      const saveFailed = data.database?.saved === false && databaseReason === "database_error";
+      const databaseDisabled = data.database?.saved === false && databaseReason === "database_disabled";
+      historyWarning.classList.toggle("hidden", !(saveFailed || databaseDisabled));
       historyWarning.innerHTML = saveFailed
-        ? `<strong>⚠️ השמירה להיסטוריה בענן לא הצליחה</strong><span>נתוני NASA והחישוב תקינים. התוצאה נשמרה במכשיר בלבד וייתכן שלא תהיה זמינה ממכשיר אחר.</span>`
-        : "";
+        ? `<strong>⚠️ לא ניתן לשמור כרגע בהיסטוריה בענן</strong><span>נתוני NASA והחישוב תקינים. התוצאה נשמרה במכשיר בלבד.</span>`
+        : databaseDisabled
+          ? `<strong>היסטוריה בענן אינה מוגדרת</strong><span>התוצאה נשמרה במכשיר הזה. יש להגדיר DATABASE_URL ב-Render כדי לסנכרן בין מכשירים.</span>`
+          : "";
     }
   }
   byId("updatedAt").textContent = formatDateTime(data.updated_at);
@@ -215,7 +218,7 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     saveResultToHistory(payload);
     elements.progressBar.style.width = "100%";
     setState("success");
-    showToast(payload.cached ? "נתוני RAAM נטענו מהמטמון" : "הנתונים עודכנו בהצלחה");
+    showToast(payload.cached ? "נתוני RAAM נטענו מהמטמון התקין של השרת" : "הנתונים עודכנו בהצלחה");
     setTimeout(() => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 320);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "אירעה שגיאה לא צפויה.";
@@ -555,25 +558,39 @@ function setLiveStatus(cardId, labelId, detailId, state, label, detail) {
 
 async function checkHealth() {
   const started = performance.now();
-  setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "checking", "Checking", "Health endpoint");
-  setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "checking", "Checking", "Server gateway");
+  setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "checking", "בודק", "חיבור לשרת");
+  setLiveStatus("databaseStatusCard", "databaseStatus", "databaseDetail", "checking", "בודק", "PostgreSQL");
+  setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", "checking", "בודק", "מקור מסלולים");
+  setLiveStatus("windStatusCard", "windStatus", "windDetail", "neutral", "זמין", "מפת הרוח נפתחת בנפרד");
+  setLiveStatus("k69StatusCard", "k69Status", "k69Detail", "online", "מחושב מקומית", "שעון המכשיר");
   try {
     const response = await fetch("/api/health", { cache: "no-store" });
     if (!response.ok) throw new Error("offline");
     const payload = await response.json();
-    if (payload.status !== "ok") throw new Error("offline");
     const latency = Math.max(1, Math.round(performance.now() - started));
     elements.serviceStatus.classList.add("online");
     elements.serviceStatus.classList.remove("offline");
-    elements.serviceStatusText.textContent = "Service online";
-    setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "online", "Online", `${latency} ms response`);
-    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "online", "Connected", "Earthdata gateway ready");
+    elements.serviceStatusText.textContent = payload.status === "degraded" ? "שירות פעיל חלקית" : "השירות תקין";
+    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "online", "נגיש", `${latency} ms`);
+    const db = payload.database || {};
+    if (db.connected) setLiveStatus("databaseStatusCard", "databaseStatus", "databaseDetail", "online", "מחובר", "היסטוריה בענן פעילה");
+    else if (!db.enabled) setLiveStatus("databaseStatusCard", "databaseStatus", "databaseDetail", "neutral", "לא מוגדר", "נשמר מקומית בלבד");
+    else setLiveStatus("databaseStatusCard", "databaseStatus", "databaseDetail", "offline", "תקלה", "היסטוריה בענן אינה זמינה");
   } catch {
     elements.serviceStatus.classList.add("offline");
     elements.serviceStatus.classList.remove("online");
-    elements.serviceStatusText.textContent = "Service unavailable";
-    setLiveStatus("apiStatusCard", "apiStatus", "apiLatency", "offline", "Unavailable", "Health check failed");
-    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "offline", "Unavailable", "Backend connection required");
+    elements.serviceStatusText.textContent = "השירות אינו זמין";
+    setLiveStatus("nasaStatusCard", "nasaStatus", "nasaLatency", "offline", "לא זמין", "בדיקת השרת נכשלה");
+    setLiveStatus("databaseStatusCard", "databaseStatus", "databaseDetail", "offline", "לא ידוע", "לא ניתן לבדוק");
+  }
+  try {
+    const response = await fetch("/api/satellites/coverage?minutes=5", { cache: "no-store" });
+    if (!response.ok) throw new Error("offline");
+    const payload = await response.json();
+    const live = payload.source_mode === "live";
+    setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", live ? "online" : "neutral", live ? "חי" : "נתונים שמורים", payload.tle_fetched_at ? `עודכן ${formatDateTime(payload.tle_fetched_at)}` : "מקור מסלולים");
+  } catch {
+    setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", "offline", "לא זמין", "לא ניתן לקבל מסלולים");
   }
 }
 

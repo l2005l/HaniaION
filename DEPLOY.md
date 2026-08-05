@@ -1,12 +1,8 @@
-# העלאה בטוחה ל־GitHub ול־Render
+# Deploy v2.3.0
 
-1. צור ענף חדש מ־`main`, למשל `feature/haniaion-v1-final`.
-2. חלץ את ה־ZIP.
-3. העלה ל־GitHub את כל הקבצים שבתיקייה שחולצה, כך ש־`app.py`, `Dockerfile` ו־`static` יהיו בשורש המאגר.
-4. חבר את שירות `haniaion-preview` לענף החדש ובצע `Clear build cache & deploy`.
-5. בדוק את `/`, את `/wind`, את החילוץ, ההיסטוריה, K-69 וההתקנה.
-6. רק לאחר שהכול תקין, פתח Pull Request אל `main` ומזג.
-
-## כדי להפעיל Push וניטור
-
-בצע את ההוראות ב־README להגדרת Neon, מפתחות VAPID ו־GitHub Secrets. ההתראות אינן מופעלות אוטומטית אצל המשתמש; כל משתמש חייב ללחוץ במפורש על „הפעל התראות”.
+1. Extract this ZIP over the feature branch.
+2. Commit and push.
+3. Wait for Render deployment.
+4. On mobile, close old tabs and reopen the preview. If needed, clear site data once.
+5. Test NASA twice: the second cached/duplicate result must not show a history failure.
+6. Verify the System Status section and bottom status bar.

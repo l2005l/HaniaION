@@ -81,3 +81,7 @@ HANIAION_CRON_SECRET=<אותו ערך של CRON_SECRET ב-Render>
 ## הערה
 
 מפת הרוחות וכלי המסלול מיועדים לתצוגה כללית בלבד ואינם תחליף למידע תעופתי רשמי או למערכת תכנון מוסמכת.
+
+
+## v2.3.0
+Adds a compact system-health view and fixes false duplicate-history warnings. A duplicate result is a normal outcome: it is already present in cloud history.
