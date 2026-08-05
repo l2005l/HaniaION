@@ -68,6 +68,8 @@ const elements = {
   analyticsCommonHour: byId("analyticsCommonHour"),
   analyticsStableRun: byId("analyticsStableRun"),
   exportHistoryCsvButton: byId("exportHistoryCsvButton"),
+  cloudHistoryStatus: byId("cloudHistoryStatus"),
+  syncHistoryButton: byId("syncHistoryButton"),
 };
 
 let latestResult = null;
@@ -80,10 +82,10 @@ const HISTORY_STORAGE_KEY = "haniaion-result-history-v1";
 const HISTORY_LIMIT = 30;
 
 const loadingSteps = [
-  { delay: 0, progress: 12, title: "Connecting to NASA CDDIS", description: "Establishing a secure Earthdata session...", step: "Step 1 of 4" },
-  { delay: 1800, progress: 38, title: "Locating the latest BRDC file", description: "Checking the most recent UTC daily directories...", step: "Step 2 of 4" },
-  { delay: 4200, progress: 68, title: "Parsing the RINEX header", description: "Extracting GPS Alpha, Beta, and leap-second values...", step: "Step 3 of 4" },
-  { delay: 6800, progress: 88, title: "Converting for RAAM", description: "Scaling coefficients and packing the output words...", step: "Step 4 of 4" },
+  { delay: 0, progress: 14, title: "מתחבר ל־NASA CDDIS", description: "יוצר חיבור מאובטח למקור Earthdata.", step: "שלב 1 מתוך 4" },
+  { delay: 1400, progress: 38, title: "מאתר ומוריד BRDC", description: "בודק את תיקיות ה־UTC האחרונות ומאתר קובץ תקין.", step: "שלב 2 מתוך 4" },
+  { delay: 3600, progress: 70, title: "מחשב DATA1–DATA4", description: "מחלץ מקדמי Klobuchar וממיר אותם לערכי RAAM.", step: "שלב 3 מתוך 4" },
+  { delay: 6100, progress: 90, title: "מסיים ושומר היסטוריה", description: "מציג את התוצאה ושומר אותה מקומית ובענן, כאשר הוא מוגדר.", step: "שלב 4 מתוך 4" },
 ];
 
 function showToast(message) {
@@ -117,6 +119,10 @@ function startLoadingPresentation() {
     elements.loadingTitle.textContent = current.title;
     elements.loadingDescription.textContent = current.description;
     elements.progressStep.textContent = current.step;
+    document.querySelectorAll(".download-steps li").forEach((item, itemIndex) => {
+      item.classList.toggle("active", itemIndex === index);
+      item.classList.toggle("done", itemIndex < index);
+    });
     index += 1;
     if (index < loadingSteps.length) {
       loadingTimer = setTimeout(applyStep, loadingSteps[index].delay - current.delay);
@@ -186,39 +192,66 @@ function displayResult(data) {
     }
   }
   byId("updatedAt").textContent = formatDateTime(data.updated_at);
+  const sourceMode = byId("sourceMode");
+  const sourceDetail = byId("resultSourceDetail");
+  if (sourceMode) sourceMode.textContent = data.stale ? "נתונים אחרונים שמורים" : (data.cached ? "מטמון שרת תקין" : "שליפה חיה");
+  if (sourceDetail) sourceDetail.textContent = data.stale
+    ? `מקור NASA אינו זמין כרגע. מוצגים הנתונים האחרונים מ־${formatDateTime(data.updated_at)}.`
+    : data.cached
+      ? `התוצאה התקינה הוגשה ממטמון השרת. עודכנה ב־${formatDateTime(data.updated_at)}.`
+      : `הנתונים נשלפו מ־NASA CDDIS ועודכנו ב־${formatDateTime(data.updated_at)}.`;
   elements.resultsPanel.classList.remove("hidden");
 }
 
-async function calculate({ scrollToWorkspace = false } = {}) {
-  if (scrollToWorkspace) {
-    byId("converter").scrollIntoView({ behavior: "smooth", block: "start" });
+async function fetchCalculationWithRetry(maxAttempts = 3) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const retryStatus = byId("retryStatus");
+    if (retryStatus) {
+      retryStatus.classList.toggle("hidden", attempt === 1);
+      retryStatus.textContent = attempt === 1 ? "" : `ניסיון התחברות ${attempt} מתוך ${maxAttempts}...`;
+    }
+    try {
+      const response = await fetch("/api/calculate", {method: "POST", headers: {"Accept": "application/json"}});
+      let payload;
+      try { payload = await response.json(); }
+      catch { throw new Error("השרת החזיר תשובה שאינה ניתנת לקריאה."); }
+      if (!response.ok) throw new Error(payload.detail || `הבקשה נכשלה: HTTP ${response.status}`);
+      return payload;
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts) await new Promise(resolve => setTimeout(resolve, 900 * attempt));
+    }
   }
+  throw lastError || new Error("לא ניתן להשלים את השליפה.");
+}
 
+async function calculate({ scrollToWorkspace = false } = {}) {
+  if (scrollToWorkspace) byId("converter").scrollIntoView({ behavior: "smooth", block: "start" });
   setButtonsDisabled(true);
   startLoadingPresentation();
+  const retryStatus = byId("retryStatus");
+  if (retryStatus) { retryStatus.textContent = ""; retryStatus.classList.add("hidden"); }
 
   try {
-    const response = await fetch("/api/calculate", {
-      method: "POST",
-      headers: { "Accept": "application/json" },
-    });
-
-    let payload;
-    try {
-      payload = await response.json();
-    } catch {
-      throw new Error("The server returned an unreadable response.");
-    }
-
-    if (!response.ok) {
-      throw new Error(payload.detail || `Request failed with HTTP ${response.status}.`);
-    }
-
+    const payload = await fetchCalculationWithRetry(3);
     displayResult(payload);
     saveResultToHistory(payload);
     elements.progressBar.style.width = "100%";
+    document.querySelectorAll(".download-steps li").forEach(item => { item.classList.remove("active"); item.classList.add("done"); });
+    const databaseReason = payload.database?.reason || "";
+    const historyText = payload.database?.saved === true
+      ? "נשמרה תוצאה חדשה בהיסטוריה"
+      : databaseReason === "duplicate"
+        ? "התוצאה כבר קיימת בהיסטוריה"
+        : databaseReason === "database_disabled"
+          ? "נשמרה במכשיר; היסטוריה בענן עדיין לא הוגדרה"
+          : databaseReason === "database_error"
+            ? "הנתונים תקינים; שמירת הענן לא הושלמה"
+            : "הנתונים מוכנים";
+    elements.loadingDescription.textContent = historyText;
     setState("success");
-    showToast(payload.cached ? "נתוני RAAM נטענו מהמטמון התקין של השרת" : "הנתונים עודכנו בהצלחה");
+    showToast(payload.cached ? "נתוני RAAM נטענו ממטמון שרת תקין" : "נתוני NASA עודכנו בהצלחה");
     setTimeout(() => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 320);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "אירעה שגיאה לא צפויה.";
@@ -590,7 +623,7 @@ async function checkHealth() {
     const live = payload.source_mode === "live";
     setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", live ? "online" : "neutral", live ? "חי" : "נתונים שמורים", payload.tle_fetched_at ? `עודכן ${formatDateTime(payload.tle_fetched_at)}` : "מקור מסלולים");
   } catch {
-    setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", "offline", "לא זמין", "לא ניתן לקבל מסלולים");
+    setLiveStatus("satelliteStatusCard", "satelliteStatus", "satelliteDetail", "neutral", "ממתין לעדכון", "מקור המסלולים אינו זמין כרגע");
   }
 }
 
@@ -840,6 +873,56 @@ function updateUtcClock() {
   if (elements.utcClock) elements.utcClock.textContent = new Date().toISOString().slice(11, 19);
 }
 
+
+function cloudHistoryEntry(item) {
+  return {
+    ...item,
+    id: item.id ? `cloud-${item.id}` : `${item.source_date || "unknown"}-${item.updated_at || Date.now()}`,
+    saved_at: item.checked_at || item.updated_at || new Date().toISOString(),
+    cached: false,
+    cloud: true,
+  };
+}
+
+function historyIdentity(item) {
+  return [item.source_date, item.data1, item.data2, item.data3, item.data4, item.tls].join("|");
+}
+
+async function syncCloudHistory({announce = false} = {}) {
+  if (elements.cloudHistoryStatus) elements.cloudHistoryStatus.textContent = "מסנכרן היסטוריה מהענן...";
+  if (elements.syncHistoryButton) elements.syncHistoryButton.disabled = true;
+  try {
+    const response = await fetch("/api/history?limit=100", {cache: "no-store"});
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    if (!payload.database_enabled) {
+      if (elements.cloudHistoryStatus) elements.cloudHistoryStatus.textContent = "היסטוריית הענן אינה מוגדרת; מוצגות תוצאות מהמכשיר.";
+      return;
+    }
+    const local = loadHistory();
+    const merged = [];
+    const seen = new Set();
+    [...(payload.items || []).map(cloudHistoryEntry), ...local]
+      .sort((a,b) => new Date(b.saved_at || b.updated_at || 0) - new Date(a.saved_at || a.updated_at || 0))
+      .forEach(item => {
+        const key = historyIdentity(item);
+        if (!seen.has(key)) { seen.add(key); merged.push(item); }
+      });
+    saveHistory(merged);
+    renderHistory();
+    renderAnalytics();
+    if (elements.cloudHistoryStatus) {
+      elements.cloudHistoryStatus.textContent = `${payload.count || 0} תוצאות ענן סונכרנו · סה״כ ${merged.length} תוצאות זמינות`;
+    }
+    if (announce) showToast("היסטוריית הענן סונכרנה");
+  } catch (error) {
+    if (elements.cloudHistoryStatus) elements.cloudHistoryStatus.textContent = "לא ניתן לסנכרן כרגע; מוצגות התוצאות השמורות במכשיר.";
+    if (announce) showToast("סנכרון ההיסטוריה לא הושלם");
+  } finally {
+    if (elements.syncHistoryButton) elements.syncHistoryButton.disabled = false;
+  }
+}
+
 function historyChangeCount(history) {
   let count = 0;
   for (let i = 0; i < history.length - 1; i += 1) {
@@ -871,7 +954,7 @@ function renderAnalytics() {
   if (history.length < 2) { canvas.classList.add("hidden"); empty.classList.remove("hidden"); return; }
   canvas.classList.remove("hidden"); empty.classList.add("hidden");
   const ratio = Math.max(1, window.devicePixelRatio || 1);
-  const cssWidth = Math.max(620, canvas.parentElement.clientWidth - 44);
+  const cssWidth = Math.max(280, canvas.parentElement.clientWidth - 44);
   const cssHeight = 330;
   canvas.width = cssWidth * ratio; canvas.height = cssHeight * ratio;
   canvas.style.width = `${cssWidth}px`; canvas.style.height = `${cssHeight}px`;
@@ -906,6 +989,7 @@ function exportHistoryCsv() {
 elements.chartMetric?.addEventListener("change", renderAnalytics);
 elements.chartRange?.addEventListener("change", renderAnalytics);
 elements.exportHistoryCsvButton?.addEventListener("click", exportHistoryCsv);
+elements.syncHistoryButton?.addEventListener("click", () => syncCloudHistory({announce:true}));
 window.addEventListener("resize", () => { clearTimeout(window.__haniaChartTimer); window.__haniaChartTimer=setTimeout(renderAnalytics,150); });
 updateUtcClock(); setInterval(updateUtcClock, 1000);
 
@@ -923,6 +1007,7 @@ initializeFloatingTopButton();
 registerEvents();
 registerHistoryEvents();
 renderHistory();
+syncCloudHistory().catch(() => {});
 registerServiceWorker();
 initializeInstallExperience();
 initializePremiumMotion();

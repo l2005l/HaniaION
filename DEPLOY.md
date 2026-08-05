@@ -1,8 +1,6 @@
-# Deploy v2.3.0
+# Deploy v2.5.0
 
-1. Extract this ZIP over the feature branch.
-2. Commit and push.
-3. Wait for Render deployment.
-4. On mobile, close old tabs and reopen the preview. If needed, clear site data once.
-5. Test NASA twice: the second cached/duplicate result must not show a history failure.
-6. Verify the System Status section and bottom status bar.
+1. Extract over the existing feature branch.
+2. Keep DATABASE_URL configured in Render.
+3. Deploy and hard-refresh once.
+4. Open History/Analytics and press “סנכרן ענן”.

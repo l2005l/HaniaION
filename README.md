@@ -85,3 +85,7 @@ HANIAION_CRON_SECRET=<אותו ערך של CRON_SECRET ב-Render>
 
 ## v2.3.0
 Adds a compact system-health view and fixes false duplicate-history warnings. A duplicate result is a normal outcome: it is already present in cloud history.
+
+
+## v2.5.0
+History and charts now merge local device records with the PostgreSQL cloud history endpoint.

@@ -1,8 +1,8 @@
 # Changelog
 
-## v2.3.0
-- Duplicate RAAM results are no longer reported as cloud-history failures.
-- Database errors and unconfigured cloud history are handled separately.
-- Added one compact System Status section for NASA, K69, cloud history, satellites and wind.
-- Added a small persistent bottom status bar linking to the System Status section.
+## v2.5.0
+- Cloud PostgreSQL history sync into the existing history and analytics views.
+- Mobile-safe chart width; no forced 620px canvas.
+- Manual cloud sync control and visible sync status.
+- Satellite source outage is shown as waiting/degraded instead of a red application failure.
 - Updated PWA cache versions.

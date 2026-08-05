@@ -1305,3 +1305,23 @@ iframe {
 .system-health-section .focused-status-row{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:0}
 @media(max-width:1050px){.system-health-section .focused-status-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.system-health-section{padding:14px 10px}.system-health-heading{align-items:start;flex-direction:column}.system-health-section .focused-status-row{grid-template-columns:1fr}.system-health-section .live-status-card{width:100%;min-width:0}}
+
+/* v2.4 — focused NASA download UX */
+.download-steps{margin:18px auto 0;padding:0;list-style:none;display:grid;gap:8px;max-width:520px;text-align:right}
+.download-steps li{position:relative;padding:9px 36px 9px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft);color:var(--text-dim);font-size:.84rem;transition:.2s ease}
+.download-steps li::before{content:"○";position:absolute;right:12px;color:var(--text-muted)}
+.download-steps li.active{border-color:color-mix(in srgb,var(--primary) 45%,var(--border));color:var(--text);background:var(--primary-soft)}
+.download-steps li.active::before{content:"◉";color:var(--primary)}
+.download-steps li.done{color:var(--success);border-color:rgba(52,211,153,.25)}
+.download-steps li.done::before{content:"✓";color:var(--success);font-weight:900}
+.retry-status{margin:12px 0 0;color:#fbbf24;font-weight:800;font-size:.82rem}
+.result-source-note{margin:14px 0 18px}
+.source-strip{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:760px){.source-strip{grid-template-columns:1fr 1fr}.download-steps{width:100%}}
+@media(max-width:430px){.source-strip{grid-template-columns:1fr}.download-steps li{font-size:.78rem}}
+
+
+/* v2.5 cloud history and mobile chart */
+.cloud-history-status { margin:0 0 14px; padding:10px 14px; border:1px solid rgba(57,211,255,.24); border-radius:12px; color:#a9c7d9; background:rgba(6,24,40,.55); font-size:.92rem; }
+.history-chart { display:block; max-width:100%; overflow:hidden; touch-action:pan-y; }
+@media (max-width:640px){ .analytics-card{padding:14px}.analytics-controls{grid-template-columns:1fr}.history-heading-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}.history-heading-actions .button{width:100%;min-width:0;padding-inline:10px}.cloud-history-status{font-size:.84rem} }
