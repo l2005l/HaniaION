@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
@@ -11,7 +12,12 @@ from requests.adapters import HTTPAdapter
 from sgp4.api import Satrec, jday
 from urllib3.util.retry import Retry
 
-CELESTRAK_RESOURCE_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle"
+CELESTRAK_RESOURCE_URLS = [
+    "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle",
+    "https://www.celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle",
+]
+BOOTSTRAP_TLE_PATH = os.path.join("data", "resource_bootstrap.tle")
+LAST_GOOD_TLE_PATH = os.path.join("data", "resource_last_good.tle")
 ISRAEL_LAT = 31.5
 ISRAEL_LON = 34.8
 EARTH_RADIUS_KM = 6371.0
@@ -19,7 +25,7 @@ CACHE_SECONDS = 30 * 60
 MAX_OBJECTS = 180
 
 _cache_lock = threading.Lock()
-_cache: dict[str, Any] = {"expires": 0.0, "records": [], "fetched_at": None}
+_cache: dict[str, Any] = {"expires": 0.0, "records": [], "fetched_at": None, "mode": None, "warning": None}
 
 SAR_HINTS = ("SENTINEL-1", "RADARSAT", "ICEYE", "CAPELLA", "SAOCOM", "TERRASAR", "TANDEM-X", "KOMPSAT-5", "NISAR")
 OPTICAL_HINTS = ("LANDSAT", "SENTINEL-2", "WORLDVIEW", "GEOEYE", "PLEIADES", "SPOT", "CARTOSAT", "PRISMA", "RESOURCESAT", "KANOPUS", "SKYSAT")
@@ -73,20 +79,57 @@ def _parse_tle(text: str) -> list[dict[str, Any]]:
     return records[:MAX_OBJECTS]
 
 
-def get_records() -> tuple[list[dict[str, Any]], str]:
+def _read_local_tle(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _write_last_good(text: str) -> None:
+    try:
+        os.makedirs(os.path.dirname(LAST_GOOD_TLE_PATH), exist_ok=True)
+        with open(LAST_GOOD_TLE_PATH, "w", encoding="utf-8") as handle:
+            handle.write(text)
+    except OSError:
+        pass
+
+
+def get_records() -> tuple[list[dict[str, Any]], str, str, str | None]:
     now = time.time()
     with _cache_lock:
         if _cache["records"] and _cache["expires"] > now:
-            return _cache["records"], _cache["fetched_at"]
-    response = _session().get(CELESTRAK_RESOURCE_TLE, timeout=(10, 35))
-    response.raise_for_status()
-    records = _parse_tle(response.text)
-    if not records:
-        raise RuntimeError("CelesTrak returned no usable Earth-resource TLE records")
-    fetched_at = datetime.now(timezone.utc).isoformat()
-    with _cache_lock:
-        _cache.update(records=records, expires=now + CACHE_SECONDS, fetched_at=fetched_at)
-    return records, fetched_at
+            return _cache["records"], _cache["fetched_at"], _cache["mode"], _cache["warning"]
+
+    errors: list[str] = []
+    for url in CELESTRAK_RESOURCE_URLS:
+        try:
+            response = _session().get(url, timeout=(7, 22))
+            response.raise_for_status()
+            records = _parse_tle(response.text)
+            if not records:
+                raise RuntimeError("source returned no usable records")
+            fetched_at = datetime.now(timezone.utc).isoformat()
+            _write_last_good(response.text)
+            with _cache_lock:
+                _cache.update(records=records, expires=now + CACHE_SECONDS, fetched_at=fetched_at, mode="live", warning=None)
+            return records, fetched_at, "live", None
+        except Exception as error:
+            errors.append(f"{url}: {error}")
+
+    for path, mode, ttl in ((LAST_GOOD_TLE_PATH, "last_good_cache", 10 * 60), (BOOTSTRAP_TLE_PATH, "bundled_fallback", 5 * 60)):
+        try:
+            text = _read_local_tle(path)
+            records = _parse_tle(text)
+            if not records:
+                continue
+            fetched_at = datetime.fromtimestamp(os.path.getmtime(path), timezone.utc).isoformat()
+            warning = "CelesTrak אינו זמין כרגע; מוצגים נתוני מסלול שמורים."
+            with _cache_lock:
+                _cache.update(records=records, expires=now + ttl, fetched_at=fetched_at, mode=mode, warning=warning)
+            return records, fetched_at, mode, warning
+        except OSError:
+            continue
+
+    raise RuntimeError("Satellite source unavailable and no local cache exists: " + " | ".join(errors[-2:]))
 
 
 def _gmst(dt: datetime) -> float:
@@ -120,7 +163,7 @@ def _distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def build_coverage(minutes_ahead: int = 90, step_seconds: int = 60) -> dict[str, Any]:
-    records, fetched_at = get_records()
+    records, fetched_at, source_mode, source_warning = get_records()
     now = datetime.now(timezone.utc).replace(microsecond=0)
     objects: list[dict[str, Any]] = []
     occupancy: list[bool] = []
@@ -170,6 +213,7 @@ def build_coverage(minutes_ahead: int = 90, step_seconds: int = 60) -> dict[str,
     return {
         "generated_at": now.isoformat(), "tle_fetched_at": fetched_at,
         "source": "CelesTrak Earth Resources GP/TLE + SGP4",
+        "source_mode": source_mode, "source_warning": source_warning,
         "definition": "Public Earth-observation orbit geometry; sensor activity and pointing are unknown.",
         "location": {"name": "Israel", "lat": ISRAEL_LAT, "lon": ISRAEL_LON},
         "counts": {"total": len(objects), "visible": len(visible), "near": sum(x["status"] == "near" for x in objects),

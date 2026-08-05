@@ -66,11 +66,11 @@
       const response = await fetch('/api/satellites/coverage?minutes=90', { cache: 'no-store' });
       if (!response.ok) throw new Error((await response.json()).detail || `HTTP ${response.status}`);
       const data = await response.json(); sats = data.objects; applyStats(data); renderList(); renderTimeline();
-      document.getElementById('dataState').textContent = 'נתוני מסלול ציבוריים פעילים';
+      document.getElementById('dataState').textContent = data.source_mode === 'live' ? 'נתוני מסלול ציבוריים פעילים' : 'מצב גיבוי — נתוני מסלול שמורים';
       if (globeApi) globeApi.setSatellites(sats); else globeApi = createGlobe(sats);
     } catch (error) {
       document.getElementById('dataState').textContent = 'טעינת הנתונים נכשלה';
-      host.innerHTML = `<div class="globe-error"><strong>לא ניתן לטעון נתוני לוויינים</strong><small>${String(error.message || error)}</small><button onclick="location.reload()">נסה שוב</button></div>`;
+      const state = document.getElementById('sourceWarning'); if (state) { state.hidden = false; state.textContent = `לא ניתן לעדכן נתונים: ${String(error.message || error)}`; }
     }
   }
 
@@ -100,5 +100,6 @@
   }
 
   setInterval(()=>document.getElementById('utcClock').textContent=new Date().toISOString().slice(11,19),1000);
+  globeApi = createGlobe([]);
   loadData(); setInterval(loadData, 5*60*1000);
 })();
