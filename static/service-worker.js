@@ -1,5 +1,5 @@
-const CACHE_NAME = "haniaion-mission-v46";
-const APP_SHELL = ["/", "/wind", "/satellite", "/static/style.css?v=45", "/static/app.js?v=45", "/static/wind.css?v=45", "/static/wind.js?v=45", "/static/satellite.css?v=1", "/static/satellite.js?v=1", "/static/icons/icon.svg", "/manifest.webmanifest"];
+const CACHE_NAME = "haniaion-mission-v48";
+const APP_SHELL = ["/", "/wind", "/satellite", "/static/style.css?v=45", "/static/app.js?v=45", "/static/wind.css?v=45", "/static/wind.js?v=45", "/static/satellite.css?v=3", "/static/satellite.js?v=3", "/static/icons/icon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));

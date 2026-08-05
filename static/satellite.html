@@ -6,33 +6,33 @@
   <meta name="theme-color" content="#050b16">
   <meta name="description" content="HaniaION Satellite Live — הדמיית כיסוי לוויינים מעל ישראל.">
   <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/satellite.css?v=1">
+  <link rel="stylesheet" href="/static/satellite.css?v=3">
   <title>Satellite Live — HaniaION</title>
 </head>
 <body>
   <header class="sat-header">
     <a class="brand" href="/"><img src="/static/icons/icon.svg" alt=""><span><strong>HaniaION</strong><small>Satellite Live</small></span></a>
-    <div class="header-actions"><span class="demo-badge">DEMO</span><div class="clock"><small>UTC</small><strong id="utcClock">--:--:--</strong></div><a href="/" class="back-link">חזרה למערכת</a></div>
+    <div class="header-actions"><span class="demo-badge live-badge">LIVE ORBITS</span><div class="clock"><small>UTC</small><strong id="utcClock">--:--:--</strong></div><a href="/" class="back-link">חזרה למערכת</a></div>
   </header>
 
   <main class="sat-shell">
     <section class="hero-copy">
       <div><span class="eyebrow">SATELLITE AWARENESS</span><h1>מי מסוגל לצפות בישראל<br><em>ברגע זה?</em></h1></div>
-      <p>הדמיית ממשק לבדיקת העיצוב והביצועים. המיקומים והחלונות במסך זה הם נתוני דוגמה ואינם מעידים שלוויין מצלם בפועל.</p>
+      <p>מיקומי המסלול מחושבים מנתוני TLE ציבוריים בזמן אמת. יכולת התצפית היא הערכה גאומטרית בלבד ואינה מעידה שהחיישן פעיל או מכוון לישראל.</p>
     </section>
 
     <section class="dashboard">
       <aside class="side-panel stats-panel">
         <div class="panel-title"><span class="live-dot"></span><div><small>LIVE GEOMETRY</small><h2>כיסוי מעל ישראל</h2></div></div>
-        <div class="main-count"><strong id="visibleCount">8</strong><span>לוויינים בעלי אפשרות גאומטרית לתצפית</span></div>
+        <div class="main-count"><strong id="visibleCount">—</strong><span>לוויינים בעלי אפשרות גאומטרית לתצפית</span></div>
         <div class="stat-grid">
-          <div><small>אופטי</small><strong id="opticalCount">4</strong></div>
-          <div><small>SAR</small><strong id="sarCount">2</strong></div>
-          <div><small>מדעי</small><strong id="scienceCount">2</strong></div>
-          <div><small>קרובים</small><strong id="nearCount">3</strong></div>
+          <div><small>אופטי</small><strong id="opticalCount">—</strong></div>
+          <div><small>SAR</small><strong id="sarCount">—</strong></div>
+          <div><small>מדעי</small><strong id="scienceCount">—</strong></div>
+          <div><small>קרובים</small><strong id="nearCount">—</strong></div>
         </div>
-        <div class="coverage-card"><div class="coverage-head"><span>Coverage Score</span><strong id="coverageScore">92%</strong></div><div class="coverage-track"><span id="coverageBar"></span></div><small>מדד הדגמה המבוסס על מספר הלוויינים הפעילים במסך.</small></div>
-        <div class="window-card"><small>החלון הבא ללא לווייני תצפית ידועים</small><strong id="windowTime">14:18–14:25</strong><span>בעוד <b id="windowCountdown">18 דקות</b> · משך 7 דקות</span></div>
+        <div class="coverage-card"><div class="coverage-head"><span>Coverage Score</span><strong id="coverageScore">—</strong></div><div class="coverage-track"><span id="coverageBar"></span></div><small>מדד הדגמה המבוסס על מספר הלוויינים הפעילים במסך.</small></div>
+        <div class="window-card"><small>החלון הבא ללא לווייני תצפית ידועים</small><strong id="windowTime">—</strong><span><b id="windowCountdown">—</b></span></div>
         <button id="resetCamera" class="primary-button" type="button">מרכז את ישראל</button>
       </aside>
 
@@ -44,7 +44,7 @@
       </div>
 
       <aside class="side-panel list-panel">
-        <div class="list-head"><div><small>OBJECTS</small><h2>לוויינים נבחרים</h2></div><span id="objectCount">12</span></div>
+        <div class="list-head"><div><small>OBJECTS</small><h2>לווייני תצפית ציבוריים</h2></div><span id="objectCount">—</span></div>
         <div class="filter-row"><button class="filter active" data-filter="all">הכול</button><button class="filter" data-filter="visible">בטווח</button><button class="filter" data-filter="optical">אופטי</button><button class="filter" data-filter="sar">SAR</button></div>
         <div id="satelliteList" class="satellite-list"></div>
       </aside>
@@ -55,14 +55,14 @@
       <div id="timeline" class="timeline"></div>
     </section>
 
-    <section class="notice"><strong>חשוב:</strong> “בטווח” פירושו אפשרות גאומטרית משוערת בלבד. אין במסך אישור שהחיישן פעיל, מכוון לישראל או אוסף תמונה. בגרסה הבאה ניתן לחבר TLE עדכני ולחשב מעברים אמיתיים.</section>
+    <section class="notice"><strong>חשוב:</strong> נתוני המסלול אמיתיים ומבוססי TLE/SGP4, אך “בטווח” הוא אומדן לפי קטגוריית משימה וטווח קרקע טיפוסי. אין אישור שהחיישן פעיל, מכוון לישראל או אוסף תמונה. <span id="sourceStamp"></span> · <span id="dataState">מתחבר…</span></section>
   </main>
 
   <div id="satelliteModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-backdrop" data-close></div><article class="modal-card"><button class="modal-close" data-close>×</button><span id="modalType" class="eyebrow">OPTICAL</span><h2 id="modalName">Sentinel-2B</h2><div class="modal-grid"><div><small>מפעיל</small><strong id="modalOperator">ESA</strong></div><div><small>גובה הדגמה</small><strong id="modalAltitude">786 ק״מ</strong></div><div><small>מצב גאומטרי</small><strong id="modalStatus">בטווח</strong></div><div><small>עזיבה משוערת</small><strong id="modalExit">עוד 6 דקות</strong></div></div><p>הנתונים בחלונית זו נועדו להמחשת חוויית המשתמש בלבד.</p></article>
+    <div class="modal-backdrop" data-close></div><article class="modal-card"><button class="modal-close" data-close>×</button><span id="modalType" class="eyebrow">OPTICAL</span><h2 id="modalName">Sentinel-2B</h2><div class="modal-grid"><div><small>מפעיל</small><strong id="modalOperator">ESA</strong></div><div><small>גובה מסלול</small><strong id="modalAltitude">786 ק״מ</strong></div><div><small>מצב גאומטרי</small><strong id="modalStatus">בטווח</strong></div><div><small>עזיבה משוערת</small><strong id="modalExit">עוד 6 דקות</strong></div></div><p id="modalNote"></p></article>
   </div>
 
-  <script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
-  <script src="/static/satellite.js?v=1" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.152.2/three.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/three@0.152.2/build/three.min.js'"></script>
+  <script src="/static/satellite.js?v=3" defer></script>
 </body>
 </html>

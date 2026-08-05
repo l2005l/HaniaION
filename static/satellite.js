@@ -1,44 +1,104 @@
 (() => {
-  const sats = [
-    {name:'Sentinel-2B',type:'optical',operator:'ESA',alt:786,status:'visible',minutes:6,inc:98,phase:0.3},
-    {name:'Landsat 9',type:'optical',operator:'NASA / USGS',alt:705,status:'visible',minutes:3,inc:98.2,phase:1.1},
-    {name:'ICEYE-X18',type:'sar',operator:'ICEYE',alt:570,status:'visible',minutes:8,inc:97.7,phase:2.1},
-    {name:'Capella-11',type:'sar',operator:'Capella Space',alt:525,status:'visible',minutes:4,inc:53,phase:2.8},
-    {name:'Terra',type:'science',operator:'NASA',alt:705,status:'visible',minutes:11,inc:98.4,phase:3.4},
-    {name:'Aqua',type:'science',operator:'NASA',alt:705,status:'visible',minutes:9,inc:98.2,phase:4.1},
-    {name:'PlanetScope-17',type:'optical',operator:'Planet',alt:475,status:'visible',minutes:5,inc:97.3,phase:4.8},
-    {name:'WorldView-3',type:'optical',operator:'Maxar',alt:617,status:'visible',minutes:7,inc:98,phase:5.4},
-    {name:'Sentinel-1C',type:'sar',operator:'ESA',alt:693,status:'near',minutes:14,inc:98.2,phase:0.8},
-    {name:'Cartosat-3',type:'optical',operator:'ISRO',alt:509,status:'near',minutes:18,inc:97.5,phase:2.5},
-    {name:'RADARSAT-2',type:'sar',operator:'MDA',alt:798,status:'near',minutes:22,inc:98.6,phase:3.8},
-    {name:'PRISMA',type:'science',operator:'ASI',alt:615,status:'away',minutes:48,inc:97.8,phase:5.8}
-  ];
-  const colors={visible:0x46f0a5,near:0xffd166,away:0x66768b};
-  const labels={optical:'צילום אופטי',sar:'מכ״ם SAR',science:'מדעי'};
-  const list=document.getElementById('satelliteList');
-  let activeFilter='all';
-  function renderList(){list.innerHTML='';sats.filter(s=>activeFilter==='all'||activeFilter===s.status||activeFilter===s.type).forEach(s=>{const b=document.createElement('button');b.className='sat-item';b.innerHTML=`<span class="sat-status" style="background:#${colors[s.status].toString(16).padStart(6,'0')}"></span><span><strong>${s.name}</strong><small>${labels[s.type]} · ${s.operator}</small></span><time>${s.status==='visible'?'יוצא בעוד':s.status==='near'?'כניסה בעוד':'מעבר בעוד'} ${s.minutes} דק׳</time>`;b.onclick=()=>openModal(s);list.appendChild(b);});}
-  document.querySelectorAll('.filter').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));btn.classList.add('active');activeFilter=btn.dataset.filter;renderList();});
-  const modal=document.getElementById('satelliteModal');
-  function openModal(s){document.getElementById('modalType').textContent=labels[s.type].toUpperCase();document.getElementById('modalName').textContent=s.name;document.getElementById('modalOperator').textContent=s.operator;document.getElementById('modalAltitude').textContent=`${s.alt} ק״מ`;document.getElementById('modalStatus').textContent=s.status==='visible'?'בטווח':s.status==='near'?'מתקרב':'מחוץ לטווח';document.getElementById('modalExit').textContent=`${s.status==='visible'?'עוד':'בעוד'} ${s.minutes} דקות`;modal.classList.remove('hidden');}
-  modal.querySelectorAll('[data-close]').forEach(x=>x.onclick=()=>modal.classList.add('hidden'));
-  renderList();
-  document.getElementById('timeline').innerHTML=sats.slice(0,8).map((s,i)=>`<div class="timeline-row"><div class="timeline-label"><strong>${s.name}</strong><small>${labels[s.type]}</small></div><div class="timeline-track"><span class="timeline-pass" style="right:${Math.min(82,i*9+2)}%;width:${10+(i%3)*4}%"></span></div><div class="timeline-time">+${i*8+2} min</div></div>`).join('');
-  setInterval(()=>{document.getElementById('utcClock').textContent=new Date().toISOString().slice(11,19)},1000);
+  const colors = { visible: 0x46f0a5, near: 0xffd166, away: 0x66768b };
+  const labels = { optical: 'צילום אופטי', sar: 'מכ״ם SAR', science: 'מדעי', observation: 'תצפית משאבים' };
+  const host = document.getElementById('globe');
+  const list = document.getElementById('satelliteList');
+  const modal = document.getElementById('satelliteModal');
+  let sats = [];
+  let activeFilter = 'all';
+  let globeApi = null;
 
-  if(!window.THREE){document.getElementById('globe').innerHTML='<p style="padding:30px">לא ניתן לטעון את מנוע התלת־ממד.</p>';return;}
-  const host=document.getElementById('globe'),scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(42,1,.1,100),renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));host.appendChild(renderer.domElement);camera.position.set(0.2,1.15,4.2);
-  scene.add(new THREE.AmbientLight(0x7db8ff,1.15));const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(5,3,5);scene.add(sun);
-  const globeGroup=new THREE.Group();scene.add(globeGroup);
-  const earth=new THREE.Mesh(new THREE.SphereGeometry(1.25,64,64),new THREE.MeshPhongMaterial({color:0x0d4f7c,emissive:0x03182a,shininess:18,transparent:true,opacity:.98}));globeGroup.add(earth);
-  const grid=new THREE.Mesh(new THREE.SphereGeometry(1.257,32,20),new THREE.MeshBasicMaterial({color:0x55bfe8,wireframe:true,transparent:true,opacity:.075}));globeGroup.add(grid);
-  const atmosphere=new THREE.Mesh(new THREE.SphereGeometry(1.31,64,64),new THREE.MeshBasicMaterial({color:0x43d9ff,transparent:true,opacity:.07,side:THREE.BackSide}));globeGroup.add(atmosphere);
-  function ll(lat,lon,r=1.27){const p=(90-lat)*Math.PI/180,t=(lon+180)*Math.PI/180;return new THREE.Vector3(-r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t));}
-  const israel=ll(31.5,34.8);const marker=new THREE.Mesh(new THREE.SphereGeometry(.035,16,16),new THREE.MeshBasicMaterial({color:0x43d9ff}));marker.position.copy(israel);globeGroup.add(marker);const ring=new THREE.Mesh(new THREE.RingGeometry(.055,.085,32),new THREE.MeshBasicMaterial({color:0x43d9ff,transparent:true,opacity:.75,side:THREE.DoubleSide}));ring.position.copy(israel.clone().multiplyScalar(1.008));ring.lookAt(israel.clone().multiplyScalar(2));globeGroup.add(ring);
-  const satMeshes=[];sats.forEach((s,idx)=>{const orbitR=1.48+s.alt/5000;const curve=[];for(let j=0;j<120;j++){const a=j/119*Math.PI*2;const x=orbitR*Math.cos(a),z=orbitR*Math.sin(a),y=Math.sin(a)*Math.sin(s.inc*Math.PI/180)*orbitR*.65;curve.push(new THREE.Vector3(x,y,z));}const geo=new THREE.BufferGeometry().setFromPoints(curve),line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:colors[s.status],transparent:true,opacity:s.status==='away'?.12:.3}));line.rotation.y=s.phase;line.rotation.z=(idx%4)*.18;globeGroup.add(line);const mesh=new THREE.Mesh(new THREE.SphereGeometry(.035,12,12),new THREE.MeshBasicMaterial({color:colors[s.status]}));mesh.userData={sat:s,orbitR,phase:s.phase,speed:.12+idx*.008,tilt:line.rotation.z};globeGroup.add(mesh);satMeshes.push(mesh);});
-  const starsGeo=new THREE.BufferGeometry(),starPos=[];for(let i=0;i<800;i++){const r=12+Math.random()*18,a=Math.random()*Math.PI*2,b=Math.acos(2*Math.random()-1);starPos.push(r*Math.sin(b)*Math.cos(a),r*Math.cos(b),r*Math.sin(b)*Math.sin(a));}starsGeo.setAttribute('position',new THREE.Float32BufferAttribute(starPos,3));scene.add(new THREE.Points(starsGeo,new THREE.PointsMaterial({color:0x9bc7ff,size:.025,transparent:true,opacity:.65})));
-  let dragging=false,lastX=0,lastY=0,targetX=.15,targetY=-.55;host.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY});addEventListener('pointerup',()=>dragging=false);addEventListener('pointermove',e=>{if(!dragging)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;targetX=Math.max(-1.2,Math.min(1.2,targetX));lastX=e.clientX;lastY=e.clientY});host.addEventListener('wheel',e=>{e.preventDefault();camera.position.z=Math.max(2.7,Math.min(7,camera.position.z+e.deltaY*.003))},{passive:false});document.getElementById('resetCamera').onclick=()=>{targetX=.15;targetY=-.55;camera.position.z=4.2};
-  const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();host.addEventListener('click',e=>{const r=host.getBoundingClientRect();mouse.x=(e.clientX-r.left)/r.width*2-1;mouse.y=-((e.clientY-r.top)/r.height*2-1);ray.setFromCamera(mouse,camera);const hit=ray.intersectObjects(satMeshes)[0];if(hit)openModal(hit.object.userData.sat)});
-  function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
-  const clock=new THREE.Clock();function animate(){requestAnimationFrame(animate);const t=clock.getElapsedTime();globeGroup.rotation.x+=(targetX-globeGroup.rotation.x)*.06;globeGroup.rotation.y+=(targetY-globeGroup.rotation.y)*.06;satMeshes.forEach((m,i)=>{const u=t*m.userData.speed+m.userData.phase;const r=m.userData.orbitR;m.position.set(r*Math.cos(u),Math.sin(u)*Math.sin(sats[i].inc*Math.PI/180)*r*.65,r*Math.sin(u));m.position.applyAxisAngle(new THREE.Vector3(0,1,0),m.userData.phase);});ring.scale.setScalar(1+Math.sin(t*3)*.18);renderer.render(scene,camera)}animate();
+  const fmtTime = iso => new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC', hour12: false }).format(new Date(iso));
+  const statusText = s => s === 'visible' ? 'בטווח משוער' : s === 'near' ? 'מתקרב' : 'מחוץ לטווח';
+
+  function openModal(s) {
+    document.getElementById('modalType').textContent = (labels[s.type] || s.type).toUpperCase();
+    document.getElementById('modalName').textContent = s.name;
+    document.getElementById('modalOperator').textContent = `NORAD ${s.norad_id}`;
+    document.getElementById('modalAltitude').textContent = `${Math.round(s.alt_km)} ק״מ`;
+    document.getElementById('modalStatus').textContent = statusText(s.status);
+    document.getElementById('modalExit').textContent = s.windows?.[0] ? `${fmtTime(s.windows[0].start)}–${fmtTime(s.windows[0].end)} UTC` : (s.next_entry_minutes != null ? `בעוד ${s.next_entry_minutes} דקות` : 'לא נמצא בטווח החישוב');
+    document.getElementById('modalNote').textContent = `${s.mission}. מרחק נקודת הקרקע מישראל: ${Math.round(s.distance_km)} ק״מ. טווח הכיסוי הוא אומדן קטגוריאלי בלבד.`;
+    modal.classList.remove('hidden');
+  }
+  modal.querySelectorAll('[data-close]').forEach(x => x.onclick = () => modal.classList.add('hidden'));
+
+  function renderList() {
+    const filtered = sats.filter(s => activeFilter === 'all' || activeFilter === s.status || activeFilter === s.type).slice(0, 60);
+    list.innerHTML = filtered.map((s, i) => `<button class="sat-item" data-index="${sats.indexOf(s)}"><span class="sat-status" style="background:#${colors[s.status].toString(16).padStart(6,'0')}"></span><span><strong>${s.name}</strong><small>${labels[s.type] || s.type} · NORAD ${s.norad_id}</small></span><time>${s.status === 'visible' ? 'כעת' : s.next_entry_minutes != null ? `+${s.next_entry_minutes} דק׳` : '—'}</time></button>`).join('') || '<p class="empty-state">אין לוויינים במסנן זה.</p>';
+    list.querySelectorAll('.sat-item').forEach(b => b.onclick = () => openModal(sats[Number(b.dataset.index)]));
+  }
+  document.querySelectorAll('.filter').forEach(btn => btn.onclick = () => {
+    document.querySelectorAll('.filter').forEach(x => x.classList.remove('active'));
+    btn.classList.add('active'); activeFilter = btn.dataset.filter; renderList();
+  });
+
+  function renderTimeline() {
+    const rows = sats.filter(s => s.windows?.length).slice(0, 14);
+    const now = Date.now(), horizon = 90 * 60 * 1000;
+    document.getElementById('timeline').innerHTML = rows.map(s => {
+      const w = s.windows[0]; const start = Math.max(0, (new Date(w.start).getTime() - now) / horizon * 100);
+      const width = Math.max(2, (new Date(w.end).getTime() - new Date(w.start).getTime()) / horizon * 100);
+      return `<div class="timeline-row"><div class="timeline-label"><strong>${s.name}</strong><small>${labels[s.type] || s.type}</small></div><div class="timeline-track"><span class="timeline-pass" style="right:${Math.min(98,start)}%;width:${Math.min(100-start,width)}%"></span></div><div class="timeline-time">${fmtTime(w.start)}</div></div>`;
+    }).join('') || '<p class="empty-state">לא נמצאו חלונות מועמדים ב־90 הדקות הקרובות.</p>';
+  }
+
+  function applyStats(data) {
+    const c = data.counts;
+    document.getElementById('visibleCount').textContent = c.visible;
+    document.getElementById('opticalCount').textContent = c.optical;
+    document.getElementById('sarCount').textContent = c.sar;
+    document.getElementById('scienceCount').textContent = c.science;
+    document.getElementById('nearCount').textContent = c.near;
+    document.getElementById('objectCount').textContent = c.total;
+    const score = Math.min(100, Math.round((c.visible / Math.max(1, c.total)) * 250));
+    document.getElementById('coverageScore').textContent = `${score}%`;
+    document.getElementById('coverageBar').style.width = `${score}%`;
+    const gap = data.no_coverage_windows?.[0];
+    document.getElementById('windowTime').textContent = gap ? `${fmtTime(gap.start)}–${fmtTime(gap.end)} UTC` : 'לא נמצא בטווח החישוב';
+    document.getElementById('windowCountdown').textContent = gap ? `${Math.max(0, Math.round((new Date(gap.start)-Date.now())/60000))} דקות · משך ${gap.duration_minutes} דקות` : '—';
+    document.getElementById('sourceStamp').textContent = `TLE עודכן: ${fmtTime(data.tle_fetched_at)} UTC`;
+  }
+
+  async function loadData() {
+    document.getElementById('dataState').textContent = 'טוען נתוני מסלול…';
+    try {
+      const response = await fetch('/api/satellites/coverage?minutes=90', { cache: 'no-store' });
+      if (!response.ok) throw new Error((await response.json()).detail || `HTTP ${response.status}`);
+      const data = await response.json(); sats = data.objects; applyStats(data); renderList(); renderTimeline();
+      document.getElementById('dataState').textContent = 'נתוני מסלול ציבוריים פעילים';
+      if (globeApi) globeApi.setSatellites(sats); else globeApi = createGlobe(sats);
+    } catch (error) {
+      document.getElementById('dataState').textContent = 'טעינת הנתונים נכשלה';
+      host.innerHTML = `<div class="globe-error"><strong>לא ניתן לטעון נתוני לוויינים</strong><small>${String(error.message || error)}</small><button onclick="location.reload()">נסה שוב</button></div>`;
+    }
+  }
+
+  function createGlobe(initial) {
+    if (!window.THREE) { host.innerHTML = '<div class="globe-error"><strong>מנוע התלת־ממד לא נטען</strong><small>הדפדפן או הרשת חסמו את Three.js.</small></div>'; return null; }
+    const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(42,1,.1,100), renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2)); host.innerHTML=''; host.appendChild(renderer.domElement); camera.position.set(.2,1.15,4.2);
+    scene.add(new THREE.AmbientLight(0x7db8ff,1.15)); const sun = new THREE.DirectionalLight(0xffffff,2.2); sun.position.set(5,3,5); scene.add(sun);
+    const group = new THREE.Group(); scene.add(group);
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(1.25,64,64),new THREE.MeshPhongMaterial({color:0x0d4f7c,emissive:0x03182a,shininess:18})));
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(1.257,32,20),new THREE.MeshBasicMaterial({color:0x55bfe8,wireframe:true,transparent:true,opacity:.075})));
+    const ll=(lat,lon,r=1.27)=>{const p=(90-lat)*Math.PI/180,t=(lon+180)*Math.PI/180;return new THREE.Vector3(-r*Math.sin(p)*Math.cos(t),r*Math.cos(p),r*Math.sin(p)*Math.sin(t));};
+    const israel=ll(31.5,34.8), marker=new THREE.Mesh(new THREE.SphereGeometry(.04,16,16),new THREE.MeshBasicMaterial({color:0x43d9ff})); marker.position.copy(israel); group.add(marker);
+    let meshes=[];
+    function clearSats(){meshes.forEach(m=>group.remove(m));meshes=[];}
+    function setSatellites(items){clearSats();items.slice(0,120).forEach(s=>{const m=new THREE.Mesh(new THREE.SphereGeometry(s.status==='visible'?.038:.026,10,10),new THREE.MeshBasicMaterial({color:colors[s.status]}));m.position.copy(ll(s.lat,s.lon,1.34+Math.min(.65,s.alt_km/2200)));m.userData.sat=s;group.add(m);meshes.push(m);});}
+    setSatellites(initial);
+    let dragging=false,lastX=0,lastY=0,targetX=.15,targetY=-.55;
+    host.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY}); addEventListener('pointerup',()=>dragging=false);
+    addEventListener('pointermove',e=>{if(!dragging)return;targetY+=(e.clientX-lastX)*.006;targetX+=(e.clientY-lastY)*.006;lastX=e.clientX;lastY=e.clientY});
+    host.addEventListener('wheel',e=>{e.preventDefault();camera.position.z=Math.max(2.7,Math.min(7,camera.position.z+e.deltaY*.003))},{passive:false});
+    document.getElementById('resetCamera').onclick=()=>{targetX=.15;targetY=-.55;camera.position.z=4.2};
+    const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();host.addEventListener('click',e=>{const r=host.getBoundingClientRect();mouse.x=(e.clientX-r.left)/r.width*2-1;mouse.y=-((e.clientY-r.top)/r.height*2-1);ray.setFromCamera(mouse,camera);const hit=ray.intersectObjects(meshes)[0];if(hit)openModal(hit.object.userData.sat)});
+    function resize(){renderer.setSize(host.clientWidth,host.clientHeight,false);camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix()}addEventListener('resize',resize);resize();
+    (function animate(){requestAnimationFrame(animate);group.rotation.x+=(targetX-group.rotation.x)*.06;group.rotation.y+=(targetY-group.rotation.y)*.06;renderer.render(scene,camera)})();
+    return {setSatellites};
+  }
+
+  setInterval(()=>document.getElementById('utcClock').textContent=new Date().toISOString().slice(11,19),1000);
+  loadData(); setInterval(loadData, 5*60*1000);
 })();

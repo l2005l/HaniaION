@@ -22,6 +22,8 @@ except ImportError:  # The main RAAM application can still run before push depen
     webpush = None
 from urllib3.util.retry import Retry
 
+from satellite_service import build_coverage
+
 from database import (
     DATABASE_ENABLED,
     database_status,
@@ -524,6 +526,16 @@ def wind_page():
 @app.get("/satellite")
 def satellite_page():
     return FileResponse("static/satellite.html")
+
+
+@app.get("/api/satellites/coverage")
+def satellite_coverage(minutes: int = Query(90, ge=15, le=360)):
+    try:
+        return build_coverage(minutes_ahead=minutes)
+    except requests.RequestException as error:
+        raise HTTPException(status_code=502, detail=f"Satellite source unavailable: {error}") from error
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=f"Satellite calculation failed: {error}") from error
 
 
 @app.get("/k69-embed", response_class=HTMLResponse)

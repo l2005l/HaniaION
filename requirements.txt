@@ -5,3 +5,5 @@ SQLAlchemy==2.0.41
 psycopg[binary]==3.2.9
 pywebpush==2.0.3
 cryptography==45.0.4
+
+sgp4==2.25
