@@ -9,7 +9,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/icon.svg?v=43" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
-  <link rel="stylesheet" href="/static/style.css?v=50">
+  <link rel="stylesheet" href="/static/style.css?v=51">
   <title>HaniaION — BRDC to RAAM</title>
   <link rel="stylesheet" href="/static/data-status.css?v=4">
 </head>
@@ -123,9 +123,11 @@
       <p class="history-intro">הגרפים משלבים את ההיסטוריה מהמכשיר ומה־PostgreSQL, כך שהנתונים נשמרים גם בין מכשירים.</p>
       <div id="cloudHistoryStatus" class="cloud-history-status" role="status" aria-live="polite">בודק היסטוריה בענן...</div>
       <article class="card analytics-card">
-        <div class="analytics-controls"><label>ערך<select id="chartMetric"><option value="data1">Data 1</option><option value="data2">Data 2</option><option value="data3">Data 3</option><option value="data4">Data 4</option><option value="tls">tLS</option></select></label><label>טווח<select id="chartRange"><option value="30">30 תוצאות</option><option value="14">14 תוצאות</option><option value="7">7 תוצאות</option><option value="all">כל ההיסטוריה</option></select></label></div>
+        <div class="analytics-controls"><label>ערך<select id="chartMetric"><option value="data1">DATA1</option><option value="data2">DATA2</option><option value="data3">DATA3</option><option value="data4">DATA4</option><option value="tls">tLS</option></select></label><label>טווח<select id="chartRange"><option value="7">7 תוצאות אחרונות</option><option value="14">14 תוצאות אחרונות</option><option value="30" selected>30 תוצאות אחרונות</option><option value="all">כל ההיסטוריה</option></select></label></div>
         <div id="chartEmpty" class="chart-empty">הגרף יוצג לאחר שמירת שתי תוצאות לפחות.</div>
+        <div id="chartInsight" class="chart-insight hidden" role="status" aria-live="polite"></div>
         <canvas id="historyChart" class="history-chart hidden" width="1100" height="360" aria-label="גרף היסטוריית RAAM"></canvas>
+        <div class="chart-value-summary"><div><span>מינימום</span><strong id="chartMinimum">—</strong></div><div><span>מקסימום</span><strong id="chartMaximum">—</strong></div><div><span>שינוי בטווח</span><strong id="chartDelta">—</strong></div></div>
         <div class="analytics-summary"><div><span>מספר תוצאות</span><strong id="analyticsCount">0</strong></div><div><span>שינויים שזוהו</span><strong id="analyticsChanges">0</strong></div><div><span>השעה הנפוצה</span><strong id="analyticsCommonHour">—</strong></div><div><span>רצף ללא שינוי</span><strong id="analyticsStableRun">0</strong></div></div>
       </article>
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
@@ -177,7 +179,7 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=50" defer></script>
+  <script src="/static/app.js?v=51" defer></script>
   <script src="/static/data-status.js?v=4"></script>
 </body>
 </html>

@@ -67,6 +67,10 @@ const elements = {
   analyticsChanges: byId("analyticsChanges"),
   analyticsCommonHour: byId("analyticsCommonHour"),
   analyticsStableRun: byId("analyticsStableRun"),
+  chartInsight: byId("chartInsight"),
+  chartMinimum: byId("chartMinimum"),
+  chartMaximum: byId("chartMaximum"),
+  chartDelta: byId("chartDelta"),
   exportHistoryCsvButton: byId("exportHistoryCsvButton"),
   cloudHistoryStatus: byId("cloudHistoryStatus"),
   syncHistoryButton: byId("syncHistoryButton"),
@@ -931,6 +935,11 @@ function historyChangeCount(history) {
   return count;
 }
 
+function formatChartValue(value) {
+  if (!Number.isFinite(value)) return "—";
+  return Number.isInteger(value) ? value.toLocaleString("he-IL") : value.toLocaleString("he-IL", {maximumFractionDigits: 2});
+}
+
 function renderAnalytics() {
   if (!elements.historyChart) return;
   const allHistory = loadHistory();
@@ -951,29 +960,64 @@ function renderAnalytics() {
   elements.analyticsStableRun.textContent = String(stableRun);
   const canvas = elements.historyChart;
   const empty = elements.chartEmpty;
-  if (history.length < 2) { canvas.classList.add("hidden"); empty.classList.remove("hidden"); return; }
+  const insight = elements.chartInsight;
+  if (history.length < 2) {
+    canvas.classList.add("hidden"); empty.classList.remove("hidden"); insight?.classList.add("hidden");
+    [elements.chartMinimum, elements.chartMaximum, elements.chartDelta].forEach(el => { if (el) el.textContent = "—"; });
+    return;
+  }
+  const values = history.map(item => Number(item[metric])).filter(Number.isFinite);
+  if (values.length < 2) {
+    canvas.classList.add("hidden"); empty.classList.remove("hidden");
+    empty.textContent = "אין מספיק ערכים תקינים להצגת הגרף.";
+    return;
+  }
+  const actualMin = Math.min(...values), actualMax = Math.max(...values);
+  const delta = values.at(-1) - values[0];
+  if (elements.chartMinimum) elements.chartMinimum.textContent = formatChartValue(actualMin);
+  if (elements.chartMaximum) elements.chartMaximum.textContent = formatChartValue(actualMax);
+  if (elements.chartDelta) elements.chartDelta.textContent = `${delta > 0 ? "+" : ""}${formatChartValue(delta)}`;
+  const isFlat = actualMax === actualMin;
+  if (insight) {
+    insight.textContent = isFlat
+      ? `לא זוהה שינוי ב־${metric.toUpperCase()} בין ${history.length} התוצאות שנבחרו.`
+      : `השינוי בטווח שנבחר: ${delta > 0 ? "+" : ""}${formatChartValue(delta)}.`;
+    insight.classList.remove("hidden");
+    insight.classList.toggle("stable", isFlat);
+  }
   canvas.classList.remove("hidden"); empty.classList.add("hidden");
   const ratio = Math.max(1, window.devicePixelRatio || 1);
-  const cssWidth = Math.max(280, canvas.parentElement.clientWidth - 44);
-  const cssHeight = 330;
+  const cssWidth = Math.max(260, canvas.parentElement.clientWidth - 28);
+  const cssHeight = cssWidth < 430 ? 300 : 330;
   canvas.width = cssWidth * ratio; canvas.height = cssHeight * ratio;
   canvas.style.width = `${cssWidth}px`; canvas.style.height = `${cssHeight}px`;
-  const ctx = canvas.getContext("2d"); ctx.scale(ratio, ratio);
-  const values = history.map(item => Number(item[metric]));
-  const min = Math.min(...values), max = Math.max(...values), spread = max - min || 1;
-  const pad = {left:58,right:24,top:28,bottom:48};
-  const w = cssWidth-pad.left-pad.right, h=cssHeight-pad.top-pad.bottom;
+  const ctx = canvas.getContext("2d"); ctx.setTransform(ratio,0,0,ratio,0,0);
+  const axisPadding = isFlat ? Math.max(1, Math.abs(actualMax) * 0.02) : 0;
+  const min = isFlat ? actualMin - axisPadding : actualMin;
+  const max = isFlat ? actualMax + axisPadding : actualMax;
+  const spread = max - min || 1;
+  ctx.font = "12px system-ui";
+  const labels = Array.from({length:5}, (_,i) => formatChartValue(max-spread*i/4));
+  const widest = Math.max(...labels.map(label => ctx.measureText(label).width));
+  const pad = {left:Math.max(58, Math.ceil(widest)+18),right:18,top:24,bottom:48};
+  const w = Math.max(40, cssWidth-pad.left-pad.right), h=cssHeight-pad.top-pad.bottom;
   const isLight = document.documentElement.dataset.theme === "light";
   ctx.clearRect(0,0,cssWidth,cssHeight);
   ctx.strokeStyle = isLight ? "rgba(30,70,100,.16)" : "rgba(120,210,255,.14)";
-  ctx.fillStyle = isLight ? "#52677c" : "#9cb7cc";
-  ctx.font = "12px system-ui";
-  for(let i=0;i<=4;i++){const y=pad.top+h*i/4;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+w,y);ctx.stroke();const val=max-spread*i/4;ctx.fillText(Math.round(val).toString(),8,y+4);}
-  const points=values.map((v,i)=>({x:pad.left+(history.length===1?0:w*i/(history.length-1)),y:pad.top+(max-v)/spread*h}));
+  ctx.fillStyle = isLight ? "#52677c" : "#b7ccdc";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for(let i=0;i<=4;i++){
+    const y=pad.top+h*i/4;
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+w,y);ctx.stroke();
+    ctx.fillText(labels[i],pad.left-9,y);
+  }
+  const points=values.map((v,i)=>({x:pad.left+(values.length===1?0:w*i/(values.length-1)),y:pad.top+(max-v)/spread*h}));
   const gradient=ctx.createLinearGradient(0,pad.top,0,pad.top+h);gradient.addColorStop(0,"rgba(57,211,255,.30)");gradient.addColorStop(1,"rgba(57,211,255,0)");
   ctx.beginPath();ctx.moveTo(points[0].x,pad.top+h);points.forEach(p=>ctx.lineTo(p.x,p.y));ctx.lineTo(points.at(-1).x,pad.top+h);ctx.closePath();ctx.fillStyle=gradient;ctx.fill();
   ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle="#39d3ff";ctx.lineWidth=3;ctx.stroke();
-  points.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle="#65dcff";ctx.fill();if(i===0||i===points.length-1){const label=history[i].source_date||"";ctx.fillStyle=isLight?"#52677c":"#9cb7cc";ctx.fillText(label,p.x-28,cssHeight-18);}});
+  ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+  points.forEach((p,i)=>{ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.fillStyle="#65dcff";ctx.fill();if(i===0||i===points.length-1){const label=history[i].source_date||"";ctx.fillStyle=isLight?"#52677c":"#9cb7cc";ctx.fillText(label,p.x,cssHeight-16);}});
 }
 
 function exportHistoryCsv() {

@@ -1,3 +1,11 @@
+# HaniaION v2.6.0
+
+- Fixed full Y-axis labels on mobile charts.
+- Added no-change insight for flat datasets.
+- Added minimum, maximum and range delta summaries.
+- Added safe spacing above the fixed system-status bar.
+- Updated PWA cache version.
+
 # Changelog
 
 ## v2.5.0
