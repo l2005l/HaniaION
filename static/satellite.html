@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="he" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050b16">
+  <meta name="description" content="HaniaION Satellite Live — הדמיית כיסוי לוויינים מעל ישראל.">
+  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/satellite.css?v=1">
+  <title>Satellite Live — HaniaION</title>
+</head>
+<body>
+  <header class="sat-header">
+    <a class="brand" href="/"><img src="/static/icons/icon.svg" alt=""><span><strong>HaniaION</strong><small>Satellite Live</small></span></a>
+    <div class="header-actions"><span class="demo-badge">DEMO</span><div class="clock"><small>UTC</small><strong id="utcClock">--:--:--</strong></div><a href="/" class="back-link">חזרה למערכת</a></div>
+  </header>
+
+  <main class="sat-shell">
+    <section class="hero-copy">
+      <div><span class="eyebrow">SATELLITE AWARENESS</span><h1>מי מסוגל לצפות בישראל<br><em>ברגע זה?</em></h1></div>
+      <p>הדמיית ממשק לבדיקת העיצוב והביצועים. המיקומים והחלונות במסך זה הם נתוני דוגמה ואינם מעידים שלוויין מצלם בפועל.</p>
+    </section>
+
+    <section class="dashboard">
+      <aside class="side-panel stats-panel">
+        <div class="panel-title"><span class="live-dot"></span><div><small>LIVE GEOMETRY</small><h2>כיסוי מעל ישראל</h2></div></div>
+        <div class="main-count"><strong id="visibleCount">8</strong><span>לוויינים בעלי אפשרות גאומטרית לתצפית</span></div>
+        <div class="stat-grid">
+          <div><small>אופטי</small><strong id="opticalCount">4</strong></div>
+          <div><small>SAR</small><strong id="sarCount">2</strong></div>
+          <div><small>מדעי</small><strong id="scienceCount">2</strong></div>
+          <div><small>קרובים</small><strong id="nearCount">3</strong></div>
+        </div>
+        <div class="coverage-card"><div class="coverage-head"><span>Coverage Score</span><strong id="coverageScore">92%</strong></div><div class="coverage-track"><span id="coverageBar"></span></div><small>מדד הדגמה המבוסס על מספר הלוויינים הפעילים במסך.</small></div>
+        <div class="window-card"><small>החלון הבא ללא לווייני תצפית ידועים</small><strong id="windowTime">14:18–14:25</strong><span>בעוד <b id="windowCountdown">18 דקות</b> · משך 7 דקות</span></div>
+        <button id="resetCamera" class="primary-button" type="button">מרכז את ישראל</button>
+      </aside>
+
+      <div class="globe-card">
+        <div id="globe" aria-label="כדור הארץ תלת ממדי עם מסלולי לוויינים"></div>
+        <div class="globe-overlay top-left"><span class="pulse"></span><strong>ישראל</strong><small>31.5°N · 34.8°E</small></div>
+        <div class="globe-overlay bottom-left"><span><i class="legend green"></i> בטווח</span><span><i class="legend yellow"></i> מתקרב</span><span><i class="legend gray"></i> מחוץ לטווח</span></div>
+        <div class="globe-help">גרור לסיבוב · גלגלת לזום · לחץ על לוויין</div>
+      </div>
+
+      <aside class="side-panel list-panel">
+        <div class="list-head"><div><small>OBJECTS</small><h2>לוויינים נבחרים</h2></div><span id="objectCount">12</span></div>
+        <div class="filter-row"><button class="filter active" data-filter="all">הכול</button><button class="filter" data-filter="visible">בטווח</button><button class="filter" data-filter="optical">אופטי</button><button class="filter" data-filter="sar">SAR</button></div>
+        <div id="satelliteList" class="satellite-list"></div>
+      </aside>
+    </section>
+
+    <section class="timeline-panel">
+      <div class="timeline-heading"><div><span class="eyebrow">NEXT 90 MINUTES</span><h2>ציר מעבר מעל ישראל</h2></div><div class="now-marker"><span></span>עכשיו</div></div>
+      <div id="timeline" class="timeline"></div>
+    </section>
+
+    <section class="notice"><strong>חשוב:</strong> “בטווח” פירושו אפשרות גאומטרית משוערת בלבד. אין במסך אישור שהחיישן פעיל, מכוון לישראל או אוסף תמונה. בגרסה הבאה ניתן לחבר TLE עדכני ולחשב מעברים אמיתיים.</section>
+  </main>
+
+  <div id="satelliteModal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close></div><article class="modal-card"><button class="modal-close" data-close>×</button><span id="modalType" class="eyebrow">OPTICAL</span><h2 id="modalName">Sentinel-2B</h2><div class="modal-grid"><div><small>מפעיל</small><strong id="modalOperator">ESA</strong></div><div><small>גובה הדגמה</small><strong id="modalAltitude">786 ק״מ</strong></div><div><small>מצב גאומטרי</small><strong id="modalStatus">בטווח</strong></div><div><small>עזיבה משוערת</small><strong id="modalExit">עוד 6 דקות</strong></div></div><p>הנתונים בחלונית זו נועדו להמחשת חוויית המשתמש בלבד.</p></article>
+  </div>
+
+  <script src="https://unpkg.com/three@0.161.0/build/three.min.js"></script>
+  <script src="/static/satellite.js?v=1" defer></script>
+</body>
+</html>

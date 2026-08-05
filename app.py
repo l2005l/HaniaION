@@ -521,6 +521,11 @@ def wind_page():
     return FileResponse("static/wind.html")
 
 
+@app.get("/satellite")
+def satellite_page():
+    return FileResponse("static/satellite.html")
+
+
 @app.get("/k69-embed", response_class=HTMLResponse)
 def k69_embed():
     """Render the external K-69 monitor inside HaniaION without opening a new window."""
