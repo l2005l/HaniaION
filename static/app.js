@@ -1156,12 +1156,16 @@ function initializeK69Monitor() {
 
 document.addEventListener("DOMContentLoaded", initializeK69Monitor);
 
-// v2.8 — phone GNSS health + privacy-preserving regional consensus
+// v2.9 — GNSS permission-first flow + regional map
 (() => {
   const $ = id => document.getElementById(id);
   if (!$('gnssTestButton')) return;
-  let watchId = null, samples = [], started = 0, timer = null;
+  let watchId = null, samples = [], started = 0, timer = null, firstFix = false;
+  const button = $('gnssTestButton');
   const dist=(a,b)=>{const R=6371000,p=Math.PI/180,dLat=(b.latitude-a.latitude)*p,dLon=(b.longitude-a.longitude)*p,x=Math.sin(dLat/2)**2+Math.cos(a.latitude*p)*Math.cos(b.latitude*p)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+  function resetButton(){ button.disabled=false; button.textContent='📱 בדיקת GPS ל־60 שניות'; }
+  function stopWatch(){ if(watchId!==null) navigator.geolocation.clearWatch(watchId); if(timer) clearInterval(timer); watchId=null; timer=null; }
+  function permissionError(err){ stopWatch(); resetButton(); const denied=err && err.code===1; $('gnssBadge').className='gnss-badge neutral'; $('gnssBadge').textContent=denied?'נדרשת הרשאה':'אין Fix'; $('gnssReason').textContent=denied?'הדפדפן חסם גישה למיקום. אפשר הרשאת Location לאתר דרך הגדרות האתר בדפדפן ואז נסה שוב.':'לא התקבלה דגימת GPS. ודא ששירותי המיקום פעילים ונסה במקום עם שמיים פתוחים.'; }
   function render(score, accuracy, fixRatio, jumps, reason){
     $('gnssAccuracy').textContent=Number.isFinite(accuracy)?`±${accuracy.toFixed(1)} m`:'—'; $('gnssFix').textContent=`${Math.round(fixRatio*100)}%`; $('gnssJumps').textContent=String(jumps); $('gnssScore').textContent=`${score}/100`; $('gnssMeter').style.width=`${score}%`; $('gnssReason').textContent=reason;
     const b=$('gnssBadge'); b.className='gnss-badge '+(score<30?'ok':score<60?'warn':'alert'); b.textContent=score<30?'תקין':score<60?'חשוד':'הפרעה משמעותית';
@@ -1170,19 +1174,21 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
     const latCell=Math.round(lat*10)/10, lonCell=Math.round(lon*10)/10;
     try{if(share) await fetch('/api/gnss/sample',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat_cell:latCell,lon_cell:lonCell,score,accuracy_m:accuracy,fix_ratio:fixRatio})});
       const r=await fetch(`/api/gnss/region?lat_cell=${latCell}&lon_cell=${lonCell}`,{cache:'no-store'}); const d=await r.json();
-      if(!d.count){$('regionalGnss').textContent='אין מספיק מדידות באזור';$('regionalGnssDetail').textContent='המדד האזורי יופיע לאחר שיצטברו בדיקות אנונימיות בטווח של כ־30 ק״מ.';return;}
+      if(!d.count){$('regionalGnss').textContent='אין מספיק מדידות באזור';$('regionalGnssDetail').textContent='המדד הקהילתי יופיע לאחר שיצטברו בדיקות אנונימיות בטווח של כ־30 ק״מ.';return;}
       $('regionalGnss').textContent=`${d.score<30?'🟢 רגוע':d.score<60?'🟡 הפרעות אפשריות':'🟠 סימנים חריגים'} · ${d.score}/100`;
       $('regionalGnssDetail').textContent=`${d.count} מדידות ב־2 השעות האחרונות · דיוק ממוצע ±${d.accuracy_m} מ׳. זהו מדד קהילתי, לא אישור לחסימה.`;
-    }catch(e){$('regionalGnss').textContent='התמונה האזורית אינה זמינה כרגע';}
+    }catch(e){$('regionalGnss').textContent='התמונה הקהילתית אינה זמינה כרגע';}
   }
-  function finish(){ if(watchId!==null) navigator.geolocation.clearWatch(watchId); clearInterval(timer); watchId=null; $('gnssTestButton').disabled=false; $('gnssTestButton').textContent='📱 בדיקת GPS ל־60 שניות';
-    if(!samples.length){$('gnssBadge').textContent='אין מספיק מידע';$('gnssReason').textContent='הטלפון לא החזיר דגימות מיקום. ודא שהרשאת המיקום פעילה.';return;}
-    const acc=samples.map(s=>s.accuracy).filter(Number.isFinite), accuracy=acc.reduce((a,b)=>a+b,0)/acc.length; let jumps=0; for(let i=1;i<samples.length;i++){const dt=(samples[i].t-samples[i-1].t)/1000, d=dist(samples[i-1],samples[i]); if(dt<8 && d>Math.max(80,samples[i].accuracy*4)) jumps++;}
-    const expected=Math.max(8,Math.round((Date.now()-started)/5000)), fixRatio=Math.min(1,samples.length/expected); let score=Math.round(Math.min(100,(Math.max(0,accuracy-8)*1.15)+(1-fixRatio)*45+jumps*18));
-    const reason=score<30?'ה־Fix יציב והדיוק עקבי. לא זוהו סימנים משמעותיים להפרעה.':score<60?'נמצאה ירידה ביציבות או בדיוק. מבנים, רכב או חסימת שמיים יכולים לגרום לאותה תוצאה.':'נמצאו סימנים חריגים באיכות המיקום. מומלץ לחזור על הבדיקה במקום פתוח לפני הסקת מסקנות.'; render(score,accuracy,fixRatio,jumps,reason); const last=samples[samples.length-1]; regional(last.latitude,last.longitude,$('gnssShare').checked,score,accuracy,fixRatio);
+  function finish(){ stopWatch(); resetButton();
+    if(!samples.length){$('gnssBadge').textContent='אין מספיק מידע';$('gnssReason').textContent='לא התקבלו מספיק דגימות מיקום.';return;}
+    const acc=samples.map(s=>s.accuracy).filter(Number.isFinite), accuracy=acc.reduce((a,b)=>a+b,0)/acc.length; let jumps=0; for(let i=1;i<samples.length;i++){const dt=(samples[i].t-samples[i-1].t)/1000,d=dist(samples[i-1],samples[i]);if(dt<8&&d>Math.max(80,samples[i].accuracy*4))jumps++;}
+    const expected=Math.max(8,Math.round((Date.now()-started)/5000)),fixRatio=Math.min(1,samples.length/expected);let score=Math.round(Math.min(100,(Math.max(0,accuracy-8)*1.15)+(1-fixRatio)*45+jumps*18));
+    const reason=score<30?'ה־Fix יציב והדיוק עקבי. לא זוהו סימנים משמעותיים להפרעה.':score<60?'נמצאה ירידה ביציבות או בדיוק. מבנים, רכב או חסימת שמיים יכולים לגרום לאותה תוצאה.':'נמצאו סימנים חריגים באיכות המיקום. מומלץ לחזור על הבדיקה במקום פתוח לפני הסקת מסקנות.';render(score,accuracy,fixRatio,jumps,reason);const last=samples[samples.length-1];regional(last.latitude,last.longitude,$('gnssShare').checked,score,accuracy,fixRatio);
   }
-  $('gnssTestButton').addEventListener('click',()=>{if(!navigator.geolocation){$('gnssReason').textContent='הדפדפן אינו מאפשר גישה למיקום.';return;} samples=[];started=Date.now();$('gnssTestButton').disabled=true;let left=60;$('gnssTestButton').textContent=`בודק… ${left}s`;
-    timer=setInterval(()=>{$('gnssTestButton').textContent=`בודק… ${--left}s`;if(left<=0)finish();},1000);
-    watchId=navigator.geolocation.watchPosition(p=>{samples.push({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,t:Date.now()});$('gnssAccuracy').textContent=`±${p.coords.accuracy.toFixed(1)} m`;},{enableHighAccuracy:true,maximumAge:0,timeout:12000});
+  function beginCountdown(){ if(firstFix) return; firstFix=true; started=Date.now(); let left=60; button.textContent=`בודק… ${left}s`; timer=setInterval(()=>{left-=1;button.textContent=`בודק… ${left}s`;if(left<=0)finish();},1000); }
+  button.addEventListener('click',()=>{
+    if(!navigator.geolocation){$('gnssReason').textContent='הדפדפן אינו תומך בבדיקת מיקום.';return;}
+    samples=[];firstFix=false;button.disabled=true;button.textContent='📍 מבקש הרשאת מיקום…';$('gnssReason').textContent='אשר לדפדפן גישה למיקום. הספירה תתחיל רק לאחר קבלת Fix ראשון.';
+    watchId=navigator.geolocation.watchPosition(p=>{beginCountdown();samples.push({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,t:Date.now()});$('gnssAccuracy').textContent=`±${p.coords.accuracy.toFixed(1)} m`;$('gnssReason').textContent=`הבדיקה פעילה · התקבלו ${samples.length} דגימות.`;},permissionError,{enableHighAccuracy:true,maximumAge:0,timeout:15000});
   });
 })();
