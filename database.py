@@ -300,3 +300,32 @@ def get_admin_statistics() -> dict[str, Any]:
         errors = session.scalar(select(func.count()).select_from(MonitorLog).where(MonitorLog.level == "error")) or 0
         subscribers = session.scalar(select(func.count()).select_from(PushSubscription)) or 0
         return {"results": int(results), "checks": int(checks), "changes": int(changes), "errors": int(errors), "subscribers": int(subscribers)}
+
+class GnssRegionalSample(Base):
+    __tablename__ = "gnss_regional_samples"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    lat_cell: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    lon_cell: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    accuracy_m: Mapped[float] = mapped_column(Float, nullable=False)
+    fix_ratio: Mapped[float] = mapped_column(Float, nullable=False)
+
+
+def save_gnss_sample(lat_cell: float, lon_cell: float, score: int, accuracy_m: float, fix_ratio: float) -> None:
+    if not DATABASE_ENABLED:
+        return
+    with session_scope() as session:
+        session.add(GnssRegionalSample(created_at=datetime.now(timezone.utc), lat_cell=round(float(lat_cell), 1), lon_cell=round(float(lon_cell), 1), score=max(0,min(100,int(score))), accuracy_m=max(0,float(accuracy_m)), fix_ratio=max(0,min(1,float(fix_ratio)))))
+
+
+def get_gnss_region(lat_cell: float, lon_cell: float, hours: int = 2) -> dict[str, Any]:
+    if not DATABASE_ENABLED:
+        return {"available": False, "count": 0}
+    cutoff = datetime.now(timezone.utc) - __import__('datetime').timedelta(hours=max(1,min(hours,24)))
+    lat, lon = round(float(lat_cell),1), round(float(lon_cell),1)
+    with session_scope() as session:
+        rows = session.scalars(select(GnssRegionalSample).where(GnssRegionalSample.created_at >= cutoff, GnssRegionalSample.lat_cell.between(lat-.3,lat+.3), GnssRegionalSample.lon_cell.between(lon-.3,lon+.3))).all()
+        if not rows: return {"available": True, "count": 0}
+        scores=[r.score for r in rows]; accuracies=[r.accuracy_m for r in rows]
+        return {"available": True, "count": len(rows), "score": round(sum(scores)/len(scores)), "accuracy_m": round(sum(accuracies)/len(accuracies),1), "updated_at": max(r.created_at for r in rows).isoformat()}

@@ -41,6 +41,8 @@ from database import (
     add_monitor_log,
     get_monitor_logs,
     get_admin_statistics,
+    save_gnss_sample,
+    get_gnss_region,
 )
 
 
@@ -607,6 +609,20 @@ def history(limit: int = Query(default=30, ge=1, le=100)):
         "items": items,
     }
 
+
+
+@app.post("/api/gnss/sample")
+async def gnss_sample(request: Request):
+    payload = await request.json()
+    try:
+        save_gnss_sample(payload["lat_cell"], payload["lon_cell"], payload["score"], payload["accuracy_m"], payload["fix_ratio"])
+        return {"ok": True}
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="invalid GNSS sample")
+
+@app.get("/api/gnss/region")
+def gnss_region(lat_cell: float = Query(...), lon_cell: float = Query(...)):
+    return get_gnss_region(lat_cell, lon_cell)
 
 @app.get("/api/monitor/status")
 def monitor_status():
