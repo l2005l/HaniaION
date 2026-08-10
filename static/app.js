@@ -1209,6 +1209,13 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
     if(!m)return;
     $('gnssAccuracy').textContent=`±${m.accuracy.toFixed(1)} m`;$('gnssFix').textContent=`${Math.round(m.fixRatio*100)}%`;$('gnssJumps').textContent=String(m.jumps);$('gnssScore').textContent=`${m.score}/100`;$('gnssMeter').style.width=`${m.score}%`;
     if($('gnssSamples'))$('gnssSamples').textContent=String(samples.length);if($('gnssConfidence'))$('gnssConfidence').textContent=`${m.confidence}%`;
+    const tag=(id,text,cls)=>{const e=$(id);if(e){e.textContent=text;e.className='gnss-class '+cls;}};
+    tag('gnssAccuracyClass',m.accuracy<=12?'טוב':m.accuracy<=30?'בינוני':'חלש',m.accuracy<=12?'good':m.accuracy<=30?'mid':'bad');
+    const fp=Math.round(m.fixRatio*100);tag('gnssFixClass',fp>=80?'יציבה':fp>=55?'חלקית':'לא יציבה',fp>=80?'good':fp>=55?'mid':'bad');
+    tag('gnssJumpsClass',m.jumps===0?'תקין':m.jumps<=1?'לבדיקה':'חשוד',m.jumps===0?'good':m.jumps<=1?'mid':'bad');
+    tag('gnssScoreClass',m.score<30?'נמוך':m.score<60?'בינוני':'גבוה',m.score<30?'good':m.score<60?'mid':'bad');
+    tag('gnssSamplesClass',samples.length>=8?'מספיק':'מעט',samples.length>=8?'good':'mid');
+    tag('gnssConfidenceClass',m.confidence>=80?'גבוה':m.confidence>=60?'בינוני':'נמוך',m.confidence>=80?'good':m.confidence>=60?'mid':'bad');
   }
   function permissionError(err){stopWatch();resetButton();const denied=err&&err.code===1;$('gnssBadge').className='gnss-badge neutral';$('gnssBadge').textContent=denied?'נדרשת הרשאה':'קליטה לא מספקת';const text=denied?'הדפדפן חסם גישה למיקום. אפשר Location לאתר דרך הגדרות האתר ונסה שוב.':'לא התקבל Fix אמין. עבור לאזור פתוח עם קו ראייה לשמיים ללא חסימה ונסה שוב.';$('gnssReason').textContent=text;setLive(denied?'נדרשת הרשאת מיקום':'אין מספיק קליטת GPS',text);}
   async function regional(lat,lon,share,score,accuracy,fixRatio){const latCell=Math.round(lat*10)/10,lonCell=Math.round(lon*10)/10;try{if(share)await fetch('/api/gnss/sample',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat_cell:latCell,lon_cell:lonCell,score,accuracy_m:accuracy,fix_ratio:fixRatio})});const r=await fetch(`/api/gnss/region?lat_cell=${latCell}&lon_cell=${lonCell}`,{cache:'no-store'}),d=await r.json();if(!d.count){$('regionalGnss').textContent='אין מספיק מדידות באזור';return;}$('regionalGnss').textContent=`${d.score<30?'🟢 רגוע':d.score<60?'🟡 הפרעות אפשריות':'🟠 סימנים חריגים'} · ${d.score}/100`;$('regionalGnssDetail').textContent=`${d.count} מדידות ב־2 השעות האחרונות · דיוק ממוצע ±${d.accuracy_m} מ׳.`;}catch(e){$('regionalGnss').textContent='התמונה הקהילתית אינה זמינה כרגע';}}
@@ -1225,3 +1232,24 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
   function begin(){if(firstFix)return;firstFix=true;started=Date.now();scrollToTarget('gnss-status-target','start',112);setLive('בודק GPS בזמן אמת','אוסף דגימות ומעריך אם כבר יש מספיק מידע.');timer=setInterval(()=>{const m=metrics();if(m){paint(m);button.textContent=`בודק… ${samples.length} דגימות`;if(m.elapsed>=45)finish(true);else maybeFinish();}},1000);}
   button.addEventListener('click',()=>{if(!navigator.geolocation){$('gnssReason').textContent='הדפדפן אינו תומך בבדיקת מיקום.';return;}samples=[];firstFix=false;lastSampleAt=0;button.disabled=true;button.textContent='📍 מבקש הרשאת מיקום…';setLive('ממתין להרשאה','הרשאת Location נדרשת רק לבדיקה המקומית.');$('gnssReason').textContent='אשר לדפדפן גישה למיקום. הבדיקה תתחיל רק לאחר Fix ראשון.';watchId=navigator.geolocation.watchPosition(p=>{begin();const now=Date.now();samples.push({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,t:now});lastSampleAt=now;const m=metrics();paint(m);setLive('בודק GPS בזמן אמת',`נאספו ${samples.length} דגימות · ביטחון ${m?m.confidence:0}%`);$('gnssReason').textContent=p.coords.accuracy>35?'הקליטה כרגע חלשה. אם המצב נמשך, עבור לאזור פתוח לשמיים.':'הבדיקה פעילה והמדדים מתעדכנים בזמן אמת.';maybeFinish();},permissionError,{enableHighAccuracy:true,maximumAge:0,timeout:15000});});
 })();
+
+// v2.15 — open history/analytics only on demand
+document.addEventListener("DOMContentLoaded", () => {
+  const openPanel = id => {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    panel.classList.remove("is-collapsed");
+    window.setTimeout(() => scrollToTarget(id, "start", 92), 20);
+  };
+  const closePanel = id => {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    panel.classList.add("is-collapsed");
+    scrollToTarget("quick-menu", "start", 82);
+  };
+  document.querySelectorAll("[data-panel-open]").forEach(link => link.addEventListener("click", event => {
+    event.preventDefault(); openPanel(link.dataset.panelOpen);
+  }));
+  document.querySelectorAll("[data-panel-close]").forEach(button => button.addEventListener("click", () => closePanel(button.dataset.panelClose)));
+  if (location.hash === "#history" || location.hash === "#analytics") openPanel(location.hash.slice(1));
+});

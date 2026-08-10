@@ -1374,3 +1374,14 @@ iframe {
   .gnss-action-target .gnss-permission-note{margin-top:0}
   .gnss-actions{margin-top:10px}
 }
+
+/* v2.15 compact UI + optional panels + GNSS classifications */
+.compact-status-strip{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:12px 0 18px;padding:10px 14px;border:1px solid rgba(105,207,255,.14);border-radius:14px;background:rgba(7,25,42,.62);font-size:.82rem;color:#9fb9cb}
+.compact-status-strip a,.compact-status-strip button{color:#bdefff;text-decoration:none;background:none;border:0;padding:2px 4px;font:inherit;cursor:pointer}.compact-status-strip strong{color:#fff}
+.optional-panel.is-collapsed{display:none!important}.optional-panel:not(.is-collapsed){display:block}.panel-collapse-button{white-space:nowrap}
+.gnss-class{display:inline-block!important;margin-top:7px!important;padding:3px 8px;border-radius:999px;font-size:.68rem!important;font-style:normal;font-weight:700;border:1px solid rgba(148,163,184,.25);width:max-content}
+.gnss-class.good{color:#6ee7b7;border-color:rgba(52,211,153,.35);background:rgba(52,211,153,.08)}
+.gnss-class.mid{color:#fbbf24;border-color:rgba(251,191,36,.38);background:rgba(251,191,36,.07)}
+.gnss-class.bad{color:#fb7185;border-color:rgba(251,113,133,.38);background:rgba(251,113,133,.07)}
+.gnss-class.neutral{color:#9fb9cb}
+@media(max-width:650px){.compact-status-strip{gap:6px;padding:9px 8px;font-size:.76rem}.history-heading-actions{gap:6px!important;flex-wrap:wrap}}

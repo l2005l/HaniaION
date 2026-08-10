@@ -42,27 +42,18 @@
       </div>
 
       <nav class="focused-tools command-secondary-tools" aria-label="כלים נוספים">
-        <a href="#history"><span>↺</span><strong>היסטוריה</strong><small>תוצאות שמורות</small></a>
-        <a href="#analytics"><span>⌁</span><strong>גרפים</strong><small>מגמות והשוואה</small></a>
+        <a href="#history" data-panel-open="history"><span>↺</span><strong>היסטוריה</strong><small>פתח לפי צורך</small></a>
+        <a href="#analytics" data-panel-open="analytics"><span>⌁</span><strong>גרפים</strong><small>פתח לפי צורך</small></a>
         <a href="/wind"><span>🌬</span><strong>מפת רוחות</strong><small>מפה ותכנון מסלול</small></a>
         <a href="/satellite"><span>◉</span><strong>לוויינים</strong><small>מסלולים מעל ישראל</small></a>
       </nav>
     </section>
 
-    <section class="command-center reveal" aria-label="מרכז הפעלה">
-      <div class="command-center-heading"><div><span class="section-kicker">COMMAND CENTER</span><h2>גישה מהירה</h2></div><small>NASA ראשון · K69 שני · שאר הכלים אחריהם</small></div>
-      <div class="command-priority-grid">
-        <button id="commandCalculateButton" class="command-priority-card nasa-command-card" type="button">
-          <span class="command-icon">↯</span><div><small>עדיפות ראשונה</small><strong>נתוני NASA / RAAM</strong><em>הורד את קובץ ה־BRDC האחרון והצג DATA1–DATA4</em></div><b>הפעל</b>
-        </button>
-        <a class="command-priority-card k69-command-card" href="#gps-pulse">
-          <span class="command-icon">◷</span><div><small>עדיפות שנייה · חישוב מקומי</small><strong>K69 הבא בעוד <span id="k69QuickCountdown">--:--</span></strong><em>זמן מקומי: <span id="k69QuickNext">--:--:--</span></em></div><b>פתח</b>
-        </a>
-        <a class="command-priority-card status-command-card" href="#gnss-action-target">
-          <span class="command-icon">⌖</span><div><small>בדיקת סביבה</small><strong>GNSS Monitor</strong><em>בדיקת GPS מהטלפון ותמונה אזורית</em></div><b>בדוק</b>
-        </a>
-      </div>
-    </section>
+    <section class="compact-status-strip reveal" aria-label="מידע מהיר">
+  <a href="#k69-live-target">K69 הבא בעוד <strong id="k69QuickCountdown">--:--</strong></a>
+  <span>·</span><button id="commandCalculateButton" type="button">NASA / RAAM</button>
+  <span>·</span><a href="#gnss-action-target">בדיקת GPS</a>
+</section>
 
     <section id="gnss-monitor" class="gnss-monitor reveal" aria-label="ניטור GNSS מהטלפון">
       <div class="gnss-head"><div><span class="section-kicker">GNSS INTERFERENCE</span><h2>מצב GPS סביב הטלפון</h2></div><span id="gnssBadge" class="gnss-badge neutral">טרם נבדק</span></div>
@@ -74,11 +65,10 @@
       <div id="gnss-status-target" class="gnss-status-target">
         <div id="gnssLiveStatus" class="gnss-live-status"><strong>מוכן לבדיקה</strong><span>המערכת תאסוף דגימות עד שיש מספיק מידע לתוצאה.</span></div>
         <div class="gnss-grid">
-          <article><small>דיוק נוכחי</small><strong id="gnssAccuracy">—</strong></article><article><small>יציבות מיקום</small><strong id="gnssFix">—</strong></article><article><small>קפיצות חריגות</small><strong id="gnssJumps">—</strong></article><article><small>מדד הפרעה</small><strong id="gnssScore">—</strong></article><article><small>דגימות</small><strong id="gnssSamples">0</strong></article><article><small>ביטחון בתוצאה</small><strong id="gnssConfidence">—</strong></article>
+          <article><small>דיוק נוכחי</small><strong id="gnssAccuracy">—</strong><em id="gnssAccuracyClass" class="gnss-class neutral">ממתין</em></article><article><small>יציבות מיקום</small><strong id="gnssFix">—</strong><em id="gnssFixClass" class="gnss-class neutral">ממתין</em></article><article><small>קפיצות חריגות</small><strong id="gnssJumps">—</strong><em id="gnssJumpsClass" class="gnss-class neutral">ממתין</em></article><article><small>מדד הפרעה</small><strong id="gnssScore">—</strong><em id="gnssScoreClass" class="gnss-class neutral">ממתין</em></article><article><small>דגימות</small><strong id="gnssSamples">0</strong><em id="gnssSamplesClass" class="gnss-class neutral">מעט</em></article><article><small>ביטחון בתוצאה</small><strong id="gnssConfidence">—</strong><em id="gnssConfidenceClass" class="gnss-class neutral">ממתין</em></article>
         </div>
         <div class="gnss-meter"><span id="gnssMeter"></span></div><p id="gnssReason" class="gnss-reason">לחץ על הבדיקה והישאר במקום פתוח ככל האפשר.</p>
       </div>
-      <div class="regional-gnss external-regional"><div><span class="section-kicker">ISRAEL · REGIONAL GNSS</span><h3>מפת הפרעות GPS בישראל</h3></div><strong>Tracer · תמונת מצב אזורית מהשטח</strong><small>המפה מבוססת על נתוני GPS מצטברים מכלי רכב בישראל ומציגה רמות תקין / קל / בינוני / חמור. היא אינדיקציה אזורית ואינה מזהה מקור או גורם להפרעה.</small><div class="gnss-map-frame"><iframe title="מפת הפרעות GPS בישראל - Tracer" src="https://tracer.co.il/gps-jamming-map?embed=1" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div><div class="gnss-map-links"><a href="https://tracer.co.il/gps-jamming-map" target="_blank" rel="noopener">פתח מפה מלאה</a><span>מקור חיצוני: Tracer Technologies</span></div></div>
       <div class="regional-gnss community-regional"><div><span class="section-kicker">HANIAION COMMUNITY</span><h3>מדידות HaniaION באזור</h3></div><strong id="regionalGnss">אין עדיין מדידות באזור</strong><small id="regionalGnssDetail">מבוסס רק על בדיקות אנונימיות של HaniaION, אם משתמשים בחרו לשתף.</small></div>
     </section>
 
@@ -141,8 +131,8 @@
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
 
-    <section id="history" class="history-section reveal">
-      <div class="section-heading history-heading-row"><div><span class="section-kicker">HISTORY</span><h2>היסטוריה והשוואה</h2></div><div class="history-heading-actions"><span id="historyCount" class="result-badge">0 תוצאות</span><button id="clearHistoryButton" class="button button-ghost history-clear-button" type="button">נקה היסטוריה</button></div></div>
+    <section id="history" class="history-section reveal optional-panel is-collapsed">
+      <div class="section-heading history-heading-row"><div><span class="section-kicker">HISTORY</span><h2>היסטוריה והשוואה</h2></div><div class="history-heading-actions"><span id="historyCount" class="result-badge">0 תוצאות</span><button class="button button-ghost panel-collapse-button" data-panel-close="history" type="button">מזער</button><button id="clearHistoryButton" class="button button-ghost history-clear-button" type="button">נקה היסטוריה</button></div></div>
       <p class="history-intro">כל תוצאה מוצלחת נשמרת במכשיר הזה. ניתן לפתוח תוצאה קודמת, להוריד אותה ולהשוות מול התוצאה שלפניה.</p>
       <div id="historyCloudWarning" class="history-cloud-warning hidden" role="status" aria-live="polite"></div>
       <div id="historyEmpty" class="card history-empty"><div class="state-orb idle-orb"><span>↺</span></div><h3>עדיין אין תוצאות שמורות</h3><p>לאחר ההפעלה הראשונה התוצאה תישמר כאן אוטומטית.</p></div>
@@ -150,8 +140,8 @@
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
     </section>
 
-    <section id="analytics" class="analytics-section reveal">
-      <div class="section-heading history-heading-row"><div><span class="section-kicker">ANALYTICS</span><h2>גרפים וניתוח שינויים</h2></div><div class="history-heading-actions"><button id="syncHistoryButton" class="button button-ghost" type="button">סנכרן ענן</button><button id="exportHistoryCsvButton" class="button button-secondary" type="button">ייצוא CSV</button></div></div>
+    <section id="analytics" class="analytics-section reveal optional-panel is-collapsed">
+      <div class="section-heading history-heading-row"><div><span class="section-kicker">ANALYTICS</span><h2>גרפים וניתוח שינויים</h2></div><div class="history-heading-actions"><button class="button button-ghost panel-collapse-button" data-panel-close="analytics" type="button">מזער</button><button id="syncHistoryButton" class="button button-ghost" type="button">סנכרן ענן</button><button id="exportHistoryCsvButton" class="button button-secondary" type="button">ייצוא CSV</button></div></div>
       <p class="history-intro">הגרפים משלבים את ההיסטוריה מהמכשיר ומה־PostgreSQL, כך שהנתונים נשמרים גם בין מכשירים.</p>
       <div id="cloudHistoryStatus" class="cloud-history-status" role="status" aria-live="polite">בודק היסטוריה בענן...</div>
       <article class="card analytics-card">
