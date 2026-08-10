@@ -36,7 +36,7 @@
         <p>המערכת מאתרת את קובץ ה־BRDC האחרון, מחלצת את מקדמי Klobuchar ומציגה את ארבעת ערכי ה־RAAM ואת tLS.</p>
         <div class="focused-primary-actions">
           <button id="heroCalculateButton" class="button button-primary button-large" type="button"><span class="button-icon">↯</span> הורד והצג נתוני NASA</button>
-          <a class="button button-secondary button-large k69-priority-button" href="#gps-pulse"><span>◷</span> מעבר מהיר ל־K69</a>
+          <a class="button button-secondary button-large k69-priority-button" href="#k69-live-target"><span>◷</span> מעבר מהיר ל־K69</a>
           <a class="button button-secondary button-large gnss-priority-button" href="#gnss-monitor"><span>⌖</span> בדיקת חסימת GPS</a>
         </div>
       </div>
@@ -125,7 +125,7 @@
     <section id="resultsPanel" class="results-section hidden reveal" aria-live="polite">
       <div class="section-heading results-heading-row"><div><span class="section-kicker">LATEST RESULT</span><h2>נתוני BRDC האחרונים</h2><p class="success-subtitle">✓ הומרו לערכי RAAM בהצלחה</p></div><div class="result-status-group"><span id="cacheBadge" class="result-badge">עודכן כעת</span><span id="updatedAt" class="updated-at">—</span></div></div>
       <div class="source-strip"><div><span>קובץ מקור</span><strong id="fileName">—</strong></div><div><span>תאריך מקור UTC</span><strong id="sourceDate">—</strong></div><div><span>מודל</span><strong>GPS Klobuchar</strong></div><div><span>מצב המקור</span><strong id="sourceMode">—</strong></div></div><div id="resultSourceNote" class="source-state-note result-source-note"><strong>מקור: NASA CDDIS</strong><span id="resultSourceDetail">זמן העדכון יוצג לאחר השליפה.</span></div>
-      <div class="value-grid">
+      <div id="raam-values-target" class="value-grid">
         <article class="value-card"><span>DATA 1</span><strong id="data1">—</strong><small>Alpha A0 · A1</small></article>
         <article class="value-card"><span>DATA 2</span><strong id="data2">—</strong><small>Alpha A2 · A3</small></article>
         <article class="value-card"><span>DATA 3</span><strong id="data3">—</strong><small>Beta B0 · B1</small></article>
@@ -170,7 +170,7 @@
           <div class="k69-live-state"><span></span><strong>פעיל</strong></div>
         </div>
 
-        <div class="k69-dashboard">
+        <div id="k69-live-target" class="k69-dashboard">
           <div class="k69-countdown-wrap">
             <div id="k69ProgressRing" class="k69-progress-ring" style="--k69-progress:0deg">
               <div class="k69-ring-inner"><small>זמן שנותר</small><strong id="k69Countdown">--:--</strong><span>עד אירוע K הבא</span></div>

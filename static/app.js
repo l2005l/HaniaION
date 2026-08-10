@@ -2,6 +2,13 @@
 
 const byId = id => document.getElementById(id);
 
+function scrollToTarget(id, block = "start") {
+  const target = byId(id);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block });
+}
+
+
 const elements = {
   calculateButton: byId("calculateButton"),
   heroCalculateButton: byId("heroCalculateButton"),
@@ -256,7 +263,7 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     elements.loadingDescription.textContent = historyText;
     setState("success");
     showToast(payload.cached ? "נתוני RAAM נטענו ממטמון שרת תקין" : "נתוני NASA עודכנו בהצלחה");
-    setTimeout(() => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }), 320);
+    setTimeout(() => scrollToTarget("raam-values-target", "start"), 320);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "אירעה שגיאה לא צפויה.";
     const previous = loadHistory()[0];
@@ -643,7 +650,16 @@ function registerEvents() {
   elements.downloadJsonButton.addEventListener("click", exportJson);
   elements.downloadCsvButton.addEventListener("click", exportCsv);
   elements.shareResultButton?.addEventListener("click", shareResult);
-  elements.viewResultsButton.addEventListener("click", () => elements.resultsPanel.scrollIntoView({ behavior: "smooth", block: "start" }));
+  elements.viewResultsButton.addEventListener("click", () => scrollToTarget("raam-values-target", "start"));
+
+
+  document.querySelectorAll('a[href="#k69-live-target"]').forEach(link => {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      scrollToTarget("k69-live-target", "start");
+      history.replaceState(null, "", "#k69-live-target");
+    });
+  });
 
   document.querySelectorAll(".mini-copy").forEach(button => {
     button.addEventListener("click", () => {

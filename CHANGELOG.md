@@ -1,3 +1,10 @@
+# v2.13.0 — Direct Result Jumps
+
+- NASA download now scrolls directly to DATA1–DATA4 after a successful calculation.
+- Quick K69 shortcut now scrolls directly to the live countdown/time dashboard.
+- Results shortcut also targets the RAAM values instead of the BRDC metadata header.
+- PWA cache version bumped.
+
 # v2.12.0
 - GNSS terminology: "רציפות Fix" renamed to "יציבות מיקום".
 - "ביטחון" clarified as "ביטחון בתוצאה".
