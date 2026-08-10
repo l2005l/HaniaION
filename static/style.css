@@ -1396,3 +1396,12 @@ iframe {
 .gnss-test-progress-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#34d399);transition:width .35s ease}
 .gnss-test-progress small{color:#91aabd;font-size:.74rem}
 @media(max-width:520px){.gnss-test-progress-head{align-items:flex-start;flex-direction:column;gap:3px}}
+
+/* v2.17 Android Native GNSS bridge */
+.gnss-advanced{margin:18px 0;padding:18px;border:1px solid rgba(52,211,153,.3);border-radius:20px;background:linear-gradient(145deg,rgba(7,45,45,.88),rgba(5,24,35,.95))}
+.gnss-advanced.hidden{display:none}.gnss-advanced-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.gnss-advanced h3{margin:.2rem 0}.gnss-advanced p{color:#a8bfd0;line-height:1.55}
+.gnss-native-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.gnss-native-grid article{padding:13px;border:1px solid rgba(52,211,153,.18);border-radius:14px;background:rgba(52,211,153,.055)}
+.gnss-native-grid small,.gnss-native-grid em{display:block;color:#91aabd;font-size:.72rem;font-style:normal}.gnss-native-grid strong{display:block;margin:5px 0;font-size:1.15rem}
+.gnss-constellations{margin-top:12px;padding:12px;border:1px solid rgba(105,207,255,.13);border-radius:14px}.gnss-constellations small{color:#91aabd}.gnss-constellations div{margin-top:7px;color:#eafcff;font-weight:700}
+.native-gnss-note{margin-top:10px;color:#9fb9cb;font-size:.78rem}
+@media(max-width:650px){.gnss-native-grid{grid-template-columns:1fr 1fr}.gnss-advanced{padding:15px 12px}}

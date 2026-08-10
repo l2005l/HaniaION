@@ -1268,3 +1268,26 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-panel-close]").forEach(button => button.addEventListener("click", () => closePanel(button.dataset.panelClose)));
   if (location.hash === "#history" || location.hash === "#analytics") openPanel(location.hash.slice(1));
 });
+
+// v2.17 — receive native Android GNSS measurements when running inside HaniaION APK
+(() => {
+  const panel = document.getElementById("gnss-advanced");
+  if (!panel) return;
+  let received = 0;
+  window.addEventListener("haniaion-native-gnss", event => {
+    const d = event.detail || {};
+    if (d.source !== "android-native") return;
+    received += 1;
+    panel.classList.remove("hidden");
+    const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+    set("nativeSatView", Number.isFinite(Number(d.satellitesInView)) ? d.satellitesInView : "—");
+    set("nativeSatUsed", Number.isFinite(Number(d.satellitesUsed)) ? d.satellitesUsed : "—");
+    set("nativeCn0", Number(d.avgCn0DbHz)>0 ? Number(d.avgCn0DbHz).toFixed(1) : "—");
+    set("nativeAccuracy", Number(d.accuracyM)>0 ? `±${Number(d.accuracyM).toFixed(1)} m` : "—");
+    const constellations=d.constellations||{};
+    const text=Object.entries(constellations).filter(([,n])=>Number(n)>0).map(([name,n])=>`${name} ${n}`).join(" · ");
+    set("nativeConstellations", text || "ממתין לזיהוי מערכות");
+    const note=document.getElementById("nativeGnssNote");
+    if(note) note.textContent=`מדידה Native #${received} · ${new Date(Number(d.timestamp)||Date.now()).toLocaleTimeString("he-IL")}`;
+  });
+})();

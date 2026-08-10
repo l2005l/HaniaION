@@ -77,7 +77,19 @@
         </div>
         <div class="gnss-meter"><span id="gnssMeter"></span></div><p id="gnssReason" class="gnss-reason">לחץ על הבדיקה והישאר במקום פתוח ככל האפשר.</p>
       </div>
-      <div class="regional-gnss community-regional"><div><span class="section-kicker">HANIAION COMMUNITY</span><h3>מדידות HaniaION באזור</h3></div><strong id="regionalGnss">אין עדיין מדידות באזור</strong><small id="regionalGnssDetail">מבוסס רק על בדיקות אנונימיות של HaniaION, אם משתמשים בחרו לשתף.</small></div>
+      <section id="gnss-advanced" class="gnss-advanced hidden" aria-label="GNSS Advanced">
+  <div class="gnss-advanced-head"><div><span class="section-kicker">ANDROID NATIVE GNSS</span><h3>GNSS Advanced</h3></div><span id="nativeGnssBadge" class="gnss-badge ok">Android מחובר</span></div>
+  <p>נתוני לוויינים ישירים ממקלט ה־GNSS של מכשיר Android. אזור זה מופיע רק כאשר HaniaION רץ דרך אפליקציית Android.</p>
+  <div class="gnss-native-grid">
+    <article><small>לוויינים נראים</small><strong id="nativeSatView">—</strong></article>
+    <article><small>בשימוש ל־Fix</small><strong id="nativeSatUsed">—</strong></article>
+    <article><small>C/N0 ממוצע</small><strong id="nativeCn0">—</strong><em>dB-Hz</em></article>
+    <article><small>דיוק Android</small><strong id="nativeAccuracy">—</strong></article>
+  </div>
+  <div class="gnss-constellations"><small>מערכות לוויין שנקלטות</small><div id="nativeConstellations">—</div></div>
+  <div class="native-gnss-note" id="nativeGnssNote">ממתין למדידות GNSS מהמכשיר…</div>
+</section>
+<div class="regional-gnss community-regional"><div><span class="section-kicker">HANIAION COMMUNITY</span><h3>מדידות HaniaION באזור</h3></div><strong id="regionalGnss">אין עדיין מדידות באזור</strong><small id="regionalGnssDetail">מבוסס רק על בדיקות אנונימיות של HaniaION, אם משתמשים בחרו לשתף.</small></div>
     </section>
 
     <section id="system-status" class="system-health-section" aria-label="מצב המערכת">
