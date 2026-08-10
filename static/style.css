@@ -1385,3 +1385,14 @@ iframe {
 .gnss-class.bad{color:#fb7185;border-color:rgba(251,113,133,.38);background:rgba(251,113,133,.07)}
 .gnss-class.neutral{color:#9fb9cb}
 @media(max-width:650px){.compact-status-strip{gap:6px;padding:9px 8px;font-size:.76rem}.history-heading-actions{gap:6px!important;flex-wrap:wrap}}
+
+/* v2.16 adaptive GNSS test progress */
+.gnss-test-progress{margin:12px 0 4px;padding:11px 13px;border:1px solid rgba(66,215,255,.18);border-radius:14px;background:rgba(9,44,68,.52)}
+.gnss-test-progress.hidden{display:none}
+.gnss-test-progress-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.gnss-test-progress-head strong{font-size:.86rem;color:#eafcff}
+.gnss-test-progress-head span{font-size:.75rem;color:#9fb9cb;white-space:nowrap}
+.gnss-test-progress-bar{height:7px;margin:9px 0 6px;border-radius:999px;background:#10273c;overflow:hidden}
+.gnss-test-progress-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#34d399);transition:width .35s ease}
+.gnss-test-progress small{color:#91aabd;font-size:.74rem}
+@media(max-width:520px){.gnss-test-progress-head{align-items:flex-start;flex-direction:column;gap:3px}}

@@ -56,13 +56,21 @@
 </section>
 
     <section id="gnss-monitor" class="gnss-monitor reveal" aria-label="ניטור GNSS מהטלפון">
-      <div class="gnss-head"><div><span class="section-kicker">GNSS INTERFERENCE</span><h2>מצב GPS סביב הטלפון</h2></div><span id="gnssBadge" class="gnss-badge neutral">טרם נבדק</span></div>
-      <p class="gnss-explain">בדיקה מקומית של יציבות המיקום והדיוק. התוצאה היא אינדיקציה להפרעה אפשרית — לא הוכחה לחסימה או שיבוש מכוון.</p>
+      <div class="gnss-head"><div><span class="section-kicker">GNSS INTERFERENCE</span><h2>בדיקת תקינות GPS</h2></div><span id="gnssBadge" class="gnss-badge neutral">טרם נבדק</span></div>
+      <p class="gnss-explain">בדיקה בזמן אמת לזיהוי חוסר קליטה, חוסר יציבות וסימנים אפשריים להפרעת GPS.</p>
       <div id="gnss-action-target" class="gnss-action-target">
         <div class="gnss-permission-note"><strong>📍 הרשאת מיקום נדרשת רק לבדיקה מהטלפון</strong><span>בלחיצה על הבדיקה הדפדפן יבקש מהאתר הרשאת מיקום. הבדיקה מתחילה רק אחרי דגימת מיקום ראשונה. המפה האזורית אינה דורשת הרשאה.</span></div>
         <div class="gnss-actions"><button id="gnssTestButton" class="button button-primary" type="button">📱 בדוק GPS עכשיו</button><label><input id="gnssShare" type="checkbox"> שתף מדגם אזורי אנונימי (מיקום מעוגל לכ־10 ק״מ)</label></div>
       </div>
-      <div id="gnss-status-target" class="gnss-status-target">
+      <div id="gnssTestProgress" class="gnss-test-progress hidden" aria-live="polite">
+  <div class="gnss-test-progress-head">
+    <strong id="gnssTestStage">מתחיל בדיקה…</strong>
+    <span id="gnssTestEta">זמן משוער: —</span>
+  </div>
+  <div class="gnss-test-progress-bar"><span id="gnssTestProgressBar"></span></div>
+  <small id="gnssTestProgressMeta">0 דגימות · ממתין ל־Fix ראשון</small>
+</div>
+<div id="gnss-status-target" class="gnss-status-target">
         <div id="gnssLiveStatus" class="gnss-live-status"><strong>מוכן לבדיקה</strong><span>המערכת תאסוף דגימות עד שיש מספיק מידע לתוצאה.</span></div>
         <div class="gnss-grid">
           <article><small>דיוק נוכחי</small><strong id="gnssAccuracy">—</strong><em id="gnssAccuracyClass" class="gnss-class neutral">ממתין</em></article><article><small>יציבות מיקום</small><strong id="gnssFix">—</strong><em id="gnssFixClass" class="gnss-class neutral">ממתין</em></article><article><small>קפיצות חריגות</small><strong id="gnssJumps">—</strong><em id="gnssJumpsClass" class="gnss-class neutral">ממתין</em></article><article><small>מדד הפרעה</small><strong id="gnssScore">—</strong><em id="gnssScoreClass" class="gnss-class neutral">ממתין</em></article><article><small>דגימות</small><strong id="gnssSamples">0</strong><em id="gnssSamplesClass" class="gnss-class neutral">מעט</em></article><article><small>ביטחון בתוצאה</small><strong id="gnssConfidence">—</strong><em id="gnssConfidenceClass" class="gnss-class neutral">ממתין</em></article>

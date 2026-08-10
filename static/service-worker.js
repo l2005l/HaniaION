@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v2-15-compact";
+const CACHE_NAME = "haniaion-v2-16-gnss-progress";
 const APP_SHELL = ["/", "/wind", "/satellite", "/static/style.css?v=55", "/static/app.js?v=55", "/static/wind.css?v=45", "/static/wind.js?v=45", "/static/satellite.css?v=21", "/static/satellite.js?v=21", "/static/data-status.css?v=4", "/static/data-status.js?v=4", "/static/icons/icon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", event => {

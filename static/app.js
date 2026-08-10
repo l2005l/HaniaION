@@ -1193,6 +1193,21 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
   const button=$('gnssTestButton');
   const dist=(a,b)=>{const R=6371000,p=Math.PI/180,dLat=(b.latitude-a.latitude)*p,dLon=(b.longitude-a.longitude)*p,x=Math.sin(dLat/2)**2+Math.cos(a.latitude*p)*Math.cos(b.latitude*p)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
   const setLive=(title,text)=>{const el=$('gnssLiveStatus'); if(el) el.innerHTML=`<strong>${title}</strong><span>${text}</span>`;};
+  const progressEl=$('gnssTestProgress'),stageEl=$('gnssTestStage'),etaEl=$('gnssTestEta'),metaEl=$('gnssTestProgressMeta'),progressBar=$('gnssTestProgressBar');
+  function showProgress(show=true){if(progressEl)progressEl.classList.toggle('hidden',!show);}
+  function updateProgress(m){
+    if(!progressEl)return;
+    const elapsed=m?m.elapsed:0, count=samples.length, conf=m?m.confidence:0;
+    let stage='מחפש GPS…', stageProgress=8;
+    if(firstFix){stage='אוסף דגימות';stageProgress=Math.min(68,18 + count*5);}
+    if(count>=6){stage='מאמת יציבות';stageProgress=Math.max(stageProgress,Math.min(88,58 + conf*.3));}
+    if(count>=8&&conf>=70){stage='מסיים ניתוח';stageProgress=Math.max(stageProgress,92);}
+    const remain=Math.max(0,Math.ceil(22-elapsed));
+    if(stageEl)stageEl.textContent=stage;
+    if(metaEl)metaEl.textContent=`${count} דגימות · ביטחון ${conf||0}%`;
+    if(etaEl)etaEl.textContent=firstFix ? (remain>0?`זמן משוער: עד ${remain} שנ׳`:'עשוי להסתיים בכל רגע') : 'ממתין ל־Fix ראשון';
+    if(progressBar)progressBar.style.width=`${Math.min(96,stageProgress)}%`;
+  }
   function resetButton(){button.disabled=false;button.textContent='📱 בדוק GPS עכשיו';}
   function stopWatch(){if(watchId!==null) navigator.geolocation.clearWatch(watchId);if(timer)clearInterval(timer);watchId=null;timer=null;}
   function metrics(){
@@ -1217,9 +1232,9 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
     tag('gnssSamplesClass',samples.length>=8?'מספיק':'מעט',samples.length>=8?'good':'mid');
     tag('gnssConfidenceClass',m.confidence>=80?'גבוה':m.confidence>=60?'בינוני':'נמוך',m.confidence>=80?'good':m.confidence>=60?'mid':'bad');
   }
-  function permissionError(err){stopWatch();resetButton();const denied=err&&err.code===1;$('gnssBadge').className='gnss-badge neutral';$('gnssBadge').textContent=denied?'נדרשת הרשאה':'קליטה לא מספקת';const text=denied?'הדפדפן חסם גישה למיקום. אפשר Location לאתר דרך הגדרות האתר ונסה שוב.':'לא התקבל Fix אמין. עבור לאזור פתוח עם קו ראייה לשמיים ללא חסימה ונסה שוב.';$('gnssReason').textContent=text;setLive(denied?'נדרשת הרשאת מיקום':'אין מספיק קליטת GPS',text);}
+  function permissionError(err){stopWatch();showProgress(false);resetButton();const denied=err&&err.code===1;$('gnssBadge').className='gnss-badge neutral';$('gnssBadge').textContent=denied?'נדרשת הרשאה':'קליטה לא מספקת';const text=denied?'הדפדפן חסם גישה למיקום. אפשר Location לאתר דרך הגדרות האתר ונסה שוב.':'לא התקבל Fix אמין. עבור לאזור פתוח עם קו ראייה לשמיים ללא חסימה ונסה שוב.';$('gnssReason').textContent=text;setLive(denied?'נדרשת הרשאת מיקום':'אין מספיק קליטת GPS',text);}
   async function regional(lat,lon,share,score,accuracy,fixRatio){const latCell=Math.round(lat*10)/10,lonCell=Math.round(lon*10)/10;try{if(share)await fetch('/api/gnss/sample',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lat_cell:latCell,lon_cell:lonCell,score,accuracy_m:accuracy,fix_ratio:fixRatio})});const r=await fetch(`/api/gnss/region?lat_cell=${latCell}&lon_cell=${lonCell}`,{cache:'no-store'}),d=await r.json();if(!d.count){$('regionalGnss').textContent='אין מספיק מדידות באזור';return;}$('regionalGnss').textContent=`${d.score<30?'🟢 רגוע':d.score<60?'🟡 הפרעות אפשריות':'🟠 סימנים חריגים'} · ${d.score}/100`;$('regionalGnssDetail').textContent=`${d.count} מדידות ב־2 השעות האחרונות · דיוק ממוצע ±${d.accuracy_m} מ׳.`;}catch(e){$('regionalGnss').textContent='התמונה הקהילתית אינה זמינה כרגע';}}
-  function finish(forced=false){const m=metrics();stopWatch();resetButton();if(!m||samples.length<4){$('gnssBadge').textContent='אין מספיק מידע';$('gnssReason').textContent='לא התקבלו מספיק דגימות. עבור למקום פתוח לשמיים ונסה שוב.';setLive('אין מספיק מידע','עבור לאזור פתוח עם קו ראייה לשמיים ללא חסימה ונסה שוב.');return;}
+  function finish(forced=false){const m=metrics();stopWatch();if(progressBar)progressBar.style.width='100%';if(stageEl)stageEl.textContent='הבדיקה הושלמה';if(etaEl)etaEl.textContent='הסתיים';resetButton();if(!m||samples.length<4){$('gnssBadge').textContent='אין מספיק מידע';$('gnssReason').textContent='לא התקבלו מספיק דגימות. עבור למקום פתוח לשמיים ונסה שוב.';setLive('אין מספיק מידע','עבור לאזור פתוח עם קו ראייה לשמיים ללא חסימה ונסה שוב.');return;}
     paint(m);const poorSky=m.accuracy>35 || m.fixRatio<.55;
     let title,reason,cls;
     if(poorSky){title='קליטה לא מספקת לקביעה';reason='איכות ה־GPS נמוכה. ייתכן שאתה בתוך מבנה, ברכב מקורה או עם חסימת שמיים. עבור לאזור פתוח לשמיים ונסה שוב.';cls='warn';}
@@ -1229,8 +1244,8 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
     $('gnssBadge').className='gnss-badge '+cls;$('gnssBadge').textContent=title;$('gnssReason').textContent=reason;setLive(title,`${samples.length} דגימות נותחו · ביטחון ${m.confidence}%`);const last=samples[samples.length-1];regional(last.latitude,last.longitude,$('gnssShare').checked,m.score,m.accuracy,m.fixRatio);
   }
   function maybeFinish(){const m=metrics();if(!m)return;paint(m);const enoughStable=samples.length>=8&&m.elapsed>=15&&m.confidence>=75&&m.accuracy<=25;const enoughAny=samples.length>=12&&m.elapsed>=22&&m.confidence>=82;if(enoughStable||enoughAny)finish();}
-  function begin(){if(firstFix)return;firstFix=true;started=Date.now();scrollToTarget('gnss-status-target','start',112);setLive('בודק GPS בזמן אמת','אוסף דגימות ומעריך אם כבר יש מספיק מידע.');timer=setInterval(()=>{const m=metrics();if(m){paint(m);button.textContent=`בודק… ${samples.length} דגימות`;if(m.elapsed>=45)finish(true);else maybeFinish();}},1000);}
-  button.addEventListener('click',()=>{if(!navigator.geolocation){$('gnssReason').textContent='הדפדפן אינו תומך בבדיקת מיקום.';return;}samples=[];firstFix=false;lastSampleAt=0;button.disabled=true;button.textContent='📍 מבקש הרשאת מיקום…';setLive('ממתין להרשאה','הרשאת Location נדרשת רק לבדיקה המקומית.');$('gnssReason').textContent='אשר לדפדפן גישה למיקום. הבדיקה תתחיל רק לאחר Fix ראשון.';watchId=navigator.geolocation.watchPosition(p=>{begin();const now=Date.now();samples.push({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,t:now});lastSampleAt=now;const m=metrics();paint(m);setLive('בודק GPS בזמן אמת',`נאספו ${samples.length} דגימות · ביטחון ${m?m.confidence:0}%`);$('gnssReason').textContent=p.coords.accuracy>35?'הקליטה כרגע חלשה. אם המצב נמשך, עבור לאזור פתוח לשמיים.':'הבדיקה פעילה והמדדים מתעדכנים בזמן אמת.';maybeFinish();},permissionError,{enableHighAccuracy:true,maximumAge:0,timeout:15000});});
+  function begin(){if(firstFix)return;firstFix=true;started=Date.now();updateProgress(metrics());scrollToTarget('gnss-status-target','start',112);setLive('בודק GPS בזמן אמת','אוסף דגימות ומעריך אם כבר יש מספיק מידע.');timer=setInterval(()=>{const m=metrics();if(m){paint(m);updateProgress(m);button.textContent=`בודק… ${samples.length} דגימות`;if(m.elapsed>=45)finish(true);else maybeFinish();}},1000);}
+  button.addEventListener('click',()=>{if(!navigator.geolocation){$('gnssReason').textContent='הדפדפן אינו תומך בבדיקת מיקום.';return;}samples=[];firstFix=false;lastSampleAt=0;button.disabled=true;button.textContent='📍 מבקש הרשאת מיקום…';showProgress(true);updateProgress(null);setLive('ממתין להרשאה','הרשאת Location נדרשת רק לבדיקה המקומית.');$('gnssReason').textContent='אשר לדפדפן גישה למיקום. הבדיקה תתחיל רק לאחר Fix ראשון.';watchId=navigator.geolocation.watchPosition(p=>{begin();const now=Date.now();samples.push({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,t:now});lastSampleAt=now;const m=metrics();paint(m);setLive('בודק GPS בזמן אמת',`נאספו ${samples.length} דגימות · ביטחון ${m?m.confidence:0}%`);$('gnssReason').textContent=p.coords.accuracy>35?'הקליטה כרגע חלשה. אם המצב נמשך, עבור לאזור פתוח לשמיים.':'הבדיקה פעילה והמדדים מתעדכנים בזמן אמת.';maybeFinish();},permissionError,{enableHighAccuracy:true,maximumAge:0,timeout:15000});});
 })();
 
 // v2.15 — open history/analytics only on demand
