@@ -2,9 +2,14 @@
 
 const byId = id => document.getElementById(id);
 
-function scrollToTarget(id, block = "start") {
+function scrollToTarget(id, block = "start", offset = 0) {
   const target = byId(id);
   if (!target) return;
+  if (block === "start" && offset) {
+    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    return;
+  }
   target.scrollIntoView({ behavior: "smooth", block });
 }
 
@@ -263,7 +268,7 @@ async function calculate({ scrollToWorkspace = false } = {}) {
     elements.loadingDescription.textContent = historyText;
     setState("success");
     showToast(payload.cached ? "נתוני RAAM נטענו ממטמון שרת תקין" : "נתוני NASA עודכנו בהצלחה");
-    setTimeout(() => scrollToTarget("raam-values-target", "start"), 320);
+    setTimeout(() => scrollToTarget("raam-values-target", "start", 132), 320);
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "אירעה שגיאה לא צפויה.";
     const previous = loadHistory()[0];
@@ -650,14 +655,22 @@ function registerEvents() {
   elements.downloadJsonButton.addEventListener("click", exportJson);
   elements.downloadCsvButton.addEventListener("click", exportCsv);
   elements.shareResultButton?.addEventListener("click", shareResult);
-  elements.viewResultsButton.addEventListener("click", () => scrollToTarget("raam-values-target", "start"));
+  elements.viewResultsButton.addEventListener("click", () => scrollToTarget("raam-values-target", "start", 132));
 
 
   document.querySelectorAll('a[href="#k69-live-target"]').forEach(link => {
     link.addEventListener("click", event => {
       event.preventDefault();
-      scrollToTarget("k69-live-target", "start");
+      scrollToTarget("k69-live-target", "start", 92);
       history.replaceState(null, "", "#k69-live-target");
+    });
+  });
+
+  document.querySelectorAll('a[href="#gnss-action-target"]').forEach(link => {
+    link.addEventListener("click", event => {
+      event.preventDefault();
+      scrollToTarget("gnss-action-target", "start", 112);
+      history.replaceState(null, "", "#gnss-action-target");
     });
   });
 
@@ -1209,6 +1222,6 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
     $('gnssBadge').className='gnss-badge '+cls;$('gnssBadge').textContent=title;$('gnssReason').textContent=reason;setLive(title,`${samples.length} דגימות נותחו · ביטחון ${m.confidence}%`);const last=samples[samples.length-1];regional(last.latitude,last.longitude,$('gnssShare').checked,m.score,m.accuracy,m.fixRatio);
   }
   function maybeFinish(){const m=metrics();if(!m)return;paint(m);const enoughStable=samples.length>=8&&m.elapsed>=15&&m.confidence>=75&&m.accuracy<=25;const enoughAny=samples.length>=12&&m.elapsed>=22&&m.confidence>=82;if(enoughStable||enoughAny)finish();}
-  function begin(){if(firstFix)return;firstFix=true;started=Date.now();setLive('בודק GPS בזמן אמת','אוסף דגימות ומעריך אם כבר יש מספיק מידע.');timer=setInterval(()=>{const m=metrics();if(m){paint(m);button.textContent=`בודק… ${samples.length} דגימות`;if(m.elapsed>=45)finish(true);else maybeFinish();}},1000);}
+  function begin(){if(firstFix)return;firstFix=true;started=Date.now();scrollToTarget('gnss-status-target','start',112);setLive('בודק GPS בזמן אמת','אוסף דגימות ומעריך אם כבר יש מספיק מידע.');timer=setInterval(()=>{const m=metrics();if(m){paint(m);button.textContent=`בודק… ${samples.length} דגימות`;if(m.elapsed>=45)finish(true);else maybeFinish();}},1000);}
   button.addEventListener('click',()=>{if(!navigator.geolocation){$('gnssReason').textContent='הדפדפן אינו תומך בבדיקת מיקום.';return;}samples=[];firstFix=false;lastSampleAt=0;button.disabled=true;button.textContent='📍 מבקש הרשאת מיקום…';setLive('ממתין להרשאה','הרשאת Location נדרשת רק לבדיקה המקומית.');$('gnssReason').textContent='אשר לדפדפן גישה למיקום. הבדיקה תתחיל רק לאחר Fix ראשון.';watchId=navigator.geolocation.watchPosition(p=>{begin();const now=Date.now();samples.push({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,t:now});lastSampleAt=now;const m=metrics();paint(m);setLive('בודק GPS בזמן אמת',`נאספו ${samples.length} דגימות · ביטחון ${m?m.confidence:0}%`);$('gnssReason').textContent=p.coords.accuracy>35?'הקליטה כרגע חלשה. אם המצב נמשך, עבור לאזור פתוח לשמיים.':'הבדיקה פעילה והמדדים מתעדכנים בזמן אמת.';maybeFinish();},permissionError,{enableHighAccuracy:true,maximumAge:0,timeout:15000});});
 })();

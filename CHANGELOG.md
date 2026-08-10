@@ -1,3 +1,11 @@
+# v2.14.0 — Mobile Action Landing Fixes
+
+- GPS shortcut lands directly on the permission note and “בדוק GPS עכשיו” button.
+- After the first GPS fix, the page moves to the live GNSS status metrics.
+- NASA/BRDC results stop above DATA1–DATA4 so the first row is no longer hidden by the mobile header.
+- K69 mobile layout is more compact: smaller countdown ring and a 2×2 time grid.
+- PWA cache bumped to v2.14.0.
+
 # v2.13.0 — Direct Result Jumps
 
 - NASA download now scrolls directly to DATA1–DATA4 after a successful calculation.
