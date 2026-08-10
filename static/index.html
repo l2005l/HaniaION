@@ -9,7 +9,7 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/static/icons/icon.svg?v=43" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
-  <link rel="stylesheet" href="/static/style.css?v=55">
+  <link rel="stylesheet" href="/static/style.css?v=54">
   <title>HaniaION — BRDC to RAAM</title>
   <link rel="stylesheet" href="/static/data-status.css?v=4">
 </head>
@@ -37,7 +37,7 @@
         <div class="focused-primary-actions">
           <button id="heroCalculateButton" class="button button-primary button-large" type="button"><span class="button-icon">↯</span> הורד והצג נתוני NASA</button>
           <a class="button button-secondary button-large k69-priority-button" href="#gps-pulse"><span>◷</span> מעבר מהיר ל־K69</a>
-          <a class="button button-secondary button-large gnss-priority-button" href="#gnss-start"><span>⌖</span> בדיקת חסימת GPS</a>
+          <a class="button button-secondary button-large gnss-priority-button" href="#gnss-monitor"><span>⌖</span> בדיקת חסימת GPS</a>
         </div>
       </div>
 
@@ -67,18 +67,13 @@
     <section id="gnss-monitor" class="gnss-monitor reveal" aria-label="ניטור GNSS מהטלפון">
       <div class="gnss-head"><div><span class="section-kicker">GNSS INTERFERENCE</span><h2>מצב GPS סביב הטלפון</h2></div><span id="gnssBadge" class="gnss-badge neutral">טרם נבדק</span></div>
       <p class="gnss-explain">בדיקה מקומית של יציבות המיקום והדיוק. התוצאה היא אינדיקציה להפרעה אפשרית — לא הוכחה לחסימה או שיבוש מכוון.</p>
-      <div id="gnss-start" class="gnss-quick-start">
-        <div class="gnss-permission-note"><strong>📍 בדיקה מהטלפון</strong><span>בלחיצה על הכפתור הדפדפן יבקש הרשאת מיקום לאתר. הבדיקה תתחיל רק אחרי שמתקבלת דגימת מיקום ראשונה.</span></div>
-        <button id="gnssTestButton" class="button button-primary" type="button">📱 בדוק GPS עכשיו</button>
+      <div id="gnssLiveStatus" class="gnss-live-status"><strong>מוכן לבדיקה</strong><span>המערכת תאסוף דגימות עד שיש מספיק מידע לתוצאה.</span></div>
+      <div class="gnss-grid">
+        <article><small>דיוק נוכחי</small><strong id="gnssAccuracy">—</strong></article><article><small>יציבות מיקום</small><strong id="gnssFix">—</strong></article><article><small>קפיצות חריגות</small><strong id="gnssJumps">—</strong></article><article><small>מדד הפרעה</small><strong id="gnssScore">—</strong></article><article><small>דגימות</small><strong id="gnssSamples">0</strong></article><article><small>ביטחון בתוצאה</small><strong id="gnssConfidence">—</strong></article>
       </div>
-      <div id="gnss-results" class="gnss-results">
-        <div id="gnssLiveStatus" class="gnss-live-status"><strong>מוכן לבדיקה</strong><span>המערכת תאסוף דגימות עד שיש מספיק מידע לתוצאה.</span></div>
-        <div class="gnss-grid">
-          <article><small>דיוק נוכחי</small><strong id="gnssAccuracy">—</strong></article><article><small>רציפות Fix</small><strong id="gnssFix">—</strong></article><article><small>קפיצות חריגות</small><strong id="gnssJumps">—</strong></article><article><small>מדד הפרעה</small><strong id="gnssScore">—</strong></article><article><small>דגימות</small><strong id="gnssSamples">0</strong></article><article><small>ביטחון</small><strong id="gnssConfidence">—</strong></article>
-        </div>
-        <div class="gnss-meter"><span id="gnssMeter"></span></div><p id="gnssReason" class="gnss-reason">לחץ על הבדיקה והישאר במקום פתוח ככל האפשר.</p>
-      </div>
-      <div class="gnss-actions"><label><input id="gnssShare" type="checkbox"> שתף מדגם אזורי אנונימי (מיקום מעוגל לכ־10 ק״מ)</label></div>
+      <div class="gnss-meter"><span id="gnssMeter"></span></div><p id="gnssReason" class="gnss-reason">לחץ על הבדיקה והישאר במקום פתוח ככל האפשר.</p>
+      <div class="gnss-permission-note"><strong>📍 הרשאת מיקום נדרשת רק לבדיקה מהטלפון</strong><span>בלחיצה על הבדיקה הדפדפן יבקש מהאתר הרשאת מיקום. הספירה תתחיל רק אחרי שמתקבלת דגימת מיקום ראשונה. המפה האזורית למטה אינה דורשת הרשאה.</span></div>
+      <div class="gnss-actions"><button id="gnssTestButton" class="button button-primary" type="button">📱 בדוק GPS עכשיו</button><label><input id="gnssShare" type="checkbox"> שתף מדגם אזורי אנונימי (מיקום מעוגל לכ־10 ק״מ)</label></div>
       <div class="regional-gnss external-regional"><div><span class="section-kicker">ISRAEL · REGIONAL GNSS</span><h3>מפת הפרעות GPS בישראל</h3></div><strong>Tracer · תמונת מצב אזורית מהשטח</strong><small>המפה מבוססת על נתוני GPS מצטברים מכלי רכב בישראל ומציגה רמות תקין / קל / בינוני / חמור. היא אינדיקציה אזורית ואינה מזהה מקור או גורם להפרעה.</small><div class="gnss-map-frame"><iframe title="מפת הפרעות GPS בישראל - Tracer" src="https://tracer.co.il/gps-jamming-map?embed=1" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div><div class="gnss-map-links"><a href="https://tracer.co.il/gps-jamming-map" target="_blank" rel="noopener">פתח מפה מלאה</a><span>מקור חיצוני: Tracer Technologies</span></div></div>
       <div class="regional-gnss community-regional"><div><span class="section-kicker">HANIAION COMMUNITY</span><h3>מדידות HaniaION באזור</h3></div><strong id="regionalGnss">אין עדיין מדידות באזור</strong><small id="regionalGnssDetail">מבוסס רק על בדיקות אנונימיות של HaniaION, אם משתמשים בחרו לשתף.</small></div>
     </section>
@@ -212,7 +207,7 @@
   </div>
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=55" defer></script>
+  <script src="/static/app.js?v=54" defer></script>
   <script src="/static/data-status.js?v=4"></script>
 </body>
 </html>

@@ -1,10 +1,6 @@
-# HaniaION v2.11.0 — GNSS Quick Launch
-
-- GPS interference shortcut now lands directly on the GPS test action.
-- Permission guidance and test button are visible immediately without extra scrolling.
-- After the first GPS fix, the page automatically moves to the live status/results area.
-- Regional GNSS maps remain below the local test results.
-- Updated PWA asset/cache versions.
+# v2.12.0
+- GNSS terminology: "רציפות Fix" renamed to "יציבות מיקום".
+- "ביטחון" clarified as "ביטחון בתוצאה".
 
 # HaniaION v2.7.0 — Command Center
 
