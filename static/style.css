@@ -1358,3 +1358,11 @@ iframe {
 .gnss-permission-note{margin:14px 0 4px;padding:13px 15px;border:1px solid rgba(56,189,248,.22);border-radius:15px;background:rgba(14,116,144,.09)}.gnss-permission-note strong,.gnss-permission-note span{display:block}.gnss-permission-note span{margin-top:5px;color:#a8bfd0;font-size:.86rem;line-height:1.55}.external-regional{margin-top:20px}.gnss-map-frame{margin-top:14px;border:1px solid rgba(105,207,255,.18);border-radius:18px;overflow:hidden;background:#071421;min-height:420px}.gnss-map-frame iframe{display:block;width:100%;height:460px;border:0}.gnss-map-links{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:9px;font-size:.78rem;color:#8eaabd}.gnss-map-links a{color:#67e8f9}.community-regional{margin-top:18px}@media(max-width:650px){.gnss-map-frame{min-height:360px}.gnss-map-frame iframe{height:390px}.gnss-map-links{align-items:flex-start;flex-direction:column}}
 /* v2.10 adaptive GNSS */
 .gnss-live-status{margin:14px 0;padding:12px 14px;border:1px solid rgba(66,215,255,.2);border-radius:14px;background:rgba(14,116,144,.08)}.gnss-live-status strong,.gnss-live-status span{display:block}.gnss-live-status span{margin-top:4px;color:#9fb9cb;font-size:.84rem}.gnss-priority-button{border-color:rgba(52,211,153,.35)}
+
+/* v2.11 — GNSS direct launch flow */
+#gnss-start,#gnss-results{scroll-margin-top:88px}
+.gnss-quick-start{margin:14px 0 18px;padding:14px;border:1px solid rgba(52,211,153,.28);border-radius:18px;background:linear-gradient(145deg,rgba(6,78,59,.16),rgba(8,31,52,.45))}
+.gnss-quick-start .gnss-permission-note{margin:0 0 12px}
+.gnss-quick-start>.button{width:100%;min-height:58px;font-size:1.02rem}
+.gnss-results{scroll-margin-top:88px}
+@media(max-width:650px){#gnss-start,#gnss-results{scroll-margin-top:72px}.gnss-quick-start{margin-top:10px;padding:10px}.gnss-quick-start>.button{min-height:60px}}
