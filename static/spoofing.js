@@ -220,12 +220,12 @@
       }
 
       note.textContent =
-        מצב: ${systemStatus} · ${reason} +
-        ` · מדד הטעיה ${Math.round(spoofScore)}/100` +
-        ` · מדידה #${received}` +
-        ` · ${new Date(
-          finite(d.timestamp) || Date.now()
-        ).toLocaleTimeString("he-IL")}`;
+  מצב: ${systemStatus} · ${reason} +
+  ` · מדד הטעיה ${Math.round(spoofScore)}/100` +
+  ` · מדידה #${received}` +
+  ` · ${new Date(
+    finite(d.timestamp) || Date.now()
+  ).toLocaleTimeString("he-IL")}`;
     }
 
     previous = {
