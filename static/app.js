@@ -1211,32 +1211,255 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
   function resetButton(){button.disabled=false;button.textContent='📱 בדוק GPS עכשיו';}
   function stopWatch(){if(watchId!==null) navigator.geolocation.clearWatch(watchId);if(timer)clearInterval(timer);watchId=null;timer=null;}
   function metrics(){
-    if(!samples.length)return null;
-    const acc=samples.map(s=>s.accuracy).filter(Number.isFinite), accuracy=acc.reduce((a,b)=>a+b,0)/acc.length;
-    let jumps=0;for(let i=1;i<samples.length;i++){const dt=(samples[i].t-samples[i-1].t)/1000,d=dist(samples[i-1],samples[i]);if(dt<8&&d>Math.max(80,samples[i].accuracy*4))jumps++;}
-    const elapsed=Math.max(1,(Date.now()-started)/1000), expected=Math.max(samples.length,Math.ceil(elapsed/3));
-    const fixRatio=Math.min(1,samples.length/expected);
-    const native=window.haniaionNativeGnss||null;
-    let nativeScore=0, nativeReady=false, nativePoorSky=false, nativeHealthy=false;
-    if(native){
-      const view=Number(native.satellitesInView)||0, used=Number(native.satellitesUsed)||0, cn0=Number(native.avgCn0DbHz)||0, nAcc=Number(native.accuracyM)||0;
-      const usedRatio=view>0?used/view:0;
-      nativeReady=view>=4;
-      nativePoorSky=nativeReady && ((cn0>0&&cn0<16) || used<=2 || (view>=12&&usedRatio<0.06) || nAcc>35);
-      nativeHealthy=nativeReady && used>=4 && cn0>=18 && nAcc>0 && nAcc<=20;
-      if(nativeReady){
-        if(cn0>0&&cn0<16) nativeScore+=18; else if(cn0>0&&cn0<20) nativeScore+=7;
-        if(view>=12&&used<=1) nativeScore+=22; else if(view>=12&&usedRatio<0.10) nativeScore+=10;
-        if(nAcc>35) nativeScore+=12; else if(nAcc>20) nativeScore+=5;
-        if(nativeHealthy) nativeScore-=8;
+  if(!samples.length) return null;
+
+  const acc = samples
+    .map(s => s.accuracy)
+    .filter(Number.isFinite);
+
+  const accuracy =
+    acc.reduce((a,b) => a+b, 0) / acc.length;
+
+  let jumps = 0;
+
+  for(let i=1; i<samples.length; i++){
+    const dt =
+      (samples[i].t - samples[i-1].t) / 1000;
+
+    const d =
+      dist(samples[i-1], samples[i]);
+
+    if(
+      dt < 8 &&
+      d > Math.max(80, samples[i].accuracy * 4)
+    ){
+      jumps++;
+    }
+  }
+
+  const elapsed =
+    Math.max(1, (Date.now()-started)/1000);
+
+  const expected =
+    Math.max(
+      samples.length,
+      Math.ceil(elapsed/3)
+    );
+
+  const fixRatio =
+    Math.min(1, samples.length/expected);
+
+
+  /* =========================
+     Android Native GNSS
+     ========================= */
+
+  const native =
+    window.haniaionNativeGnss || null;
+
+  let nativeScore = 0;
+  let nativeReady = false;
+  let nativePoorSky = false;
+  let nativeHealthy = false;
+
+  if(native){
+
+    const view =
+      Number(native.satellitesInView) || 0;
+
+    const used =
+      Number(native.satellitesUsed) || 0;
+
+    const cn0 =
+      Number(native.avgCn0DbHz) || 0;
+
+    const nAcc =
+      Number(native.accuracyM) || 0;
+
+    const usedRatio =
+      view > 0 ? used/view : 0;
+
+    nativeReady =
+      view >= 4;
+
+    nativePoorSky =
+      nativeReady &&
+      (
+        (cn0 > 0 && cn0 < 16) ||
+        used <= 2 ||
+        (view >= 12 && usedRatio < 0.06) ||
+        nAcc > 35
+      );
+
+    nativeHealthy =
+      nativeReady &&
+      used >= 4 &&
+      cn0 >= 18 &&
+      nAcc > 0 &&
+      nAcc <= 20;
+
+    if(nativeReady){
+
+      if(cn0 > 0 && cn0 < 16){
+        nativeScore += 18;
+      }
+      else if(cn0 > 0 && cn0 < 20){
+        nativeScore += 7;
+      }
+
+      if(view >= 12 && used <= 1){
+        nativeScore += 22;
+      }
+      else if(
+        view >= 12 &&
+        usedRatio < 0.10
+      ){
+        nativeScore += 10;
+      }
+
+      if(nAcc > 35){
+        nativeScore += 12;
+      }
+      else if(nAcc > 20){
+        nativeScore += 5;
+      }
+
+      if(nativeHealthy){
+        nativeScore -= 8;
       }
     }
-    const browserScore=Math.min(100,Math.max(0,accuracy-8)*1.15+(1-fixRatio)*45+jumps*18);
-    const score=Math.round(Math.min(100,Math.max(0,browserScore + nativeScore)));
-    const baseConfidence=samples.length*5+Math.min(elapsed,20)*1.5;
-    const confidence=Math.min(99,Math.round(baseConfidence+(nativeReady?10:0)));
-    return {accuracy,jumps,fixRatio,score,confidence,elapsed,native,nativeReady,nativePoorSky,nativeHealthy,nativeScore};
   }
+
+
+  /* =========================
+     Spoofing monitor
+     Android only
+     ========================= */
+
+  const spoofing =
+    window.haniaionSpoofing || null;
+
+  let spoofReady = false;
+  let spoofScore = 0;
+  let spoofContribution = 0;
+  let spoofSuspected = false;
+  let spoofHigh = false;
+
+  /*
+   * חשוב:
+   * אם אין Android Native GNSS,
+   * אין שום השפעה על המשתמש.
+   */
+  if(
+    nativeReady &&
+    spoofing &&
+    Number.isFinite(Number(spoofing.score))
+  ){
+    spoofReady = true;
+
+    spoofScore =
+      Math.max(
+        0,
+        Math.min(
+          100,
+          Number(spoofing.score)
+        )
+      );
+
+    spoofSuspected =
+      spoofScore >= 35;
+
+    spoofHigh =
+      spoofScore >= 60;
+
+    /*
+     * מדד ההטעיה משפיע על התוצאה,
+     * אבל לא מקבל לבדו שליטה מלאה.
+     *
+     * 35 -> כ-12 נקודות
+     * 60 -> כ-21 נקודות
+     * 100 -> עד 35 נקודות
+     */
+    spoofContribution =
+      Math.min(
+        35,
+        spoofScore * 0.35
+      );
+  }
+
+
+  /* =========================
+     Browser measurements
+     ========================= */
+
+  const browserScore =
+    Math.min(
+      100,
+      Math.max(0, accuracy-8) * 1.15 +
+      (1-fixRatio) * 45 +
+      jumps * 18
+    );
+
+
+  /* =========================
+     Combined score
+     ========================= */
+
+  const score =
+    Math.round(
+      Math.min(
+        100,
+        Math.max(
+          0,
+          browserScore +
+          nativeScore +
+          spoofContribution
+        )
+      )
+    );
+
+
+  /* =========================
+     Confidence
+     ========================= */
+
+  const baseConfidence =
+    samples.length * 5 +
+    Math.min(elapsed,20) * 1.5;
+
+  const confidence =
+    Math.min(
+      99,
+      Math.round(
+        baseConfidence +
+        (nativeReady ? 10 : 0) +
+        (spoofReady ? 5 : 0)
+      )
+    );
+
+
+  return {
+    accuracy,
+    jumps,
+    fixRatio,
+    score,
+    confidence,
+    elapsed,
+
+    native,
+    nativeReady,
+    nativePoorSky,
+    nativeHealthy,
+    nativeScore,
+
+    spoofing,
+    spoofReady,
+    spoofScore,
+    spoofContribution,
+    spoofSuspected,
+    spoofHigh
+  };
+}
   function paint(m){
     if(!m)return;
     $('gnssAccuracy').textContent=`±${m.accuracy.toFixed(1)} m`;$('gnssFix').textContent=`${Math.round(m.fixRatio*100)}%`;$('gnssJumps').textContent=String(m.jumps);$('gnssScore').textContent=`${m.score}/100`;$('gnssMeter').style.width=`${m.score}%`;
