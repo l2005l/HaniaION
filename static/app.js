@@ -1306,13 +1306,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const constellations=d.constellations||{};
     const text=Object.entries(constellations).filter(([,n])=>Number(n)>0).map(([name,n])=>`${name} ${n}`).join(" · ");
     set("nativeConstellations", text || "ממתין לזיהוי מערכות");
-    const note=document.getElementById("nativeGnssNote");
-    if(note){
-      const used=Number(d.satellitesUsed)||0, view=Number(d.satellitesInView)||0, cn0=Number(d.avgCn0DbHz)||0, acc=Number(d.accuracyM)||0;
-      let q='ממתין ל־Fix יציב';
-      if(used>=4&&acc>0&&acc<=20&&cn0>=18) q='נתוני Native מתאימים לניתוח משולב';
-      else if(view>=10&&used<=2) q='Fix חלש — מומלץ שמיים פתוחים';
-      note.textContent=`${q} · מדידה #${received} · ${new Date(Number(d.timestamp)||Date.now()).toLocaleTimeString("he-IL")}`;
-    }
+    
   });
 })();
