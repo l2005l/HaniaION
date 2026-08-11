@@ -1478,10 +1478,44 @@ document.addEventListener("DOMContentLoaded", initializeK69Monitor);
     paint(m);const poorSky=m.accuracy>35 || m.fixRatio<.55 || (m.nativeReady&&m.nativePoorSky&&m.score<60);
     let title,reason,cls;
     const nativeLabel=m.nativeReady?' · Android GNSS שולב':'';
-    if(poorSky){title='קליטה לא מספקת לקביעה';reason=m.nativeReady?'נתוני Android GNSS מצביעים על Fix חלש או חסימת שמיים אפשרית. עבור למקום פתוח לשמיים ונסה שוב לפני שמסיקים שיש הפרעה.':'איכות ה־GPS נמוכה. ייתכן שאתה בתוך מבנה, ברכב מקורה או עם חסימת שמיים. עבור לאזור פתוח לשמיים ונסה שוב.';cls='warn';}
-    else if(m.score<30){title='לא זוהתה הפרעת GPS';reason=m.nativeReady?'בדיקת המיקום ונתוני הלוויינים של Android עקביים: יש Fix שימושי, הדיוק יציב ולא זוהו סימנים משמעותיים להפרעה.':'ה־Fix יציב והדיוק עקבי. לא זוהו סימנים משמעותיים לחסימה או הפרעה במהלך הבדיקה.';cls='ok';}
-    else if(m.score<60){title='אי־יציבות ב־GNSS — מומלץ לבדוק שוב';reason=m.nativeReady?'נמצאה אי־יציבות בחלק מהמדדים. נתוני הלוויינים שולבו בתוצאה, אך עדיין לא ניתן להבדיל בוודאות בין תנאי קליטה סביבתיים לבין הפרעה חיצונית.':'נמצאו סימנים לאי־יציבות. מומלץ לחזור על הבדיקה במקום פתוח לשמיים כדי לשלול חסימת קליטה סביבתית.';cls='warn';}
-    else{title='סימנים חריגים ב־GNSS';reason=m.nativeReady?'גם מדדי המיקום וגם נתוני Android GNSS מציגים חריגות. זו אינדיקציה להפרעה אפשרית בלבד — לא הוכחה לחסימה או להטעיה מכוונת.':'נמצאו חריגות משמעותיות במדדי המיקום. זו אינדיקציה להפרעה, לא הוכחה לחסימה מכוונת.';cls='alert';}
+    if(m.spoofReady && m.spoofHigh){
+  title='חשד גבוה להטעיית מיקום';
+  reason='זוהתה אי־התאמה משמעותית בין תנועת המיקום לבין נתוני Android GNSS. מומלץ לחזור על הבדיקה במקום פתוח לשמיים כדי לאמת את הממצא.';
+  cls='alert';
+}
+else if(m.spoofReady && m.spoofSuspected){
+  title='חשד לאי־התאמה במיקום';
+  reason='מנגנון בדיקת ההטעיה זיהה אי־התאמה בין מדידות המיקום. מומלץ להמשיך את הבדיקה ולחזור עליה במקום פתוח לשמיים.';
+  cls='warn';
+}
+else if(poorSky){
+  title='קליטה לא מספקת לקביעה';
+  reason=m.nativeReady
+    ? 'נתוני Android GNSS מצביעים על Fix חלש או חסימת שמיים אפשרית. עבור למקום פתוח לשמיים ונסה שוב לפני שמסיקים שיש הפרעה.'
+    : 'איכות ה־GPS נמוכה. ייתכן שאתה בתוך מבנה, ברכב מקורה או עם חסימת שמיים. עבור לאזור פתוח לשמיים ונסה שוב.';
+  cls='warn';
+}
+else if(m.score<30){
+  title='לא זוהתה הפרעת GPS';
+  reason=m.nativeReady
+    ? 'בדיקת המיקום ונתוני הלוויינים של Android עקביים: יש Fix שימושי, הדיוק יציב ולא זוהו סימנים משמעותיים להפרעה.'
+    : 'ה־Fix יציב והדיוק עקבי. לא זוהו סימנים משמעותיים לחסימה או הפרעה במהלך הבדיקה.';
+  cls='ok';
+}
+else if(m.score<60){
+  title='אי־יציבות ב־GNSS — מומלץ לבדוק שוב';
+  reason=m.nativeReady
+    ? 'נמצאה אי־יציבות בחלק מהמדדים. נתוני הלוויינים שולבו בתוצאה, אך עדיין לא ניתן להבדיל בוודאות בין תנאי קליטה סביבתיים לבין הפרעה חיצונית.'
+    : 'נמצאו סימנים לאי־יציבות. מומלץ לחזור על הבדיקה במקום פתוח לשמיים כדי לשלול חסימת קליטה סביבתית.';
+  cls='warn';
+}
+else{
+  title='סימנים חריגים ב־GNSS';
+  reason=m.nativeReady
+    ? 'גם מדדי המיקום וגם נתוני Android GNSS מציגים חריגות. זו אינדיקציה להפרעה אפשרית בלבד — לא הוכחה לחסימה או להטעיה מכוונת.'
+    : 'נמצאו חריגות משמעותיות במדדי המיקום. זו אינדיקציה להפרעה, לא הוכחה לחסימה מכוונת.';
+  cls='alert';
+}
     $('gnssBadge').className='gnss-badge '+cls;$('gnssBadge').textContent=title;$('gnssReason').textContent=reason;setLive(title,`${samples.length} דגימות נותחו · ביטחון ${m.confidence}%${nativeLabel}`);const last=samples[samples.length-1];regional(last.latitude,last.longitude,$('gnssShare').checked,m.score,m.accuracy,m.fixRatio);
   }
   function maybeFinish(){const m=metrics();if(!m)return;paint(m);const enoughNative=m.nativeReady&&samples.length>=6&&m.elapsed>=10&&m.confidence>=70&&m.accuracy<=25&&Number(m.native?.satellitesUsed||0)>=4;const enoughStable=samples.length>=8&&m.elapsed>=15&&m.confidence>=75&&m.accuracy<=25;const enoughAny=samples.length>=12&&m.elapsed>=22&&m.confidence>=82;if(enoughNative||enoughStable||enoughAny)finish();}
