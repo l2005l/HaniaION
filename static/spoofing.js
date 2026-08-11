@@ -173,22 +173,54 @@
       document.getElementById("nativeGnssNote");
 
     if (note) {
-      let quality = "יציב";
+      let systemStatus = "ממתין";
+      let reason = "נאספים נתוני GNSS";
 
-      if (
-        used >= 4 &&
-        accuracy !== null &&
-        accuracy <= 20 &&
-        cn0 !== null &&
-        cn0 >= 18
+      // 1. חשד גבוה להטעיית מיקום
+      if (spoofScore >= 60) {
+        systemStatus = "חשד גבוה";
+        reason = "זוהתה אי־התאמה משמעותית בנתוני המיקום";
+      }
+
+      // 2. חשד בינוני
+      else if (spoofScore >= 35) {
+        systemStatus = "חשוד";
+        reason = "זוהתה אי־התאמה הדורשת המשך בדיקה";
+      }
+
+      // 3. אין עדיין Fix מספיק
+      else if (used < 4) {
+        systemStatus = "Fix חלש";
+        reason = "אין מספיק לוויינים בשימוש לקביעה יציבה";
+      }
+
+      // 4. איכות GNSS חלשה
+      else if (
+        (cn0 !== null && cn0 < 18) ||
+        (accuracy !== null && accuracy > 30)
       ) {
-        quality = "נתוני Native מתאימים לניתוח משולב";
-      } else if (view > 10 && used <= 2) {
-        quality = "נראים לוויינים אך ה־Fix חלש";
+        systemStatus = "קליטה חלשה";
+        reason = "איכות נתוני ה־GNSS אינה מספקת לקביעה חזקה";
+      }
+
+      // 5. Fix טוב
+      else if (
+        used >= 8 &&
+        accuracy !== null &&
+        accuracy <= 10
+      ) {
+        systemStatus = "תקין";
+        reason = "Fix יציב ודיוק מיקום טוב";
+      }
+
+      // 6. Fix סביר אבל עדיין לא ברמה הגבוהה
+      else {
+        systemStatus = "יציב";
+        reason = "נתוני GNSS תקינים, ממשיך מעקב";
       }
 
       note.textContent =
-        `${quality} · ${spoofStatus}` +
+        מצב: ${systemStatus} · ${reason} +
         ` · מדד הטעיה ${Math.round(spoofScore)}/100` +
         ` · מדידה #${received}` +
         ` · ${new Date(
