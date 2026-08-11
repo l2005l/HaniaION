@@ -217,30 +217,14 @@
     reason = "Fix יציב ודיוק מיקום טוב";
   }
 
-  let statusColor = "#55d99b";
-
-if (
-  systemStatus === "קליטה חלשה"
-) {
-  statusColor = "#f5c84c";
-}
-
-if (
-  systemStatus === "חשד להפרעת GNSS" ||
-  systemStatus === "חשד להטעיית מיקום"
-) {
-  statusColor = "#ff6b81";
-}
-
-const timeText = new Date(
+  const timeText = new Date(
   finite(d.timestamp) || Date.now()
 ).toLocaleTimeString("he-IL");
 
-note.innerHTML =
-  <span style="color:${statusColor};font-weight:700"> +
-  מצב: ${systemStatus} +
-  </span> +
-  ` · ${reason}` +
+note.style.color = "";
+
+note.textContent =
+  מצב: ${systemStatus} · ${reason} +
   ` · מדד הטעיה ${Math.round(spoofScore)}/100` +
   ` · מדידה #${received}` +
   ` · ${timeText}`;
