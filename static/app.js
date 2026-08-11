@@ -1307,71 +1307,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const text=Object.entries(constellations).filter(([,n])=>Number(n)>0).map(([name,n])=>`${name} ${n}`).join(" · ");
     set("nativeConstellations", text || "ממתין לזיהוי מערכות");
     const note=document.getElementById("nativeGnssNote");
-    if (note) {
-    const used = Number(d.satellitesUsed) || 0;
-    const view = Number(d.satellitesInView) || 0;
-    const cn0 = Number(d.avgCn0DbHz) || 0;
-    const acc = Number(d.accuracyM) || 0;
-
-    // נתוני GNSS נוספים שמגיעים מה-Android Native
-    const spoofScore = Number(d.spoofScore) || 0;
-    const jumpCount = Number(d.jumpCount) || 0;
-
-    let status = "תקין";
-    let reason = "לא זוהו סימנים משמעותיים להפרעה";
-    let score = spoofScore;
-
-    // חשד להטעיית מיקום
-    if (spoofScore >= 60 || jumpCount >= 3) {
-        status = "חשד להטעיית מיקום";
-        reason = "זוהו חריגות במיקום או בהתנהגות נתוני GNSS";
+    if(note){
+      const used=Number(d.satellitesUsed)||0, view=Number(d.satellitesInView)||0, cn0=Number(d.avgCn0DbHz)||0, acc=Number(d.accuracyM)||0;
+      let q='ממתין ל־Fix יציב';
+      if(used>=4&&acc>0&&acc<=20&&cn0>=18) q='נתוני Native מתאימים לניתוח משולב';
+      else if(view>=10&&used<=2) q='Fix חלש — מומלץ שמיים פתוחים';
+      note.textContent=`${q} · מדידה #${received} · ${new Date(Number(d.timestamp)||Date.now()).toLocaleTimeString("he-IL")}`;
     }
-
-    // חשד להפרעה / Jamming
-    else if (
-        (view >= 15 && used <= 2) ||
-        (view >= 20 && cn0 > 0 && cn0 < 15)
-    ) {
-        status = "חשד להפרעת GNSS";
-        reason = "נראים לוויינים אך איכות הקליטה או ה-Fix חריגים";
-    }
-
-    // קליטה חלשה
-    else if (
-        used < 4 ||
-        (cn0 > 0 && cn0 < 18) ||
-        acc > 30
-    ) {
-        status = "קליטה חלשה";
-        reason = "איכות נתוני ה-GNSS אינה מספקת לקביעה חזקה";
-    }
-
-    // מצב תקין
-    else {
-        status = "תקין";
-
-        if (used >= 8 && acc > 0 && acc <= 10) {
-            reason = "Fix יציב ודיוק מיקום טוב";
-        } else {
-            reason = "נתוני GNSS נראים תקינים";
-        }
-    }
-
-    // לא מאפשרים ציון מחוץ לטווח
-    score = Math.max(0, Math.min(100, score));
-
-    const time = new Date(
-        Number(d.timestamp) || Date.now()
-    ).toLocaleTimeString("he-IL", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-    });
-
-    note.textContent =
-        `מצב: ${status} · ${reason} · ` +
-        `מדד הטעיה ${Math.round(score)}/100 · ` +
-        מדידה #${received} · ${time};
-}
   });
 })();
