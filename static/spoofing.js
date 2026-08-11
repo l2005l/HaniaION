@@ -218,7 +218,23 @@
         systemStatus = "יציב";
         reason = "נתוני GNSS תקינים, ממשיך מעקב";
       }
-
+      note.classList.remove(
+      "gnss-status-ok",
+      "gnss-status-warn",
+      "gnss-status-danger"
+    );
+    
+    if (systemStatus === "תקין" || systemStatus === "יציב") {
+      note.classList.add("gnss-status-ok");
+    } else if (
+      systemStatus === "קליטה חלשה" ||
+      systemStatus === "Fix חלש" ||
+      systemStatus === "חשוד"
+    ) {
+      note.classList.add("gnss-status-warn");
+    } else if (systemStatus === "חשד גבוה") {
+      note.classList.add("gnss-status-danger");
+}
       note.textContent =
         "מצב: " + systemStatus + " · " + reason +
         " · מדד הטעיה " + Math.round(spoofScore) + "/100" +
