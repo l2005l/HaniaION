@@ -1405,3 +1405,19 @@ iframe {
 .gnss-constellations{margin-top:12px;padding:12px;border:1px solid rgba(105,207,255,.13);border-radius:14px}.gnss-constellations small{color:#91aabd}.gnss-constellations div{margin-top:7px;color:#eafcff;font-weight:700}
 .native-gnss-note{margin-top:10px;color:#9fb9cb;font-size:.78rem}
 @media(max-width:650px){.gnss-native-grid{grid-template-columns:1fr 1fr}.gnss-advanced{padding:15px 12px}}
+
+#nativeGnssNote {
+  transition: color 0.25s ease, background-color 0.25s ease;
+}
+
+#nativeGnssNote.gnss-status-ok {
+  color: #62e6ad;
+}
+
+#nativeGnssNote.gnss-status-warn {
+  color: #f2c94c;
+}
+
+#nativeGnssNote.gnss-status-danger {
+  color: #ff6b81;
+}
