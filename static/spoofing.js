@@ -173,62 +173,28 @@
       document.getElementById("nativeGnssNote");
 
     if (note) {
-  let systemStatus = "תקין";
-  let reason = "נתוני GNSS נראים תקינים";
+      let quality = "יציב";
 
-  // 1. חשד להטעיית מיקום
-  if (spoofScore >= 60) {
-    systemStatus = "חשד להטעיית מיקום";
-    reason = "זוהו חריגות משמעותיות בנתוני המיקום";
-  }
+      if (
+        used >= 4 &&
+        accuracy !== null &&
+        accuracy <= 20 &&
+        cn0 !== null &&
+        cn0 >= 18
+      ) {
+        quality = "נתוני Native מתאימים לניתוח משולב";
+      } else if (view > 10 && used <= 2) {
+        quality = "נראים לוויינים אך ה־Fix חלש";
+      }
 
-  // 2. אי־התאמה חשודה
-  else if (spoofScore >= 35) {
-    systemStatus = "חשד להטעיית מיקום";
-    reason = "זוהתה אי־התאמה חשודה בנתוני המיקום";
-  }
-
-  // 3. חשד להפרעת GNSS
-  else if (
-    (view >= 15 && used <= 2) ||
-    (view >= 20 && cn0 !== null && cn0 < 15)
-  ) {
-    systemStatus = "חשד להפרעת GNSS";
-    reason = "נראים לוויינים אך איכות הקליטה או ה־Fix חריגים";
-  }
-
-  // 4. קליטה חלשה
-  else if (
-    used < 4 ||
-    (cn0 !== null && cn0 < 18) ||
-    (accuracy !== null && accuracy > 30)
-  ) {
-    systemStatus = "קליטה חלשה";
-    reason = "איכות נתוני ה־GNSS אינה מספקת לקביעה חזקה";
-  }
-
-  // 5. נתונים טובים
-  else if (
-    used >= 8 &&
-    accuracy !== null &&
-    accuracy <= 10
-  ) {
-    systemStatus = "תקין";
-    reason = "Fix יציב ודיוק מיקום טוב";
-  }
-
-  const timeText = new Date(
-  finite(d.timestamp) || Date.now()
-).toLocaleTimeString("he-IL");
-
-note.style.color = "";
-
-note.textContent =
-  מצב: ${systemStatus} · ${reason} +
-  ` · מדד הטעיה ${Math.round(spoofScore)}/100` +
-  ` · מדידה #${received}` +
-  ` · ${timeText}`;
-}
+      note.textContent =
+        `${quality} · ${spoofStatus}` +
+        ` · מדד הטעיה ${Math.round(spoofScore)}/100` +
+        ` · מדידה #${received}` +
+        ` · ${new Date(
+          finite(d.timestamp) || Date.now()
+        ).toLocaleTimeString("he-IL")}`;
+    }
 
     previous = {
       lat,
