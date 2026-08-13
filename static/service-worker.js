@@ -1,11 +1,11 @@
-const CACHE_NAME = "haniaion-v2-24-k69-diagnostics";
+const CACHE_NAME = "haniaion-v2-25-k69-armed-push";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
   "/static/style.css?v=55",
-  "/static/app.js?v=57",
+  "/static/app.js?v=62",
   "/static/wind.css?v=45",
   "/static/wind.js?v=45",
   "/static/satellite.css?v=21",
@@ -110,6 +110,108 @@ self.addEventListener("fetch", event => {
   );
 });
 
+const k69ArmedCycles = new Map();
+
+function k69NotificationText(seconds) {
+  if (seconds === 0) return "המפתח הגיע עכשיו 🔔";
+  if (seconds === 60) return "בעוד דקה יגיע המפתח 🔔";
+  return `בעוד ${seconds} שניות יגיע המפתח 🔔`;
+}
+
+async function showK69Notification(seconds, cycleAt) {
+  const title = seconds === 0
+    ? "HaniaION — K-69"
+    : "HaniaION — התראת K-69";
+
+  await self.registration.showNotification(title, {
+    body: k69NotificationText(seconds),
+    icon: "/static/icons/icon.svg",
+    badge: "/static/icons/icon.svg",
+    tag: `haniaion-k69-${cycleAt}-${seconds}`,
+    renotify: true,
+    requireInteraction: false,
+    silent: false,
+    data: {
+      url: "/#k69-live-target",
+      type: "k69-alert",
+      cycle_at: cycleAt,
+      seconds_before: seconds,
+    },
+  });
+
+  const windows = await clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+  const visibleClient = windows.find(client => client.visibilityState === "visible");
+  if (visibleClient) {
+    visibleClient.postMessage({
+      type: "k69-alert",
+      seconds_before: seconds,
+      cycle_at: cycleAt,
+    });
+  }
+}
+
+async function armK69Alerts(payload) {
+  const cycleAt = String(payload.data?.cycle_at || "");
+  const alerts = Array.isArray(payload.data?.alerts) ? payload.data.alerts : [];
+  if (!cycleAt || !alerts.length) return;
+
+  // If the user schedules again, only the newest K cycle remains armed.
+  for (const [oldCycle, timers] of k69ArmedCycles) {
+    if (oldCycle === cycleAt) continue;
+    for (const timer of timers) clearTimeout(timer);
+    k69ArmedCycles.delete(oldCycle);
+  }
+
+  const timers = [];
+  const now = Date.now();
+
+  for (const alert of alerts) {
+    const seconds = Number(alert.seconds_before);
+    const dueAt = Date.parse(alert.due_at);
+    if (!Number.isFinite(seconds) || !Number.isFinite(dueAt)) continue;
+
+    const delay = Math.max(0, dueAt - now);
+    const timer = setTimeout(() => {
+      showK69Notification(seconds, cycleAt).catch(() => {});
+    }, delay);
+    timers.push(timer);
+  }
+
+  k69ArmedCycles.set(cycleAt, timers);
+
+  // Confirm receipt to the server. Once acknowledged, the server will not
+  // send duplicate per-alert pushes for this cycle.
+  try {
+    const subscription = await self.registration.pushManager.getSubscription();
+    if (subscription) {
+      await fetch("/api/k69/arm-ack", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          schedule_ids: alerts.map(alert => Number(alert.schedule_id)).filter(Number.isFinite),
+        }),
+      });
+    }
+  } catch (_) {
+    // If the acknowledgement fails, the server-side scheduler remains the
+    // fallback while the service is alive.
+  }
+
+  // Keep this push event alive until the latest short countdown finishes.
+  // This is intentionally capped to the current K cycle, never a recurring
+  // background job.
+  const maxDelay = Math.max(...alerts.map(alert => {
+    const dueAt = Date.parse(alert.due_at);
+    return Number.isFinite(dueAt) ? Math.max(0, dueAt - now) : 0;
+  }), 0);
+
+  await new Promise(resolve => setTimeout(resolve, Math.min(maxDelay + 1500, 75_000)));
+}
+
 self.addEventListener("push", event => {
   let payload = {
     title: "HaniaION",
@@ -129,6 +231,11 @@ self.addEventListener("push", event => {
   }
 
   event.waitUntil((async () => {
+    if (payload.data?.type === "k69-arm") {
+      await armK69Alerts(payload);
+      return;
+    }
+
     const windows = await clients.matchAll({type: "window", includeUncontrolled: true});
     const visibleClient = windows.find(client => client.visibilityState === "visible");
 

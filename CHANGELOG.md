@@ -26,3 +26,9 @@
 - Live satellite data remains green; true absence of all data remains neutral/offline.
 - Updated PWA cache versions.
 \n\n## v2.24.0 — Push diagnostics\n- Added safe `/api/push/diagnostics` endpoint and in-app K-69 Push diagnostics.\n- Foreground K-69 Push now still creates an OS notification while attempting speech.\n- K-69 schedules are marked sent only after a successful Push delivery.\n- Added protected `/api/k69/process-due` endpoint for an external scheduler.\n
+
+## v2.25.0 — K-69 armed background push
+
+- The selected K-69 alerts are now armed immediately on the device with one Push message when scheduling.
+- The Service Worker owns the short countdown for the selected next K cycle, so the Render Free web service does not need to remain awake until 60/30/10/0 seconds.
+- Added acknowledgement/migration support to prevent duplicate server-side alerts after the device is armed.

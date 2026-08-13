@@ -80,6 +80,7 @@ class K69AlertSchedule(Base):
     cycle_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     seconds_before: Mapped[int] = mapped_column(Integer, nullable=False)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    armed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
@@ -120,6 +121,15 @@ def session_scope() -> Iterator[Session]:
 def initialize_database() -> None:
     if DATABASE_ENABLED and engine is not None:
         Base.metadata.create_all(engine)
+        # Backward-compatible migration for databases created before background
+        # K-69 "arm" delivery was introduced.
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE k69_alert_schedules "
+                    "ADD COLUMN IF NOT EXISTS armed_at TIMESTAMPTZ"
+                )
+            )
 
 
 def database_status() -> dict[str, Any]:
@@ -322,6 +332,41 @@ def mark_k69_alert_sent(schedule_id: int) -> None:
             row.sent_at = datetime.now(timezone.utc)
 
 
+def get_k69_schedule_ids(endpoint: str, cycle_at: datetime) -> list[int]:
+    if not DATABASE_ENABLED:
+        return []
+    with session_scope() as session:
+        rows = session.scalars(
+            select(K69AlertSchedule)
+            .where(
+                K69AlertSchedule.endpoint == endpoint,
+                K69AlertSchedule.cycle_at == cycle_at.astimezone(timezone.utc),
+                K69AlertSchedule.sent_at.is_(None),
+            )
+            .order_by(K69AlertSchedule.seconds_before.desc())
+        ).all()
+        return [int(row.id) for row in rows]
+
+
+def mark_k69_alerts_armed(endpoint: str, schedule_ids: list[int]) -> int:
+    if not DATABASE_ENABLED or not schedule_ids:
+        return 0
+    with session_scope() as session:
+        rows = session.scalars(
+            select(K69AlertSchedule).where(
+                K69AlertSchedule.id.in_(schedule_ids),
+                K69AlertSchedule.endpoint == endpoint,
+            )
+        ).all()
+        now = datetime.now(timezone.utc)
+        changed = 0
+        for row in rows:
+            if row.sent_at is None and row.armed_at is None:
+                row.armed_at = now
+                changed += 1
+        return changed
+
+
 def due_k69_alerts(now: datetime | None = None) -> list[dict[str, Any]]:
     if not DATABASE_ENABLED:
         return []
@@ -331,6 +376,7 @@ def due_k69_alerts(now: datetime | None = None) -> list[dict[str, Any]]:
             select(K69AlertSchedule)
             .where(
                 K69AlertSchedule.sent_at.is_(None),
+                K69AlertSchedule.armed_at.is_(None),
                 K69AlertSchedule.cycle_at >= now - timedelta(seconds=30),
                 K69AlertSchedule.cycle_at <= now + timedelta(seconds=61),
             )

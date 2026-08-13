@@ -40,6 +40,8 @@ from database import (
     push_subscription_count,
     get_push_subscription,
     replace_k69_alert_schedule,
+    get_k69_schedule_ids,
+    mark_k69_alerts_armed,
     due_k69_alerts,
     mark_k69_alert_sent,
     add_monitor_log,
@@ -793,13 +795,62 @@ async def schedule_k69_alerts(request: Request):
         raise HTTPException(status_code=404, detail="Push subscription not found; enable notifications first")
 
     count = replace_k69_alert_schedule(endpoint, cycle_at, seconds_before)
+    schedule_ids = get_k69_schedule_ids(endpoint, cycle_at)
+
+    # Arm the phone immediately. This is the important Free-tier path:
+    # Render does not need to stay awake until 10/30/60 seconds before K.
+    # The service worker receives this one push while the server is awake and
+    # owns the short countdown for this specific K cycle.
+    arm_alerts = [
+        {
+            "schedule_id": schedule_id,
+            "seconds_before": seconds,
+            "due_at": (cycle_at - timedelta(seconds=seconds)).isoformat(),
+        }
+        for schedule_id, seconds in zip(schedule_ids, sorted(seconds_before, reverse=True))
+    ]
+    arm_stats = send_push_to_all_for_endpoints(
+        [endpoint],
+        {
+            "title": "HaniaION — תזמון K-69",
+            "body": "ההתראות למחזור K הבא הופעלו בטלפון.",
+            "url": "/#k69-live-target",
+            "tag": f"haniaion-k69-arm-{cycle_at.isoformat()}",
+            "data": {
+                "type": "k69-arm",
+                "cycle_at": cycle_at.isoformat(),
+                "alerts": arm_alerts,
+            },
+        },
+    )
+
     return {
         "ok": True,
         "cycle_at": cycle_at.isoformat(),
         "scheduled": count,
         "seconds_before": seconds_before,
         "background": True,
+        "arm_push_sent": arm_stats["sent"] > 0,
+        "arm_push": arm_stats,
     }
+
+
+@app.post("/api/k69/arm-ack")
+async def k69_arm_ack(request: Request):
+    """Acknowledge that the device received and armed a K-69 background schedule."""
+    if not DATABASE_ENABLED:
+        raise HTTPException(status_code=503, detail="DATABASE_URL is required")
+    body = await request.json()
+    endpoint = str(body.get("endpoint", "")).strip()
+    raw_ids = body.get("schedule_ids", [])
+    if not endpoint or not isinstance(raw_ids, list):
+        raise HTTPException(status_code=400, detail="Missing endpoint or schedule_ids")
+    try:
+        schedule_ids = [int(value) for value in raw_ids]
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid schedule_ids") from None
+    armed = mark_k69_alerts_armed(endpoint, schedule_ids)
+    return {"ok": True, "armed": armed}
 
 
 @app.get("/api/push/public-key")

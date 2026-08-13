@@ -1324,15 +1324,18 @@ function initializeK69Alerts() {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.detail || "לא ניתן לתזמן את ההתראות.");
 
-      // Foreground voice timers are only a convenience. The server Push schedule
-      // is the background path for a locked/closed phone.
+      // Foreground voice timers are only a convenience. The schedule is first
+      // armed immediately in the Service Worker so the Free Render instance
+      // does not have to stay awake until the K time.
       window.__haniaK69AlertTimers?.forEach(timer => clearTimeout(timer));
       window.__haniaK69AlertTimers = futureSelected.map(seconds => {
         const delay = Math.max(0, next.getTime() - seconds * 1000 - Date.now());
         return window.setTimeout(() => speakK69Alert(seconds), delay);
       });
 
-      status.textContent = `✓ ${payload.scheduled} התראות נקבעו למחזור K של ${formatK69Local(next)}. הן שייכות למחזור הזה בלבד.`;
+      status.textContent = payload.arm_push_sent
+        ? `✓ ${payload.scheduled} התראות נקבעו ונשלחו לטלפון למחזור K של ${formatK69Local(next)}. הן שייכות למחזור הזה בלבד.`
+        : `✓ ${payload.scheduled} התראות נשמרו למחזור K של ${formatK69Local(next)}. שרת הגיבוי ינסה לשלוח אותן בזמן.`;
       status.className = "k69-schedule-status is-ok";
     } catch (error) {
       status.textContent = error?.message || "אירעה שגיאה בתזמון.";
