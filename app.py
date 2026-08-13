@@ -186,7 +186,7 @@ VAPID_PRIVATE_KEY, VAPID_KEY_ERROR = _normalize_vapid_private_key(VAPID_PRIVATE_
 VAPID_KEY_VALID, VAPID_KEY_STATUS = _validate_vapid_pair(VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
-APP_VERSION = os.getenv("APP_VERSION", "1.0.0").strip()
+APP_VERSION = os.getenv("APP_VERSION", "2.29").strip()
 
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")

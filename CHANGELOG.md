@@ -1,4 +1,6 @@
-
+## v2.29
+- VAPID generator now emits raw 32-byte P-256 private scalar as base64url; avoids PEM/BEGIN/END formatting issues.
+- Public/private pair remains matched and is validated server-side.\n\n
 ## 2.28
 - Hardened VAPID private-key normalization: accepts PEM with real/literal newlines, PKCS8/SEC1 DER, base64url DER, and raw 32-byte P-256 scalars.
 - PEM wrappers are no longer assumed to imply a particular inner format; malformed wrappers fall back to parsing the enclosed key material.
