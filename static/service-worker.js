@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v2-22-k69-background";
+const CACHE_NAME = "haniaion-v2-22-k69-alerts";
 
 const APP_SHELL = [
   "/",
@@ -128,26 +128,33 @@ self.addEventListener("push", event => {
     }
   }
 
-  event.waitUntil(
-    self.registration.showNotification(
+  event.waitUntil((async () => {
+    const windows = await clients.matchAll({type: "window", includeUncontrolled: true});
+    const visibleClient = windows.find(client => client.visibilityState === "visible");
+
+    if (payload.data?.type === "k69-alert" && visibleClient) {
+      visibleClient.postMessage({
+        type: "k69-alert",
+        seconds_before: Number(payload.data.seconds_before) || 0,
+        cycle_at: payload.data.cycle_at || ""
+      });
+      return;
+    }
+
+    await self.registration.showNotification(
       payload.title,
       {
         body: payload.body,
         icon: "/static/icons/icon.svg",
         badge: "/static/icons/icon.svg",
         tag: payload.tag || "haniaion-v2-update",
-        silent: false,
-        renotify: true,
-        vibrate: [120, 60, 120],
-        dir: "rtl",
-        lang: "he-IL",
         data: {
           url: payload.url || "/",
           ...(payload.data || {})
         }
       }
-    )
-  );
+    );
+  })());
 });
 
 self.addEventListener("notificationclick", event => {

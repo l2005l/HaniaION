@@ -38,10 +38,10 @@ from database import (
     mark_push_success,
     delete_push_subscription_by_id,
     push_subscription_count,
-    schedule_k69_alerts,
-    cancel_k69_alerts,
-    claim_due_k69_alerts,
-    get_k69_schedule,
+    get_push_subscription,
+    replace_k69_alert_schedule,
+    due_k69_alerts,
+    mark_k69_alert_sent,
     add_monitor_log,
     get_monitor_logs,
     get_admin_statistics,
@@ -66,11 +66,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 def startup_database() -> None:
-    """Create the monitoring/K69 schedule schema and start background delivery."""
+    """Create the small monitoring schema and start the K-69 scheduler."""
     initialize_database()
-    if DATABASE_ENABLED and webpush and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY:
-        thread = threading.Thread(target=run_k69_alert_worker, name="k69-push-worker", daemon=True)
-        thread.start()
+    if DATABASE_ENABLED and webpush is not None and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY:
+        worker = threading.Thread(target=k69_alert_worker, name="k69-alert-worker", daemon=True)
+        worker.start()
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {
@@ -322,56 +322,78 @@ def send_push_to_all(payload: dict[str, Any]) -> dict[str, int]:
 
 
 
-
-
-def send_push_to_subscription(endpoint: str, payload: dict[str, Any]) -> bool:
-    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
-        return False
-    subscriptions = [item for item in list_push_subscriptions() if item["endpoint"] == endpoint]
-    if not subscriptions:
-        return False
-    subscription = subscriptions[0]
-    try:
-        webpush(
-            subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
-            data=json.dumps(payload, ensure_ascii=False),
-            vapid_private_key=VAPID_PRIVATE_KEY,
-            vapid_claims={"sub": VAPID_SUBJECT},
-            ttl=120,
+def process_k69_alerts_once() -> None:
+    """Deliver due K-69 alerts for the cycle explicitly scheduled by a user."""
+    if not DATABASE_ENABLED or webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        return
+    for item in due_k69_alerts():
+        seconds = int(item["seconds_before"])
+        if seconds == 0:
+            body = "K הגיע עכשיו 🔔"
+        elif seconds == 1:
+            body = "בעוד שנייה יגיע המפתח 🔔"
+        else:
+            body = f"בעוד {seconds} שניות יגיע המפתח 🔔"
+        stats = send_push_to_all_for_endpoints(
+            [item["endpoint"]],
+            {
+                "title": "HaniaION — התראת K-69",
+                "body": body,
+                "url": "/#k69-live-target",
+                "tag": f"haniaion-k69-{item['cycle_at'].isoformat()}-{seconds}",
+                "data": {
+                    "type": "k69-alert",
+                    "cycle_at": item["cycle_at"].isoformat(),
+                    "seconds_before": seconds,
+                },
+            },
         )
-        mark_push_success(subscription["id"])
-        return True
-    except WebPushException as error:
-        status = getattr(getattr(error, "response", None), "status_code", None)
-        if status in (404, 410):
-            delete_push_subscription_by_id(subscription["id"])
-        return False
+        mark_k69_alert_sent(item["id"])
+        add_monitor_log(
+            "info",
+            "k69_alert_sent",
+            f"K69 alert {seconds}s before cycle",
+            {"push": stats, "cycle_at": item["cycle_at"].isoformat()},
+        )
 
 
-def run_k69_alert_worker() -> None:
+def k69_alert_worker() -> None:
+    """Best-effort one-second scheduler while the web process is alive."""
     while True:
         try:
-            due = claim_due_k69_alerts()
-            for item in due:
-                ok = send_push_to_subscription(item["endpoint"], {
-                    "title": item["title"],
-                    "body": item["body"],
-                    "url": "/#k69-live-target",
-                    "tag": f"haniaion-k69-{item['cycle_at'].timestamp()}-{item['offset_seconds']}",
-                    "data": {
-                        "type": "k69",
-                        "cycle_at": item["cycle_at"].isoformat(),
-                        "offset_seconds": item["offset_seconds"],
-                    },
-                })
-                if not ok:
-                    add_monitor_log("warning", "k69_push_failed", "K69 background push could not be delivered", {
-                        "offset_seconds": item["offset_seconds"],
-                        "cycle_at": item["cycle_at"].isoformat(),
-                    })
+            process_k69_alerts_once()
         except Exception as error:
-            add_monitor_log("error", "k69_worker_error", "K69 background alert worker error", str(error))
-        time.sleep(0.5)
+            add_monitor_log("error", "k69_alert_worker_error", str(error)[:500])
+        time.sleep(1)
+
+
+def send_push_to_all_for_endpoints(endpoints: list[str], payload: dict[str, Any]) -> dict[str, int]:
+    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        return {"sent": 0, "failed": 0, "removed": 0}
+    wanted = set(endpoints)
+    stats = {"sent": 0, "failed": 0, "removed": 0}
+    data = json.dumps(payload, ensure_ascii=False)
+    for subscription in list_push_subscriptions():
+        if subscription["endpoint"] not in wanted:
+            continue
+        try:
+            webpush(
+                subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
+                data=data,
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims={"sub": VAPID_SUBJECT},
+                ttl=120,
+            )
+            mark_push_success(subscription["id"])
+            stats["sent"] += 1
+        except WebPushException as error:
+            status = getattr(getattr(error, "response", None), "status_code", None)
+            if status in (404, 410):
+                delete_push_subscription_by_id(subscription["id"])
+                stats["removed"] += 1
+            else:
+                stats["failed"] += 1
+    return stats
 
 
 def require_admin(x_admin_secret: str | None) -> None:
@@ -730,6 +752,48 @@ def admin_test_push(x_admin_secret: str | None = Header(default=None)):
     return {"ok": True, "push": stats}
 
 
+@app.post("/api/k69/schedule")
+async def schedule_k69_alerts(request: Request):
+    """Schedule selected alerts for one specific K-69 cycle."""
+    if not DATABASE_ENABLED:
+        raise HTTPException(status_code=503, detail="DATABASE_URL is required for background K-69 alerts")
+    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        raise HTTPException(status_code=503, detail="Push notifications are not configured")
+
+    body = await request.json()
+    endpoint = str(body.get("endpoint", "")).strip()
+    cycle_raw = str(body.get("cycle_at", "")).strip()
+    selected = body.get("seconds_before", [])
+    if not endpoint or not cycle_raw or not isinstance(selected, list):
+        raise HTTPException(status_code=400, detail="Missing endpoint, cycle_at or seconds_before")
+
+    allowed = {0, 10, 30, 60}
+    try:
+        seconds_before = sorted({int(value) for value in selected if int(value) in allowed}, reverse=True)
+        cycle_at = datetime.fromisoformat(cycle_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid K-69 schedule") from None
+
+    if not seconds_before:
+        raise HTTPException(status_code=400, detail="Select at least one alert")
+    if cycle_at <= datetime.now(timezone.utc) - timedelta(seconds=5):
+        raise HTTPException(status_code=400, detail="This K-69 cycle has already started")
+    if cycle_at > datetime.now(timezone.utc) + timedelta(minutes=20):
+        raise HTTPException(status_code=400, detail="Only the next K-69 cycle can be scheduled")
+
+    if get_push_subscription(endpoint) is None:
+        raise HTTPException(status_code=404, detail="Push subscription not found; enable notifications first")
+
+    count = replace_k69_alert_schedule(endpoint, cycle_at, seconds_before)
+    return {
+        "ok": True,
+        "cycle_at": cycle_at.isoformat(),
+        "scheduled": count,
+        "seconds_before": seconds_before,
+        "background": True,
+    }
+
+
 @app.get("/api/push/public-key")
 def push_public_key():
     if not VAPID_PUBLIC_KEY:
@@ -754,84 +818,6 @@ async def push_unsubscribe(request: Request):
     if not endpoint:
         raise HTTPException(status_code=400, detail="Missing endpoint")
     return {"ok": True, "removed": remove_push_subscription(endpoint)}
-
-
-@app.post("/api/k69/schedule")
-async def k69_schedule(request: Request):
-    body = await request.json()
-    endpoint = str(body.get("endpoint", "")).strip()
-    cycle_raw = str(body.get("cycle_at", "")).strip()
-    selected = body.get("times") or []
-    if not endpoint or not cycle_raw:
-        raise HTTPException(status_code=400, detail="Missing push endpoint or K cycle")
-    try:
-        cycle_at = datetime.fromisoformat(cycle_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail="Invalid cycle time") from error
-    now = datetime.now(timezone.utc)
-    if cycle_at <= now:
-        raise HTTPException(status_code=400, detail="This K cycle has already started")
-    if cycle_at - now > timedelta(minutes=13):
-        raise HTTPException(status_code=400, detail="K cycle is too far in the future")
-    allowed = {60, 30, 10, 0}
-    times: list[int] = []
-    for value in selected:
-        try:
-            number = int(value)
-        except (TypeError, ValueError):
-            continue
-        if number in allowed and number not in times:
-            times.append(number)
-    if not times:
-        cancel_k69_alerts(endpoint, cycle_at)
-        return {"ok": True, "scheduled": 0, "cycle_at": cycle_at.isoformat()}
-    alerts = []
-    for seconds in sorted(times, reverse=True):
-        fire_at = cycle_at - timedelta(seconds=seconds)
-        if fire_at <= now:
-            continue
-        body_text = (
-            "מפתח K התקבל"
-            if seconds == 0
-            else "מפתח K הבא יגיע בעוד דקה"
-            if seconds == 60
-            else f"מפתח K בעוד {seconds} שניות"
-        )
-        alerts.append({
-            "offset_seconds": seconds,
-            "fire_at": fire_at,
-            "title": "HaniaION · K-69",
-            "body": body_text,
-        })
-    scheduled = schedule_k69_alerts(endpoint, cycle_at, alerts)
-    return {"ok": True, "scheduled": scheduled, "cycle_at": cycle_at.isoformat()}
-
-
-@app.post("/api/k69/cancel")
-async def k69_cancel(request: Request):
-    body = await request.json()
-    endpoint = str(body.get("endpoint", "")).strip()
-    cycle_raw = str(body.get("cycle_at", "")).strip()
-    if not endpoint:
-        raise HTTPException(status_code=400, detail="Missing push endpoint")
-    cycle_at = None
-    if cycle_raw:
-        try:
-            cycle_at = datetime.fromisoformat(cycle_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail="Invalid cycle time") from error
-    return {"ok": True, "removed": cancel_k69_alerts(endpoint, cycle_at)}
-
-
-@app.get("/api/k69/status")
-def k69_status(endpoint: str = Query(...), cycle_at: str | None = Query(default=None)):
-    parsed = None
-    if cycle_at:
-        try:
-            parsed = datetime.fromisoformat(cycle_at.replace("Z", "+00:00")).astimezone(timezone.utc)
-        except ValueError as error:
-            raise HTTPException(status_code=400, detail="Invalid cycle time") from error
-    return {"items": get_k69_schedule(endpoint, parsed)}
 
 
 @app.post("/api/monitor/run")

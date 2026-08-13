@@ -1186,249 +1186,133 @@ function initializeK69Monitor() {
 document.addEventListener("DOMContentLoaded", initializeK69Monitor);
 
 
-// v2.19 — K-69 current-cycle voice + background push alerts
-(() => {
-  const enabledEl = byId("k69VoiceEnabled");
-  const choices = () => [...document.querySelectorAll(".k69-alert-choice")];
-  const statusEl = byId("k69VoiceStatus");
-  const deliveryEl = byId("k69VoiceDeliveryStatus");
-  const testEl = byId("k69VoiceTest");
-  const scheduleEl = byId("k69ScheduleCurrent");
-  if (!enabledEl) return;
+function initializeK69Alerts() {
+  const scheduleButton = byId("k69ScheduleButton");
+  const testButton = byId("k69TestVoiceButton");
+  const enabled = byId("k69AlertsEnabled");
+  const status = byId("k69ScheduleStatus");
+  if (!scheduleButton || !enabled) return;
 
-  const STORAGE_KEY = "haniaion-k69-voice-settings-v2";
-  const CYCLE_KEY = "haniaion-k69-current-cycle-v1";
-  let announced = new Set();
-  let lastMarker = "";
-  let speechPrimed = false;
+  const checks = () => [...document.querySelectorAll(".k69-alert-check:checked")]
+    .map(input => Number(input.value))
+    .filter(Number.isFinite);
 
-  function load() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      enabledEl.checked = Boolean(saved.enabled);
-      const selected = new Set(Array.isArray(saved.times) ? saved.times.map(String) : ["60"]);
-      choices().forEach(el => { el.checked = selected.has(el.value); });
-    } catch {
-      enabledEl.checked = false;
-      choices().forEach(el => { el.checked = el.value === "60"; });
-    }
-    renderStatus();
-  }
-
-  function save() {
-    const data = {
-      enabled: enabledEl.checked,
-      times: choices().filter(el => el.checked).map(el => el.value)
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    renderStatus();
-  }
-
-  function renderStatus() {
-    if (!statusEl) return;
-    const selected = choices().filter(el => el.checked).map(el => el.value);
-    if (!enabledEl.checked) {
-      statusEl.textContent = "ההתראות כבויות";
-      return;
-    }
-    if (!selected.length) {
-      statusEl.textContent = "בחר לפחות זמן אחד להתראה";
-      return;
-    }
-    const labels = {"60":"דקה", "30":"30 שניות", "10":"10 שניות", "0":"בזמן K"};
-    statusEl.textContent = `פעיל · המחזור הנוכחי · ${selected.map(v => labels[v]).join(" · ")}`;
-  }
-
-  function primeSpeech() {
-    if (!("speechSynthesis" in window)) return;
+  const speakK69Alert = seconds => {
+    if (!("speechSynthesis" in window)) return false;
+    const text = seconds === 0
+      ? "מפתח קיי הגיע עכשיו"
+      : `בעוד ${seconds === 60 ? "דקה" : seconds === 30 ? "שלושים שניות" : "עשר שניות"} יגיע המפתח`;
     try {
       window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance("");
-      u.volume = 0;
-      window.speechSynthesis.speak(u);
-      speechPrimed = true;
-    } catch {}
-  }
-
-  function speak(text) {
-    if (!enabledEl.checked || document.hidden || !("speechSynthesis" in window)) return false;
-    try {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "he-IL";
-      u.rate = 0.95;
-      u.pitch = 1;
-      u.volume = 1;
-      window.speechSynthesis.speak(u);
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "he-IL";
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
       return true;
-    } catch {
+    } catch (_) {
       return false;
     }
-  }
+  };
 
-  async function ensurePushSubscription() {
-    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
-      throw new Error("התראות רקע אינן נתמכות בדפדפן הזה");
-    }
-    const registration = await navigator.serviceWorker.ready;
-    let subscription = await registration.pushManager.getSubscription();
-    if (subscription) return subscription;
-
-    const permission = Notification.permission === "granted"
-      ? "granted"
-      : await Notification.requestPermission();
-    if (permission !== "granted") {
-      throw new Error("כדי לקבל התראה כשהטלפון נעול צריך לאשר התראות");
-    }
-
-    const keyResponse = await fetch("/api/push/public-key", {cache:"no-store"});
-    if (!keyResponse.ok) throw new Error("שירות התראות הרקע עדיין לא מוגדר בשרת");
-    const {public_key: publicKey} = await keyResponse.json();
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey)
-    });
-    const saveResponse = await fetch("/api/push/subscribe", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(subscription)
-    });
-    if (!saveResponse.ok) {
-      await subscription.unsubscribe();
-      throw new Error("לא ניתן לרשום את המכשיר להתראות רקע");
-    }
-    return subscription;
-  }
-
-  async function scheduleCurrentCycle() {
-    const now = new Date();
-    const {next} = calculateNextK69(now);
-    const selected = choices().filter(el => el.checked).map(el => Number(el.value));
-    if (!selected.length) throw new Error("בחר לפחות זמן אחד להתראה");
-
-    const subscription = await ensurePushSubscription();
-    const response = await fetch("/api/k69/schedule", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({
-        endpoint: subscription.endpoint,
-        cycle_at: next.toISOString(),
-        times: selected
-      })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.detail || "תזמון המחזור נכשל");
-
-    localStorage.setItem(CYCLE_KEY, next.toISOString());
-    deliveryEl.textContent = `ברקע: המחזור ${formatK69Local(next)} מתוזמן · ${payload.scheduled || 0} התראות`;
-    showToast(`המחזור ${formatK69Local(next)} תוזמן`);
-    return payload;
-  }
-
-  async function cancelCurrentCycle() {
-    const cycle = localStorage.getItem(CYCLE_KEY);
-    const subscription = await currentPushSubscription().catch(() => null);
-    if (!subscription) return;
-    await fetch("/api/k69/cancel", {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({endpoint: subscription.endpoint, cycle_at: cycle || undefined})
-    }).catch(() => {});
-    localStorage.removeItem(CYCLE_KEY);
-    deliveryEl.textContent = "ברקע: אין מחזור מתוזמן";
-  }
-
-  function announce(seconds, next) {
-    const marker = String(next.getTime());
-    const key = `${marker}:${seconds}`;
-    if (announced.has(key)) return;
-    announced.add(key);
-    const text = seconds === 0
-      ? "מפתח K התקבל"
-      : seconds === 60
-        ? "מפתח K הבא יגיע בעוד דקה"
-        : `מפתח K בעוד ${seconds} שניות`;
-    speak(text);
-  }
-
-  function check() {
-    if (!enabledEl.checked || document.hidden) return;
-    const now = new Date();
-    const {next, remaining} = calculateNextK69(now);
-    const scheduledCycle = localStorage.getItem(CYCLE_KEY);
-    const marker = String(next.getTime());
-    // Voice belongs only to the cycle the user explicitly scheduled.
-    if (!scheduledCycle || scheduledCycle !== next.toISOString()) return;
-    const remainingSec = remaining / 1000;
-
-    if (lastMarker && marker !== lastMarker) {
-      announced.clear();
-    }
-    lastMarker = marker;
-
-    const selected = new Set(choices().filter(el => el.checked).map(el => Number(el.value)));
-    [60, 30, 10].forEach(sec => {
-      if (selected.has(sec) && remainingSec <= sec && remainingSec > Math.max(0, sec - 1.5)) {
-        announce(sec, next);
-      }
-    });
-    if (selected.has(0) && remainingSec <= 0.6) announce(0, next);
-  }
-
-  enabledEl.addEventListener("change", async () => {
-    if (enabledEl.checked) {
-      primeSpeech();
-      save();
-      try {
-        await scheduleCurrentCycle();
-      } catch (error) {
-        enabledEl.checked = false;
-        save();
-        showToast(error.message || "לא ניתן לתזמן התראות רקע");
-        deliveryEl.textContent = "ברקע: לא הופעל";
-      }
-    } else {
-      save();
-      await cancelCurrentCycle();
-    }
+  testButton?.addEventListener("click", () => {
+    const ok = speakK69Alert(30);
+    status.textContent = ok
+      ? "בדיקת הקול הופעלה. אם לא שמעת, בדוק שעוצמת המדיה במכשיר פעילה."
+      : "הדפדפן לא מאפשר השמעת קול. ההתראות ברקע עדיין יישלחו כהתראות מערכת.";
+    status.className = `k69-schedule-status ${ok ? "is-ok" : "is-error"}`;
   });
 
-  choices().forEach(el => el.addEventListener("change", async () => {
-    save();
-    if (enabledEl.checked) {
-      try { await scheduleCurrentCycle(); }
-      catch (error) { showToast(error.message || "עדכון תזמון נכשל"); }
-    }
-  }));
-
-  testEl?.addEventListener("click", () => {
-    primeSpeech();
-    const ok = speak("בדיקת קול HaniaION. ההתראה הקולית עובדת.");
-    if (!ok) {
-      showToast("לא ניתן להשמיע קול כרגע. נסה שוב לאחר לחיצה על הפעל.");
-      return;
-    }
-    showToast("בדיקת הקול הופעלה");
+  enabled.addEventListener("change", () => {
+    document.querySelectorAll(".k69-alert-check").forEach(input => {
+      input.disabled = !enabled.checked;
+    });
   });
 
-  scheduleEl?.addEventListener("click", async () => {
+  scheduleButton.addEventListener("click", async () => {
+    scheduleButton.disabled = true;
+    status.className = "k69-schedule-status";
     try {
-      await scheduleCurrentCycle();
+      if (!enabled.checked) throw new Error("הפעל את ההתראות לפני התזמון.");
+      const selected = checks();
+      if (!selected.length) throw new Error("בחר לפחות זמן התראה אחד.");
+
+      if (!("Notification" in window) || !("PushManager" in window) || !("serviceWorker" in navigator)) {
+        throw new Error("הדפדפן הזה אינו תומך בהתראות Push ברקע.");
+      }
+
+      if (Notification.permission !== "granted") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") throw new Error("הרשאת ההתראות לא אושרה.");
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        const keyResponse = await fetch("/api/push/public-key");
+        if (!keyResponse.ok) throw new Error("שירות ההתראות עדיין לא מוגדר בשרת.");
+        const {public_key} = await keyResponse.json();
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(public_key)
+        });
+        const saveResponse = await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(subscription)
+        });
+        if (!saveResponse.ok) throw new Error("לא ניתן לרשום את המכשיר להתראות.");
+      }
+
+      const {next} = calculateNextK69(new Date());
+      const now = Date.now();
+      const futureSelected = selected.filter(seconds => next.getTime() - seconds * 1000 > now + 1500);
+      if (!futureSelected.length) throw new Error("המחזור הבא קרוב מדי. המתן למחזור K הבא.");
+
+      const response = await fetch("/api/k69/schedule", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          endpoint: subscription.endpoint,
+          cycle_at: next.toISOString(),
+          seconds_before: futureSelected
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || "לא ניתן לתזמן את ההתראות.");
+
+      // Foreground voice timers are only a convenience. The server Push schedule
+      // is the background path for a locked/closed phone.
+      window.__haniaK69AlertTimers?.forEach(timer => clearTimeout(timer));
+      window.__haniaK69AlertTimers = futureSelected.map(seconds => {
+        const delay = Math.max(0, next.getTime() - seconds * 1000 - Date.now());
+        return window.setTimeout(() => speakK69Alert(seconds), delay);
+      });
+
+      status.textContent = `✓ ${payload.scheduled} התראות נקבעו למחזור K של ${formatK69Local(next)}. הן שייכות למחזור הזה בלבד.`;
+      status.className = "k69-schedule-status is-ok";
     } catch (error) {
-      showToast(error.message || "תזמון המחזור נכשל");
+      status.textContent = error?.message || "אירעה שגיאה בתזמון.";
+      status.className = "k69-schedule-status is-error";
+    } finally {
+      scheduleButton.disabled = false;
     }
   });
 
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      primeSpeech();
-      check();
-    }
+  // When a scheduled Push reaches the service worker while this page is visible,
+  // the worker forwards it here so the foreground can attempt spoken Hebrew.
+  navigator.serviceWorker?.addEventListener("message", event => {
+    const data = event.data || {};
+    if (data.type !== "k69-alert") return;
+    speakK69Alert(Number(data.seconds_before) || 0);
+    status.textContent = data.seconds_before
+      ? `🔊 בעוד ${data.seconds_before} שניות יגיע המפתח`
+      : "🔊 המפתח הגיע עכשיו";
+    status.className = "k69-schedule-status is-ok";
   });
+}
 
-  load();
-  window.setInterval(check, 250);
-})();
+document.addEventListener("DOMContentLoaded", initializeK69Alerts);
 
 // v2.10 — adaptive live GNSS interference check
 (() => {

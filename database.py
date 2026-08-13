@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterator
 
 from sqlalchemy import BigInteger, Boolean, Date, DateTime, Float, Integer, String, Text, create_engine, delete, func, select, text
@@ -72,17 +72,15 @@ class PushSubscription(Base):
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
-class K69Schedule(Base):
-    __tablename__ = "k69_schedules"
+class K69AlertSchedule(Base):
+    __tablename__ = "k69_alert_schedules"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     endpoint: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     cycle_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
-    fire_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
-    offset_seconds: Mapped[int] = mapped_column(Integer, nullable=False)
-    title: Mapped[str] = mapped_column(String(120), nullable=False)
-    body: Mapped[str] = mapped_column(Text, nullable=False)
+    seconds_before: Mapped[int] = mapped_column(Integer, nullable=False)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 def _normalize_database_url(raw_url: str) -> str:
@@ -276,88 +274,79 @@ def delete_push_subscription_by_id(subscription_id: int) -> None:
             session.delete(row)
 
 
-def schedule_k69_alerts(endpoint: str, cycle_at: datetime, alerts: list[dict[str, Any]]) -> int:
-    if not DATABASE_ENABLED:
-        raise RuntimeError("DATABASE_URL is required for K69 background alerts")
-    now = datetime.now(timezone.utc)
-    with session_scope() as session:
-        # One device/browser can have only one schedule for the selected K cycle.
-        session.execute(delete(K69Schedule).where(
-            K69Schedule.endpoint == endpoint,
-            K69Schedule.cycle_at == cycle_at,
-        ))
-        created = 0
-        for alert in alerts:
-            fire_at = alert["fire_at"]
-            if fire_at <= now:
-                continue
-            session.add(K69Schedule(
-                endpoint=endpoint,
-                cycle_at=cycle_at,
-                fire_at=fire_at,
-                offset_seconds=int(alert["offset_seconds"]),
-                title=str(alert["title"])[:120],
-                body=str(alert["body"]),
-            ))
-            created += 1
-        return created
-
-
-def cancel_k69_alerts(endpoint: str, cycle_at: datetime | None = None) -> int:
-    if not DATABASE_ENABLED:
-        return 0
-    with session_scope() as session:
-        stmt = delete(K69Schedule).where(K69Schedule.endpoint == endpoint)
-        if cycle_at is not None:
-            stmt = stmt.where(K69Schedule.cycle_at == cycle_at)
-        result = session.execute(stmt)
-        return int(result.rowcount or 0)
-
-
-def claim_due_k69_alerts(limit: int = 50) -> list[dict[str, Any]]:
-    if not DATABASE_ENABLED:
-        return []
-    now = datetime.now(timezone.utc)
-    with session_scope() as session:
-        rows = session.scalars(
-            select(K69Schedule)
-            .where(K69Schedule.sent_at.is_(None), K69Schedule.fire_at <= now)
-            .order_by(K69Schedule.fire_at)
-            .limit(max(1, min(limit, 200)))
-        ).all()
-        items = []
-        for row in rows:
-            # Claim before network I/O so a second worker cannot immediately pick it.
-            row.sent_at = now
-            items.append({
-                "id": row.id,
-                "endpoint": row.endpoint,
-                "cycle_at": row.cycle_at,
-                "fire_at": row.fire_at,
-                "offset_seconds": row.offset_seconds,
-                "title": row.title,
-                "body": row.body,
-            })
-        return items
-
-
-def get_k69_schedule(endpoint: str, cycle_at: datetime | None = None) -> list[dict[str, Any]]:
-    if not DATABASE_ENABLED:
-        return []
-    with session_scope() as session:
-        stmt = select(K69Schedule).where(K69Schedule.endpoint == endpoint)
-        if cycle_at is not None:
-            stmt = stmt.where(K69Schedule.cycle_at == cycle_at)
-        rows = session.scalars(stmt.order_by(K69Schedule.fire_at)).all()
-        return [{
-            "id": row.id, "cycle_at": row.cycle_at.isoformat(), "fire_at": row.fire_at.isoformat(),
-            "offset_seconds": row.offset_seconds, "title": row.title, "body": row.body,
-            "sent": row.sent_at is not None,
-        } for row in rows]
-
-
 def push_subscription_count() -> int:
     return len(list_push_subscriptions())
+
+
+def get_push_subscription(endpoint: str) -> dict[str, Any] | None:
+    if not DATABASE_ENABLED:
+        return None
+    with session_scope() as session:
+        row = session.scalar(select(PushSubscription).where(PushSubscription.endpoint == endpoint))
+        if row is None:
+            return None
+        return {"id": row.id, "endpoint": row.endpoint, "p256dh": row.p256dh, "auth": row.auth}
+
+
+def replace_k69_alert_schedule(endpoint: str, cycle_at: datetime, seconds_before: list[int]) -> int:
+    if not DATABASE_ENABLED:
+        raise RuntimeError("DATABASE_URL is required for K69 alert scheduling")
+    now = datetime.now(timezone.utc)
+    cycle_at = cycle_at.astimezone(timezone.utc)
+    with session_scope() as session:
+        session.execute(
+            delete(K69AlertSchedule).where(
+                K69AlertSchedule.endpoint == endpoint,
+                K69AlertSchedule.cycle_at == cycle_at,
+            )
+        )
+        rows = [
+            K69AlertSchedule(
+                endpoint=endpoint,
+                cycle_at=cycle_at,
+                seconds_before=int(value),
+                created_at=now,
+            )
+            for value in sorted(set(seconds_before), reverse=True)
+        ]
+        session.add_all(rows)
+        return len(rows)
+
+
+def mark_k69_alert_sent(schedule_id: int) -> None:
+    if not DATABASE_ENABLED:
+        return
+    with session_scope() as session:
+        row = session.get(K69AlertSchedule, schedule_id)
+        if row is not None and row.sent_at is None:
+            row.sent_at = datetime.now(timezone.utc)
+
+
+def due_k69_alerts(now: datetime | None = None) -> list[dict[str, Any]]:
+    if not DATABASE_ENABLED:
+        return []
+    now = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    with session_scope() as session:
+        rows = session.scalars(
+            select(K69AlertSchedule)
+            .where(
+                K69AlertSchedule.sent_at.is_(None),
+                K69AlertSchedule.cycle_at >= now - timedelta(seconds=30),
+                K69AlertSchedule.cycle_at <= now + timedelta(seconds=61),
+            )
+            .order_by(K69AlertSchedule.cycle_at, K69AlertSchedule.seconds_before)
+        ).all()
+        result = []
+        for row in rows:
+            due_at = row.cycle_at - timedelta(seconds=row.seconds_before)
+            if due_at <= now:
+                result.append({
+                    "id": row.id,
+                    "endpoint": row.endpoint,
+                    "cycle_at": row.cycle_at,
+                    "seconds_before": row.seconds_before,
+                })
+        return result
 
 
 def add_monitor_log(level: str, event: str, message: str, details: Any | None = None, duration_ms: int | None = None) -> None:

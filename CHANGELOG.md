@@ -1,20 +1,3 @@
-## v2.19 — K-69 background current-cycle alerts
-- K-69 voice settings now schedule only the explicitly selected current K cycle.
-- Added server-side Push scheduling for 60/30/10/0-second alerts.
-- Added Android/iOS-capable Web Push fallback for locked/background devices.
-- Added "בדוק קול" and "תזמן את המחזור הנוכחי" controls.
-- Previous scheduled cycle is canceled/rescheduled when the user changes selections.
-- Service worker notifications use system sound/vibration; spoken audio remains available while the app is foregrounded.
-
-# HaniaION v2.18 — first UX upgrade bundle
-
-- Added multi-select K-69 voice alerts: 60s, 30s, 10s, and at-event.
-- Saved K-69 voice preferences locally and prevented duplicate announcements per K cycle.
-- Added Android APK download to the device-install modal while retaining PWA install.
-- Kept the iPhone/iPad Add to Home Screen flow.
-- Merged the feature-final web stack with the release APK from `HaniaION-main`.
-- Preserved satellite, wind, GNSS Advanced, spoofing, history, and monitoring work from the feature branch.
-
 # v2.14.0 — Mobile Action Landing Fixes
 
 - GPS shortcut lands directly on the permission note and “בדוק GPS עכשיו” button.
