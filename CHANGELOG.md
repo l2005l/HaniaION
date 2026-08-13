@@ -1,3 +1,8 @@
+
+## v2.23.0 — K-69 background alert reliability
+- K-69 Push alerts now always create a system notification, including when the installed PWA is visible.
+- Foreground pages may additionally attempt Hebrew speech, but system notification delivery is no longer skipped.
+- Failed Push deliveries are retried instead of being marked as sent.
 # v2.14.0 — Mobile Action Landing Fixes
 
 - GPS shortcut lands directly on the permission note and “בדוק GPS עכשיו” button.

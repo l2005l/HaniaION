@@ -348,12 +348,17 @@ def process_k69_alerts_once() -> None:
                 },
             },
         )
-        mark_k69_alert_sent(item["id"])
+        # Do not consume a scheduled alert when delivery failed. The one-second
+        # worker will retry it while it remains due. A 404/410 means the
+        # subscription is gone and is safe to consume.
+        delivered = stats["sent"] > 0 or stats["removed"] > 0
+        if delivered:
+            mark_k69_alert_sent(item["id"])
         add_monitor_log(
-            "info",
-            "k69_alert_sent",
+            "info" if delivered else "warning",
+            "k69_alert_sent" if delivered else "k69_alert_delivery_retry",
             f"K69 alert {seconds}s before cycle",
-            {"push": stats, "cycle_at": item["cycle_at"].isoformat()},
+            {"push": stats, "cycle_at": item["cycle_at"].isoformat(), "consumed": delivered},
         )
 
 

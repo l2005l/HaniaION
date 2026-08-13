@@ -1,11 +1,11 @@
-const CACHE_NAME = "haniaion-v2-22-k69-alerts";
+const CACHE_NAME = "haniaion-v2-23-k69-alerts";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
   "/static/style.css?v=55",
-  "/static/app.js?v=57",
+  "/static/app.js?v=58",
   "/static/wind.css?v=45",
   "/static/wind.js?v=45",
   "/static/satellite.css?v=21",
@@ -132,13 +132,18 @@ self.addEventListener("push", event => {
     const windows = await clients.matchAll({type: "window", includeUncontrolled: true});
     const visibleClient = windows.find(client => client.visibilityState === "visible");
 
+    // K-69 alerts must still create a real system notification when the
+    // installed PWA is visible. SpeechSynthesis from a push event is not
+    // guaranteed to have user activation, so forwarding only to the page can
+    // result in no audible/visible alert at all. We therefore ALWAYS show the
+    // system notification, and additionally notify the visible page so it can
+    // attempt spoken Hebrew while foregrounded.
     if (payload.data?.type === "k69-alert" && visibleClient) {
       visibleClient.postMessage({
         type: "k69-alert",
         seconds_before: Number(payload.data.seconds_before) || 0,
         cycle_at: payload.data.cycle_at || ""
       });
-      return;
     }
 
     await self.registration.showNotification(
@@ -148,6 +153,10 @@ self.addEventListener("push", event => {
         icon: "/static/icons/icon.svg",
         badge: "/static/icons/icon.svg",
         tag: payload.tag || "haniaion-v2-update",
+        renotify: true,
+        silent: false,
+        vibrate: [250, 100, 250],
+        requireInteraction: false,
         data: {
           url: payload.url || "/",
           ...(payload.data || {})
