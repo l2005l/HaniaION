@@ -1185,6 +1185,133 @@ function initializeK69Monitor() {
 
 document.addEventListener("DOMContentLoaded", initializeK69Monitor);
 
+
+// v2.18 — K-69 multi-select voice alerts
+(() => {
+  const enabledEl = byId("k69VoiceEnabled");
+  const choices = () => [...document.querySelectorAll(".k69-alert-choice")];
+  const statusEl = byId("k69VoiceStatus");
+  if (!enabledEl) return;
+
+  const STORAGE_KEY = "haniaion-k69-voice-settings-v1";
+  let announcedMarker = "";
+  let announced = new Set();
+  let lastMarker = "";
+  let speechPrimed = false;
+
+  function load() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      enabledEl.checked = Boolean(saved.enabled);
+      const selected = new Set(Array.isArray(saved.times) ? saved.times.map(String) : ["60"]);
+      choices().forEach(el => { el.checked = selected.has(el.value); });
+    } catch {
+      enabledEl.checked = false;
+      choices().forEach(el => { el.checked = el.value === "60"; });
+    }
+    renderStatus();
+  }
+
+  function save() {
+    const data = {
+      enabled: enabledEl.checked,
+      times: choices().filter(el => el.checked).map(el => el.value)
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    renderStatus();
+  }
+
+  function renderStatus() {
+    if (!statusEl) return;
+    const selected = choices().filter(el => el.checked).map(el => el.value);
+    if (!enabledEl.checked) {
+      statusEl.textContent = "ההתראות כבויות";
+      return;
+    }
+    if (!selected.length) {
+      statusEl.textContent = "בחר לפחות זמן אחד להתראה";
+      return;
+    }
+    const labels = {"60":"דקה", "30":"30 שניות", "10":"10 שניות", "0":"בזמן K"};
+    statusEl.textContent = `פעיל · ${selected.map(v => labels[v]).join(" · ")}`;
+  }
+
+  function primeSpeech() {
+    if (!("speechSynthesis" in window) || speechPrimed) return;
+    try {
+      const u = new SpeechSynthesisUtterance("");
+      u.volume = 0;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+      speechPrimed = true;
+    } catch {}
+  }
+
+  function speak(text) {
+    if (!enabledEl.checked || document.hidden || !("speechSynthesis" in window)) return;
+    const selected = choices().filter(el => el.checked).map(el => el.value);
+    if (!selected.length) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "he-IL";
+      u.rate = 0.95;
+      u.pitch = 1;
+      u.volume = 1;
+      window.speechSynthesis.speak(u);
+    } catch {}
+  }
+
+  function announce(seconds, next) {
+    const marker = String(next.getTime());
+    const key = `${marker}:${seconds}`;
+    if (announced.has(key)) return;
+    announced.add(key);
+    const text = seconds === 0
+      ? "מפתח K התקבל"
+      : seconds === 60
+        ? "מפתח K הבא יגיע בעוד דקה"
+        : `מפתח K בעוד ${seconds} שניות`;
+    speak(text);
+  }
+
+  function check() {
+    if (!enabledEl.checked || document.hidden) return;
+    const now = new Date();
+    const {next, remaining} = calculateNextK69(now);
+    const remainingSec = remaining / 1000;
+    const marker = String(next.getTime());
+
+    if (lastMarker && marker !== lastMarker) {
+      announced.clear();
+    }
+    lastMarker = marker;
+
+    const selected = new Set(choices().filter(el => el.checked).map(el => Number(el.value)));
+    [60, 30, 10].forEach(sec => {
+      if (selected.has(sec) && remainingSec <= sec && remainingSec > Math.max(0, sec - 1.5)) {
+        announce(sec, next);
+      }
+    });
+    if (selected.has(0) && remainingSec <= 0.6) announce(0, next);
+  }
+
+  enabledEl.addEventListener("change", () => {
+    if (enabledEl.checked) primeSpeech();
+    save();
+  });
+  choices().forEach(el => el.addEventListener("change", save));
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      primeSpeech();
+      check();
+    }
+  });
+
+  load();
+  window.setInterval(check, 250);
+})();
+
 // v2.10 — adaptive live GNSS interference check
 (() => {
   const $ = id => document.getElementById(id);

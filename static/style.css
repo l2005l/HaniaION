@@ -1421,3 +1421,48 @@ iframe {
 #nativeGnssNote.gnss-status-danger {
   color: #ff6b81;
 }
+
+
+/* v2.18 — K-69 multi-select voice alerts */
+.k69-alerts-card {
+  margin-top: 22px;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, var(--premium-cyan) 22%, var(--border));
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface-strong) 78%, transparent);
+}
+.k69-alerts-head { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.k69-alerts-head h3 { margin:5px 0 0; }
+.k69-alerts-card > p { margin:10px 0 16px; color:var(--text-dim); line-height:1.65; }
+.k69-alert-options { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.k69-alert-options label {
+  display:flex; align-items:center; gap:9px; min-height:48px; padding:10px 12px;
+  border:1px solid var(--border); border-radius:13px; background:var(--surface-soft);
+  cursor:pointer; font-weight:700; font-size:.86rem;
+}
+.k69-alert-options label:has(input:checked) {
+  border-color:color-mix(in srgb,var(--premium-cyan) 55%,var(--border));
+  background:color-mix(in srgb,var(--premium-cyan) 10%,var(--surface-soft));
+}
+.k69-alert-options input { accent-color:var(--premium-cyan); width:17px; height:17px; }
+.k69-switch { display:inline-flex; align-items:center; gap:8px; cursor:pointer; }
+.k69-switch input { position:absolute; opacity:0; pointer-events:none; }
+.k69-switch span {
+  width:44px; height:24px; border-radius:999px; background:#94a3b8; position:relative; transition:.2s;
+}
+.k69-switch span::after {
+  content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%;
+  background:#fff; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,.25);
+}
+.k69-switch input:checked + span { background:var(--premium-cyan); }
+.k69-switch input:checked + span::after { transform:translateX(20px); }
+.k69-alert-status { display:block; margin-top:13px; color:var(--text-dim); }
+.install-note { display:block; margin-top:10px; color:var(--text-muted); line-height:1.5; }
+.install-instructions .button + .button { margin-top:10px; }
+@media (max-width:760px) {
+  .k69-alert-options { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:430px) {
+  .k69-alert-options { grid-template-columns:1fr; }
+  .k69-alerts-card { padding:17px; }
+}
