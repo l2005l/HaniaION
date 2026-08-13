@@ -1,3 +1,7 @@
+
+## 2.28
+- Hardened VAPID private-key normalization: accepts PEM with real/literal newlines, PKCS8/SEC1 DER, base64url DER, and raw 32-byte P-256 scalars.
+- PEM wrappers are no longer assumed to imply a particular inner format; malformed wrappers fall back to parsing the enclosed key material.
 ## 2.27.0 — VAPID validation + K-69 push diagnostics
 - Validates the VAPID P-256 key pair before scheduling.
 - Accepts PEM, base64url DER, or raw 32-byte private key input.

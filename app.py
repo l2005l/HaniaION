@@ -66,59 +66,92 @@ VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com").strip()
 
 
 def _normalize_vapid_private_key(value: str) -> tuple[str, str | None]:
-    """Accept PEM, base64url-encoded DER, or a raw 32-byte base64url scalar.
-    Return a PKCS8 PEM string for pywebpush plus a safe validation error.
+    """Normalize VAPID private keys into an unencrypted PKCS8 PEM.
+
+    Accepted inputs:
+      * PKCS8 PEM (real newlines or literal ``\\n``)
+      * SEC1/EC PRIVATE KEY PEM
+      * base64/base64url encoded DER
+      * base64/base64url encoded raw 32-byte P-256 scalar
+
+    Some hosting dashboards preserve PEM wrappers/line breaks differently,
+    so the parser deliberately tries the actual PEM first and then falls
+    back to decoding the material inside the wrappers.
     """
+    import base64
+
     if not value:
         return "", "VAPID private key is missing"
 
-    # Most convenient Render format: a PEM copied as one line with literal \\n.
-    if "BEGIN" in value and "PRIVATE KEY" in value:
-        try:
-            key = serialization.load_pem_private_key(value.encode("utf-8"), password=None)
-            if not isinstance(key, ec.EllipticCurvePrivateKey) or key.curve.name != "secp256r1":
-                return "", "VAPID private key is not an EC P-256 key"
-            pem = key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption(),
-            ).decode("ascii").strip()
-            return pem, None
-        except Exception as exc:
-            return "", f"VAPID private key PEM is invalid: {type(exc).__name__}"
+    # Normalize the common Render/dashboard representation.
+    normalized = value.strip().replace("\\r", "").replace("\\n", "\n")
+    normalized = normalized.replace("\r\n", "\n").replace("\r", "\n").strip()
 
-    # Also accept a base64/base64url encoded DER private key or a raw 32-byte scalar.
-    import base64
-    compact = "".join(value.split())
-    padded = compact + "=" * (-len(compact) % 4)
-    for decoder in (base64.urlsafe_b64decode, base64.b64decode):
+    def pem_from_key(key) -> tuple[str, str | None]:
+        if not isinstance(key, ec.EllipticCurvePrivateKey):
+            return "", "VAPID private key is not an EC private key"
+        if key.curve.name != "secp256r1":
+            return "", "VAPID private key is not an EC P-256 key"
+        pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        ).decode("ascii").strip()
+        return pem, None
+
+    # 1) Try the supplied PEM exactly as-is.
+    if "BEGIN" in normalized and "PRIVATE KEY" in normalized:
         try:
-            raw = decoder(padded.encode("ascii"))
+            key = serialization.load_pem_private_key(
+                normalized.encode("utf-8"), password=None
+            )
+            return pem_from_key(key)
         except Exception:
-            continue
-        try:
-            key = serialization.load_der_private_key(raw, password=None)
-            if isinstance(key, ec.EllipticCurvePrivateKey) and key.curve.name == "secp256r1":
-                pem = key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption(),
-                ).decode("ascii").strip()
-                return pem, None
-        except Exception:
+            # Do not stop here. A user may have wrapped a raw/DER key in
+            # PEM headers, or a dashboard may have altered whitespace.
             pass
-        if len(raw) == 32:
-            scalar = int.from_bytes(raw, "big")
+
+        # 2) Strip any PEM wrapper and try the enclosed base64 material.
+        body = re.sub(
+            r"-----BEGIN [^-]+-----|-----END [^-]+-----",
+            "",
+            normalized,
+            flags=re.IGNORECASE,
+        )
+        normalized = "".join(body.split())
+
+    # 3) Decode base64/base64url. This covers PKCS8 DER and raw 32-byte scalar.
+    if normalized:
+        padded = normalized + "=" * (-len(normalized) % 4)
+        decoded_candidates = []
+        for decoder in (base64.urlsafe_b64decode, base64.b64decode):
             try:
-                key = ec.derive_private_key(scalar, ec.SECP256R1(), default_backend())
-                pem = key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption(),
-                ).decode("ascii").strip()
-                return pem, None
+                raw = decoder(padded.encode("ascii"))
+                if raw not in decoded_candidates:
+                    decoded_candidates.append(raw)
+            except Exception:
+                continue
+
+        for raw in decoded_candidates:
+            # PKCS8 / SEC1 DER
+            try:
+                key = serialization.load_der_private_key(raw, password=None)
+                pem, err = pem_from_key(key)
+                if not err:
+                    return pem, None
             except Exception:
                 pass
+
+            # Raw 32-byte P-256 private scalar
+            if len(raw) == 32:
+                scalar = int.from_bytes(raw, "big")
+                try:
+                    key = ec.derive_private_key(
+                        scalar, ec.SECP256R1(), default_backend()
+                    )
+                    return pem_from_key(key)
+                except Exception:
+                    pass
 
     return "", "VAPID private key format is invalid"
 
