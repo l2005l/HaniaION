@@ -39,6 +39,8 @@ from database import (
     delete_push_subscription_by_id,
     push_subscription_count,
     get_push_subscription,
+    set_push_preferences,
+    get_push_preferences,
     replace_k69_alert_schedule,
     get_k69_schedule_ids,
     mark_k69_alerts_armed,
@@ -302,7 +304,12 @@ def send_push_to_all(payload: dict[str, Any]) -> dict[str, int]:
         return {"sent": 0, "failed": 0, "removed": 0}
     stats = {"sent": 0, "failed": 0, "removed": 0}
     data = json.dumps(payload, ensure_ascii=False)
+    category = str((payload.get("data") or {}).get("category", "")).strip().lower()
     for subscription in list_push_subscriptions():
+        if category == "nasa" and not subscription.get("nasa_enabled", True):
+            continue
+        if category == "k69" and not subscription.get("k69_enabled", True):
+            continue
         try:
             webpush(
                 subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
@@ -344,6 +351,7 @@ def process_k69_alerts_once() -> None:
                 "url": "/#k69-live-target",
                 "tag": f"haniaion-k69-{item['cycle_at'].isoformat()}-{seconds}",
                 "data": {
+                    "category": "k69",
                     "type": "k69-alert",
                     "cycle_at": item["cycle_at"].isoformat(),
                     "seconds_before": seconds,
@@ -383,8 +391,13 @@ def send_push_to_all_for_endpoints(endpoints: list[str], payload: dict[str, Any]
     wanted = set(endpoints)
     stats = {"sent": 0, "failed": 0, "removed": 0}
     data = json.dumps(payload, ensure_ascii=False)
+    category = str((payload.get("data") or {}).get("category", "")).strip().lower()
     for subscription in list_push_subscriptions():
         if subscription["endpoint"] not in wanted:
+            continue
+        if category == "nasa" and not subscription.get("nasa_enabled", True):
+            continue
+        if category == "k69" and not subscription.get("k69_enabled", True):
             continue
         try:
             webpush(
@@ -460,7 +473,7 @@ def run_monitor() -> dict[str, Any]:
                 "body": f"{result['file_name']} is now available. Tap to view RAAM data.",
                 "url": "/#extractor",
                 "tag": "haniaion-brdc-update",
-                "data": {"file_name": result["file_name"], "source_date": result["source_date"]},
+                "data": {"category": "nasa", "file_name": result["file_name"], "source_date": result["source_date"]},
             })
         finished = datetime.now(timezone.utc)
         set_state_values({
@@ -762,6 +775,36 @@ def admin_test_push(x_admin_secret: str | None = Header(default=None)):
     return {"ok": True, "push": stats}
 
 
+@app.get("/api/push/preferences")
+def push_preferences(request: Request):
+    endpoint = str(request.query_params.get("endpoint", "")).strip()
+    if not endpoint:
+        raise HTTPException(status_code=400, detail="Missing endpoint")
+    prefs = get_push_preferences(endpoint)
+    if prefs is None:
+        raise HTTPException(status_code=404, detail="Push subscription not found")
+    return {"ok": True, **prefs}
+
+
+@app.post("/api/push/preferences")
+async def update_push_preferences(request: Request):
+    body = await request.json()
+    endpoint = str(body.get("endpoint", "")).strip()
+    if not endpoint:
+        raise HTTPException(status_code=400, detail="Missing endpoint")
+    nasa = body.get("nasa_enabled")
+    k69 = body.get("k69_enabled")
+    if nasa is None and k69 is None:
+        raise HTTPException(status_code=400, detail="No preference supplied")
+    if nasa is not None and not isinstance(nasa, bool):
+        raise HTTPException(status_code=400, detail="nasa_enabled must be boolean")
+    if k69 is not None and not isinstance(k69, bool):
+        raise HTTPException(status_code=400, detail="k69_enabled must be boolean")
+    if not set_push_preferences(endpoint, nasa_enabled=nasa, k69_enabled=k69):
+        raise HTTPException(status_code=404, detail="Push subscription not found")
+    return {"ok": True, **(get_push_preferences(endpoint) or {})}
+
+
 @app.post("/api/k69/schedule")
 async def schedule_k69_alerts(request: Request):
     """Schedule selected alerts for one specific K-69 cycle."""
@@ -817,6 +860,7 @@ async def schedule_k69_alerts(request: Request):
             "url": "/#k69-live-target",
             "tag": f"haniaion-k69-arm-{cycle_at.isoformat()}",
             "data": {
+                "category": "k69",
                 "type": "k69-arm",
                 "cycle_at": cycle_at.isoformat(),
                 "alerts": arm_alerts,

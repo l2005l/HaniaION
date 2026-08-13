@@ -70,6 +70,9 @@ class PushSubscription(Base):
     user_agent: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Notification preferences are independent: NASA and K-69 never share a toggle.
+    nasa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("TRUE"))
+    k69_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("TRUE"))
 
 
 class K69AlertSchedule(Base):
@@ -130,6 +133,15 @@ def initialize_database() -> None:
                     "ADD COLUMN IF NOT EXISTS armed_at TIMESTAMPTZ"
                 )
             )
+            # Independent notification preferences; safe for existing databases.
+            connection.execute(text(
+                "ALTER TABLE push_subscriptions "
+                "ADD COLUMN IF NOT EXISTS nasa_enabled BOOLEAN NOT NULL DEFAULT TRUE"
+            ))
+            connection.execute(text(
+                "ALTER TABLE push_subscriptions "
+                "ADD COLUMN IF NOT EXISTS k69_enabled BOOLEAN NOT NULL DEFAULT TRUE"
+            ))
 
 
 def database_status() -> dict[str, Any]:
@@ -263,7 +275,13 @@ def list_push_subscriptions() -> list[dict[str, Any]]:
         return []
     with session_scope() as session:
         rows = session.scalars(select(PushSubscription).order_by(PushSubscription.id)).all()
-        return [{"id": row.id, "endpoint": row.endpoint, "keys": {"p256dh": row.p256dh, "auth": row.auth}} for row in rows]
+        return [{
+            "id": row.id,
+            "endpoint": row.endpoint,
+            "keys": {"p256dh": row.p256dh, "auth": row.auth},
+            "nasa_enabled": bool(row.nasa_enabled),
+            "k69_enabled": bool(row.k69_enabled),
+        } for row in rows]
 
 
 def mark_push_success(subscription_id: int) -> None:
@@ -295,7 +313,32 @@ def get_push_subscription(endpoint: str) -> dict[str, Any] | None:
         row = session.scalar(select(PushSubscription).where(PushSubscription.endpoint == endpoint))
         if row is None:
             return None
-        return {"id": row.id, "endpoint": row.endpoint, "p256dh": row.p256dh, "auth": row.auth}
+        return {"id": row.id, "endpoint": row.endpoint, "p256dh": row.p256dh, "auth": row.auth,
+                "nasa_enabled": bool(row.nasa_enabled), "k69_enabled": bool(row.k69_enabled)}
+
+
+def set_push_preferences(endpoint: str, *, nasa_enabled: bool | None = None, k69_enabled: bool | None = None) -> bool:
+    if not DATABASE_ENABLED:
+        raise RuntimeError("DATABASE_URL is required for notification preferences")
+    with session_scope() as session:
+        row = session.scalar(select(PushSubscription).where(PushSubscription.endpoint == endpoint))
+        if row is None:
+            return False
+        if nasa_enabled is not None:
+            row.nasa_enabled = bool(nasa_enabled)
+        if k69_enabled is not None:
+            row.k69_enabled = bool(k69_enabled)
+        return True
+
+
+def get_push_preferences(endpoint: str) -> dict[str, bool] | None:
+    if not DATABASE_ENABLED:
+        return None
+    with session_scope() as session:
+        row = session.scalar(select(PushSubscription).where(PushSubscription.endpoint == endpoint))
+        if row is None:
+            return None
+        return {"nasa_enabled": bool(row.nasa_enabled), "k69_enabled": bool(row.k69_enabled)}
 
 
 def replace_k69_alert_schedule(endpoint: str, cycle_at: datetime, seconds_before: list[int]) -> int:

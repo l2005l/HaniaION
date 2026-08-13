@@ -822,9 +822,17 @@ async function refreshNotificationUi() {
     return;
   }
   const subscription = await currentPushSubscription();
-  const enabled = Boolean(subscription) && Notification.permission === "granted";
-  elements.notificationStatus.textContent = enabled ? "ההתראות פעילות" : "ההתראות כבויות";
-  elements.notificationButton.textContent = enabled ? "בטל התראות" : "הפעל התראות";
+  let nasaEnabled = false;
+  if (subscription && Notification.permission === "granted") {
+    const prefResponse = await fetch(`/api/push/preferences?endpoint=${encodeURIComponent(subscription.endpoint)}`, {cache: "no-store"});
+    if (prefResponse.ok) {
+      const prefs = await prefResponse.json();
+      nasaEnabled = prefs.nasa_enabled !== false;
+    }
+  }
+  const enabled = Boolean(subscription) && Notification.permission === "granted" && nasaEnabled;
+  elements.notificationStatus.textContent = enabled ? "התראות NASA פעילות" : "התראות NASA כבויות";
+  elements.notificationButton.textContent = enabled ? "בטל התראות NASA" : "הפעל התראות NASA";
   elements.notificationButton.dataset.enabled = enabled ? "true" : "false";
 }
 
@@ -833,9 +841,15 @@ async function toggleNotifications() {
   try {
     const existing = await currentPushSubscription();
     if (existing) {
-      await fetch("/api/push/unsubscribe", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({endpoint: existing.endpoint})});
-      await existing.unsubscribe();
-      showToast("ההתראות בוטלו");
+      const enabled = elements.notificationButton.dataset.enabled === "true";
+      const response = await fetch("/api/push/preferences", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({endpoint: existing.endpoint, nasa_enabled: !enabled})
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || "לא ניתן לשנות את התראות NASA");
+      showToast(!enabled ? "התראות NASA הופעלו" : "התראות NASA בוטלו");
     } else {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") throw new Error("לא ניתן אישור לקבלת התראות");
@@ -843,13 +857,22 @@ async function toggleNotifications() {
       if (!keyResponse.ok) throw new Error("שירות ההתראות עדיין לא הוגדר בשרת");
       const {public_key: publicKey} = await keyResponse.json();
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey)});
-      const saveResponse = await fetch("/api/push/subscribe", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(subscription)});
-      if (!saveResponse.ok) {
-        await subscription.unsubscribe();
-        throw new Error("לא ניתן לשמור את רישום ההתראות");
-      }
-      showToast("ההתראות הופעלו");
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+      const saveResponse = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(subscription)
+      });
+      if (!saveResponse.ok) throw new Error("לא ניתן לשמור את רישום ההתראות");
+      await fetch("/api/push/preferences", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({endpoint: subscription.endpoint, nasa_enabled: true, k69_enabled: true})
+      });
+      showToast("התראות NASA הופעלו");
     }
   } catch (error) {
     showToast(error.message || "הפעלת ההתראות נכשלה");
@@ -1299,12 +1322,26 @@ function initializeK69Alerts() {
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(public_key)
         });
-        const saveResponse = await fetch("/api/push/subscribe", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(subscription)
-        });
-        if (!saveResponse.ok) throw new Error("לא ניתן לרשום את המכשיר להתראות.");
+      }
+
+      // Always refresh the server copy. Browser Push subscriptions can rotate;
+      // diagnostics may still show an older registered endpoint.
+      const saveResponse = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(subscription)
+      });
+      if (!saveResponse.ok) throw new Error("לא ניתן לרשום את המכשיר להתראות.");
+
+      // K-69 is independent of NASA notifications.
+      const k69PrefResponse = await fetch("/api/push/preferences", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({endpoint: subscription.endpoint, k69_enabled: true})
+      });
+      if (!k69PrefResponse.ok) {
+        const prefPayload = await k69PrefResponse.json().catch(() => ({}));
+        throw new Error(prefPayload.detail || "לא ניתן להפעיל את התראות K-69.");
       }
 
       const {next} = calculateNextK69(new Date());
@@ -1322,7 +1359,7 @@ function initializeK69Alerts() {
         })
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.detail || "לא ניתן לתזמן את ההתראות.");
+      if (!response.ok) throw new Error(payload.detail || `לא ניתן לתזמן את ההתראות (HTTP ${response.status}).`);
 
       // Foreground voice timers are only a convenience. The schedule is first
       // armed immediately in the Service Worker so the Free Render instance

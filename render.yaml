@@ -22,4 +22,4 @@ services:
       - key: ADMIN_SECRET
         sync: false
       - key: APP_VERSION
-        value: 2.25.0
+        value: 2.26.0
