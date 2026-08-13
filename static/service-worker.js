@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v2-25-k69-armed-push";
+const CACHE_NAME = "haniaion-v2-27-k69-armed-push";
 
 const APP_SHELL = [
   "/",

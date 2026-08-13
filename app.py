@@ -11,6 +11,9 @@ from typing import Any
 from urllib.parse import urlparse
 
 import requests
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.backends import default_backend
 from fastapi import FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -58,8 +61,96 @@ APP_NAME = "HaniaION RAAM"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
-VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "").replace("\\n", "\n").strip()
+VAPID_PRIVATE_KEY_RAW = os.getenv("VAPID_PRIVATE_KEY", "").replace("\\n", "\n").strip()
 VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com").strip()
+
+
+def _normalize_vapid_private_key(value: str) -> tuple[str, str | None]:
+    """Accept PEM, base64url-encoded DER, or a raw 32-byte base64url scalar.
+    Return a PKCS8 PEM string for pywebpush plus a safe validation error.
+    """
+    if not value:
+        return "", "VAPID private key is missing"
+
+    # Most convenient Render format: a PEM copied as one line with literal \\n.
+    if "BEGIN" in value and "PRIVATE KEY" in value:
+        try:
+            key = serialization.load_pem_private_key(value.encode("utf-8"), password=None)
+            if not isinstance(key, ec.EllipticCurvePrivateKey) or key.curve.name != "secp256r1":
+                return "", "VAPID private key is not an EC P-256 key"
+            pem = key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption(),
+            ).decode("ascii").strip()
+            return pem, None
+        except Exception as exc:
+            return "", f"VAPID private key PEM is invalid: {type(exc).__name__}"
+
+    # Also accept a base64/base64url encoded DER private key or a raw 32-byte scalar.
+    import base64
+    compact = "".join(value.split())
+    padded = compact + "=" * (-len(compact) % 4)
+    for decoder in (base64.urlsafe_b64decode, base64.b64decode):
+        try:
+            raw = decoder(padded.encode("ascii"))
+        except Exception:
+            continue
+        try:
+            key = serialization.load_der_private_key(raw, password=None)
+            if isinstance(key, ec.EllipticCurvePrivateKey) and key.curve.name == "secp256r1":
+                pem = key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                ).decode("ascii").strip()
+                return pem, None
+        except Exception:
+            pass
+        if len(raw) == 32:
+            scalar = int.from_bytes(raw, "big")
+            try:
+                key = ec.derive_private_key(scalar, ec.SECP256R1(), default_backend())
+                pem = key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption(),
+                ).decode("ascii").strip()
+                return pem, None
+            except Exception:
+                pass
+
+    return "", "VAPID private key format is invalid"
+
+
+def _validate_vapid_pair(public_key: str, private_pem: str) -> tuple[bool, str]:
+    """Validate that public and private VAPID keys are a matching P-256 pair."""
+    if not public_key:
+        return False, "VAPID public key is missing"
+    if not private_pem:
+        return False, "VAPID private key is missing or invalid"
+    try:
+        import base64
+        compact = public_key + "=" * (-len(public_key) % 4)
+        public_bytes = base64.urlsafe_b64decode(compact.encode("ascii"))
+        if len(public_bytes) != 65 or public_bytes[0] != 4:
+            return False, "VAPID public key is not a 65-byte uncompressed P-256 key"
+        key = serialization.load_pem_private_key(private_pem.encode("ascii"), password=None)
+        if not isinstance(key, ec.EllipticCurvePrivateKey) or key.curve.name != "secp256r1":
+            return False, "VAPID private key is not P-256"
+        derived = key.public_key().public_bytes(
+            encoding=serialization.Encoding.X962,
+            format=serialization.PublicFormat.UncompressedPoint,
+        )
+        if derived != public_bytes:
+            return False, "VAPID Public and Private keys do not match"
+        return True, "VAPID P-256 key pair is valid"
+    except Exception as exc:
+        return False, f"VAPID key validation failed: {type(exc).__name__}"
+
+
+VAPID_PRIVATE_KEY, VAPID_KEY_ERROR = _normalize_vapid_private_key(VAPID_PRIVATE_KEY_RAW)
+VAPID_KEY_VALID, VAPID_KEY_STATUS = _validate_vapid_pair(VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
 CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
 APP_VERSION = os.getenv("APP_VERSION", "1.0.0").strip()
@@ -72,7 +163,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 def startup_database() -> None:
     """Create the small monitoring schema and start the K-69 scheduler."""
     initialize_database()
-    if DATABASE_ENABLED and webpush is not None and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY:
+    if DATABASE_ENABLED and webpush is not None and VAPID_KEY_VALID:
         worker = threading.Thread(target=k69_alert_worker, name="k69-alert-worker", daemon=True)
         worker.start()
 
@@ -300,7 +391,7 @@ def discover_latest_brdc(session: EarthdataSession) -> dict[str, Any]:
 
 
 def send_push_to_all(payload: dict[str, Any]) -> dict[str, int]:
-    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+    if webpush is None or not VAPID_KEY_VALID:
         return {"sent": 0, "failed": 0, "removed": 0}
     stats = {"sent": 0, "failed": 0, "removed": 0}
     data = json.dumps(payload, ensure_ascii=False)
@@ -333,7 +424,7 @@ def send_push_to_all(payload: dict[str, Any]) -> dict[str, int]:
 
 def process_k69_alerts_once() -> None:
     """Deliver due K-69 alerts for the cycle explicitly scheduled by a user."""
-    if not DATABASE_ENABLED or webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+    if not DATABASE_ENABLED or webpush is None or not VAPID_KEY_VALID:
         return
     for item in due_k69_alerts():
         seconds = int(item["seconds_before"])
@@ -386,7 +477,7 @@ def k69_alert_worker() -> None:
 
 
 def send_push_to_all_for_endpoints(endpoints: list[str], payload: dict[str, Any]) -> dict[str, int]:
-    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+    if webpush is None or not VAPID_KEY_VALID:
         return {"sent": 0, "failed": 0, "removed": 0}
     wanted = set(endpoints)
     stats = {"sent": 0, "failed": 0, "removed": 0}
@@ -675,6 +766,14 @@ def k69_embed():
         )
 
 
+
+
+@app.get("/vapid-generator")
+def vapid_generator():
+    """Local browser-side VAPID key generator; keys never leave the device."""
+    return FileResponse("static/vapid-generator.html")
+
+
 @app.get("/admin")
 def admin_page():
     return FileResponse("static/admin.html")
@@ -736,7 +835,7 @@ def monitor_status():
         "schedule": "Every 3 hours via GitHub Actions",
         "next_check_at": next_scheduled_check(),
         "version": APP_VERSION,
-        "push": {"configured": bool(webpush and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY), "subscribers": push_subscription_count() if DATABASE_ENABLED else 0},
+        "push": {"configured": bool(webpush and VAPID_KEY_VALID), "subscribers": push_subscription_count() if DATABASE_ENABLED else 0},
     }
 
 
@@ -746,7 +845,7 @@ def admin_overview(x_admin_secret: str | None = Header(default=None)):
     return {
         "version": APP_VERSION, "database": database_status(), "state": get_monitor_state(),
         "statistics": get_admin_statistics(), "next_check_at": next_scheduled_check(),
-        "push_configured": bool(webpush and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY),
+        "push_configured": bool(webpush and VAPID_KEY_VALID),
         "cron_configured": bool(CRON_SECRET),
     }
 
@@ -810,8 +909,8 @@ async def schedule_k69_alerts(request: Request):
     """Schedule selected alerts for one specific K-69 cycle."""
     if not DATABASE_ENABLED:
         raise HTTPException(status_code=503, detail="DATABASE_URL is required for background K-69 alerts")
-    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
-        raise HTTPException(status_code=503, detail="Push notifications are not configured")
+    if webpush is None or not VAPID_KEY_VALID:
+        raise HTTPException(status_code=503, detail=f"Push notifications are not configured: {VAPID_KEY_STATUS}")
 
     body = await request.json()
     endpoint = str(body.get("endpoint", "")).strip()
@@ -867,6 +966,13 @@ async def schedule_k69_alerts(request: Request):
             },
         },
     )
+
+    if arm_stats["sent"] == 0:
+        add_monitor_log("error", "k69_arm_push_failed", "K69 schedule was saved but the arm Push could not be delivered", {"push": arm_stats})
+        raise HTTPException(
+            status_code=502,
+            detail="המחזור נשמר, אבל לא ניתן היה לשלוח את פקודת ההפעלה לטלפון. בדוק את מפתחות VAPID ואת שירות ה-Push.",
+        )
 
     return {
         "ok": True,
@@ -997,7 +1103,7 @@ def push_diagnostics():
     has_public = bool(VAPID_PUBLIC_KEY)
     has_private = bool(VAPID_PRIVATE_KEY)
     webpush_loaded = webpush is not None
-    configured = bool(DATABASE_ENABLED and webpush_loaded and has_public and has_private)
+    configured = bool(DATABASE_ENABLED and webpush_loaded and VAPID_KEY_VALID)
     subscribers = push_subscription_count() if DATABASE_ENABLED else 0
     due = len(due_k69_alerts()) if DATABASE_ENABLED else 0
     return {
@@ -1012,7 +1118,9 @@ def push_diagnostics():
             "vapid_public_key_present": has_public,
             "vapid_private_key_present": has_private,
             "vapid_subject_present": bool(VAPID_SUBJECT),
-            "configured": bool(webpush_loaded and has_public and has_private),
+            "vapid_key_valid": bool(VAPID_KEY_VALID),
+            "vapid_key_status": VAPID_KEY_STATUS,
+            "configured": bool(webpush_loaded and VAPID_KEY_VALID),
             "subscribers": subscribers,
         },
         "k69": {
@@ -1033,8 +1141,8 @@ def k69_process_due(authorization: str | None = Header(default=None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
     if not DATABASE_ENABLED:
         raise HTTPException(status_code=503, detail="DATABASE_URL is not configured")
-    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
-        raise HTTPException(status_code=503, detail="Push notifications are not configured")
+    if webpush is None or not VAPID_KEY_VALID:
+        raise HTTPException(status_code=503, detail=f"Push notifications are not configured: {VAPID_KEY_STATUS}")
     before = len(due_k69_alerts())
     process_k69_alerts_once()
     after = len(due_k69_alerts())

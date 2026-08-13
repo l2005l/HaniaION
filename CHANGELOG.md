@@ -1,3 +1,10 @@
+## 2.27.0 — VAPID validation + K-69 push diagnostics
+- Validates the VAPID P-256 key pair before scheduling.
+- Accepts PEM, base64url DER, or raw 32-byte private key input.
+- Adds a browser-only `/vapid-generator` that never uploads generated keys.
+- K-69 scheduling reports a clear error if the arm Push cannot be delivered.
+- NASA and K-69 notification preferences remain independent.
+
 # v2.14.0 — Mobile Action Landing Fixes
 
 - GPS shortcut lands directly on the permission note and “בדוק GPS עכשיו” button.

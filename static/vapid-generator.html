@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HaniaION — VAPID Key Generator</title>
+<style>
+body{margin:0;background:#071525;color:#eef8ff;font-family:Arial,sans-serif;padding:24px}
+main{max-width:760px;margin:auto;background:#0b2034;border:1px solid #1c718d;border-radius:24px;padding:24px}
+h1{margin-top:0} p{line-height:1.6;color:#b9cddd}
+button{border:0;border-radius:14px;padding:14px 20px;font-size:18px;font-weight:700;cursor:pointer}
+.primary{background:#20c5e8;color:#062033}.copy{background:#18364d;color:#fff;margin-top:8px}
+label{display:block;margin:18px 0 7px;font-weight:700}
+textarea,input{width:100%;box-sizing:border-box;background:#061522;color:#dff8ff;border:1px solid #2b7088;border-radius:12px;padding:12px;font-family:monospace}
+textarea{min-height:90px;direction:ltr}
+.note{border:1px solid #47738b;border-radius:14px;padding:14px;margin-top:20px}
+.ok{color:#7df0b3}
+</style>
+</head>
+<body>
+<main>
+<h1>🔐 יצירת מפתחות VAPID</h1>
+<p>המפתחות נוצרים <strong>בתוך הדפדפן בלבד</strong>. הם לא נשלחים ל-HaniaION ולא לשרת אחר.</p>
+<button id="generate" class="primary">צור זוג מפתחות חדש</button>
+<div id="out" hidden>
+<label>VAPID_PUBLIC_KEY</label>
+<textarea id="pub" readonly></textarea>
+<button class="copy" data-copy="pub">העתק Public</button>
+<label>VAPID_PRIVATE_KEY</label>
+<textarea id="priv" readonly></textarea>
+<button class="copy" data-copy="priv">העתק Private</button>
+<label>VAPID_SUBJECT</label>
+<input id="subject" value="mailto:haniaion55@gmail.com" readonly>
+<button class="copy" data-copy="subject">העתק Subject</button>
+<div class="note"><span class="ok">✓</span> הזוג הזה תואם. הכנס את שלושת הערכים ל-Render. את ה-Private Key שמור סודי.</div>
+</div>
+</main>
+<script>
+const b64u=b=>{let s="";const a=new Uint8Array(b);for(let i=0;i<a.length;i+=0x8000)s+=String.fromCharCode(...a.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")};
+const pem=bytes=>"-----BEGIN PRIVATE KEY-----\\n"+b64u(bytes).match(/.{1,64}/g).join("\\n")+"\\n-----END PRIVATE KEY-----";
+document.getElementById("generate").onclick=async()=>{
+  const kp=await crypto.subtle.generateKey({name:"ECDSA",namedCurve:"P-256"},true,["sign","verify"]);
+  const pub=await crypto.subtle.exportKey("raw",kp.publicKey);
+  const priv=await crypto.subtle.exportKey("pkcs8",kp.privateKey);
+  document.getElementById("pub").value=b64u(pub);
+  document.getElementById("priv").value=pem(priv);
+  document.getElementById("out").hidden=false;
+};
+document.querySelectorAll(".copy").forEach(btn=>btn.onclick=async()=>{
+ const el=document.getElementById(btn.dataset.copy); await navigator.clipboard.writeText(el.value); btn.textContent="✓ הועתק"; setTimeout(()=>btn.textContent="העתק",1200);
+});
+</script>
+</body>
+</html>

@@ -1234,6 +1234,7 @@ async function refreshK69PushDiagnostics() {
         `<div><span>pywebpush מותקן</span><strong>${yes(payload.push?.pywebpush_loaded)}</strong></div>`,
         `<div><span>VAPID Public</span><strong>${yes(payload.push?.vapid_public_key_present)}</strong></div>`,
         `<div><span>VAPID Private</span><strong>${yes(payload.push?.vapid_private_key_present)}</strong></div>`,
+        `<div><span>VAPID Pair תקין</span><strong>${yes(payload.push?.vapid_key_valid)}</strong></div>`,
         `<div><span>מכשירים רשומים</span><strong>${subs}</strong></div>`,
         `<div><span>Worker K-69 יכול לפעול</span><strong>${yes(worker)}</strong></div>`,
         `<div><span>התראות K-69 שממתינות כרגע</span><strong>${Number(payload.k69?.due_unsent_now || 0)}</strong></div>`
