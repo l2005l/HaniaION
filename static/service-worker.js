@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v2-21-fresh-static";
+const CACHE_NAME = "haniaion-v2-22-k69-background";
 
 const APP_SHELL = [
   "/",
@@ -136,6 +136,11 @@ self.addEventListener("push", event => {
         icon: "/static/icons/icon.svg",
         badge: "/static/icons/icon.svg",
         tag: payload.tag || "haniaion-v2-update",
+        silent: false,
+        renotify: true,
+        vibrate: [120, 60, 120],
+        dir: "rtl",
+        lang: "he-IL",
         data: {
           url: payload.url || "/",
           ...(payload.data || {})

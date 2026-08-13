@@ -1457,6 +1457,9 @@ iframe {
 .k69-switch input:checked + span { background:var(--premium-cyan); }
 .k69-switch input:checked + span::after { transform:translateX(20px); }
 .k69-alert-status { display:block; margin-top:13px; color:var(--text-dim); }
+.k69-alert-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.k69-alert-actions .button { flex:1 1 220px; min-height:44px; }
+.k69-alert-status:empty { display:none; }
 .install-note { display:block; margin-top:10px; color:var(--text-muted); line-height:1.5; }
 .install-instructions .button + .button { margin-top:10px; }
 @media (max-width:760px) {

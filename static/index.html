@@ -210,14 +210,19 @@
             <div><span class="card-label">K-69 ALERTS</span><h3>התראות קוליות</h3></div>
             <label class="k69-switch"><input id="k69VoiceEnabled" type="checkbox"><span></span><strong>פעיל</strong></label>
           </div>
-          <p>בחר כמה התראות שתרצה. כל סימון יושמע פעם אחת בכל מחזור K, כל עוד האפליקציה פתוחה.</p>
+          <p>בחר כמה התראות שתרצה. המחזור הנוכחי בלבד יתוזמן. כשהאפליקציה פתוחה תישמע הכרזה קולית; כשהטלפון נעול או האפליקציה ברקע תישלח התראת מערכת.</p>
           <div class="k69-alert-options">
             <label><input type="checkbox" class="k69-alert-choice" value="60"><span>🔊 דקה לפני</span></label>
             <label><input type="checkbox" class="k69-alert-choice" value="30"><span>🔊 30 שניות לפני</span></label>
             <label><input type="checkbox" class="k69-alert-choice" value="10"><span>🔊 10 שניות לפני</span></label>
             <label><input type="checkbox" class="k69-alert-choice" value="0"><span>🔊 בזמן K</span></label>
           </div>
+          <div class="k69-alert-actions">
+            <button id="k69VoiceTest" class="button button-secondary" type="button">🔊 בדוק קול</button>
+            <button id="k69ScheduleCurrent" class="button button-primary" type="button">⏱ תזמן את המחזור הנוכחי</button>
+          </div>
           <small id="k69VoiceStatus" class="k69-alert-status" aria-live="polite">ההתראות כבויות</small>
+          <small id="k69VoiceDeliveryStatus" class="k69-alert-status" aria-live="polite">ברקע: מוכן לאחר הפעלת התראות מערכת</small>
         </section>
       </article>
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>

@@ -38,6 +38,10 @@ from database import (
     mark_push_success,
     delete_push_subscription_by_id,
     push_subscription_count,
+    schedule_k69_alerts,
+    cancel_k69_alerts,
+    claim_due_k69_alerts,
+    get_k69_schedule,
     add_monitor_log,
     get_monitor_logs,
     get_admin_statistics,
@@ -62,8 +66,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.on_event("startup")
 def startup_database() -> None:
-    """Create the small monitoring schema when DATABASE_URL is configured."""
+    """Create the monitoring/K69 schedule schema and start background delivery."""
     initialize_database()
+    if DATABASE_ENABLED and webpush and VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY:
+        thread = threading.Thread(target=run_k69_alert_worker, name="k69-push-worker", daemon=True)
+        thread.start()
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {
@@ -313,6 +320,58 @@ def send_push_to_all(payload: dict[str, Any]) -> dict[str, int]:
                 stats["failed"] += 1
     return stats
 
+
+
+
+
+def send_push_to_subscription(endpoint: str, payload: dict[str, Any]) -> bool:
+    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        return False
+    subscriptions = [item for item in list_push_subscriptions() if item["endpoint"] == endpoint]
+    if not subscriptions:
+        return False
+    subscription = subscriptions[0]
+    try:
+        webpush(
+            subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
+            data=json.dumps(payload, ensure_ascii=False),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims={"sub": VAPID_SUBJECT},
+            ttl=120,
+        )
+        mark_push_success(subscription["id"])
+        return True
+    except WebPushException as error:
+        status = getattr(getattr(error, "response", None), "status_code", None)
+        if status in (404, 410):
+            delete_push_subscription_by_id(subscription["id"])
+        return False
+
+
+def run_k69_alert_worker() -> None:
+    while True:
+        try:
+            due = claim_due_k69_alerts()
+            for item in due:
+                ok = send_push_to_subscription(item["endpoint"], {
+                    "title": item["title"],
+                    "body": item["body"],
+                    "url": "/#k69-live-target",
+                    "tag": f"haniaion-k69-{item['cycle_at'].timestamp()}-{item['offset_seconds']}",
+                    "data": {
+                        "type": "k69",
+                        "cycle_at": item["cycle_at"].isoformat(),
+                        "offset_seconds": item["offset_seconds"],
+                    },
+                })
+                if not ok:
+                    add_monitor_log("warning", "k69_push_failed", "K69 background push could not be delivered", {
+                        "offset_seconds": item["offset_seconds"],
+                        "cycle_at": item["cycle_at"].isoformat(),
+                    })
+        except Exception as error:
+            add_monitor_log("error", "k69_worker_error", "K69 background alert worker error", str(error))
+        time.sleep(0.5)
 
 
 def require_admin(x_admin_secret: str | None) -> None:
@@ -695,6 +754,84 @@ async def push_unsubscribe(request: Request):
     if not endpoint:
         raise HTTPException(status_code=400, detail="Missing endpoint")
     return {"ok": True, "removed": remove_push_subscription(endpoint)}
+
+
+@app.post("/api/k69/schedule")
+async def k69_schedule(request: Request):
+    body = await request.json()
+    endpoint = str(body.get("endpoint", "")).strip()
+    cycle_raw = str(body.get("cycle_at", "")).strip()
+    selected = body.get("times") or []
+    if not endpoint or not cycle_raw:
+        raise HTTPException(status_code=400, detail="Missing push endpoint or K cycle")
+    try:
+        cycle_at = datetime.fromisoformat(cycle_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail="Invalid cycle time") from error
+    now = datetime.now(timezone.utc)
+    if cycle_at <= now:
+        raise HTTPException(status_code=400, detail="This K cycle has already started")
+    if cycle_at - now > timedelta(minutes=13):
+        raise HTTPException(status_code=400, detail="K cycle is too far in the future")
+    allowed = {60, 30, 10, 0}
+    times: list[int] = []
+    for value in selected:
+        try:
+            number = int(value)
+        except (TypeError, ValueError):
+            continue
+        if number in allowed and number not in times:
+            times.append(number)
+    if not times:
+        cancel_k69_alerts(endpoint, cycle_at)
+        return {"ok": True, "scheduled": 0, "cycle_at": cycle_at.isoformat()}
+    alerts = []
+    for seconds in sorted(times, reverse=True):
+        fire_at = cycle_at - timedelta(seconds=seconds)
+        if fire_at <= now:
+            continue
+        body_text = (
+            "מפתח K התקבל"
+            if seconds == 0
+            else "מפתח K הבא יגיע בעוד דקה"
+            if seconds == 60
+            else f"מפתח K בעוד {seconds} שניות"
+        )
+        alerts.append({
+            "offset_seconds": seconds,
+            "fire_at": fire_at,
+            "title": "HaniaION · K-69",
+            "body": body_text,
+        })
+    scheduled = schedule_k69_alerts(endpoint, cycle_at, alerts)
+    return {"ok": True, "scheduled": scheduled, "cycle_at": cycle_at.isoformat()}
+
+
+@app.post("/api/k69/cancel")
+async def k69_cancel(request: Request):
+    body = await request.json()
+    endpoint = str(body.get("endpoint", "")).strip()
+    cycle_raw = str(body.get("cycle_at", "")).strip()
+    if not endpoint:
+        raise HTTPException(status_code=400, detail="Missing push endpoint")
+    cycle_at = None
+    if cycle_raw:
+        try:
+            cycle_at = datetime.fromisoformat(cycle_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Invalid cycle time") from error
+    return {"ok": True, "removed": cancel_k69_alerts(endpoint, cycle_at)}
+
+
+@app.get("/api/k69/status")
+def k69_status(endpoint: str = Query(...), cycle_at: str | None = Query(default=None)):
+    parsed = None
+    if cycle_at:
+        try:
+            parsed = datetime.fromisoformat(cycle_at.replace("Z", "+00:00")).astimezone(timezone.utc)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Invalid cycle time") from error
+    return {"items": get_k69_schedule(endpoint, parsed)}
 
 
 @app.post("/api/monitor/run")

@@ -89,3 +89,11 @@ Adds a compact system-health view and fixes false duplicate-history warnings. A 
 
 ## v2.5.0
 History and charts now merge local device records with the PostgreSQL cloud history endpoint.
+
+
+## K-69 background alerts (v2.19)
+The K-69 alert switch schedules **only the currently displayed K cycle**. Selected 60/30/10/0-second alerts are stored server-side against the browser Push subscription. While the page is foregrounded, spoken Hebrew announcements are used; when the phone is locked/backgrounded, Web Push delivers a system notification.
+
+For background delivery, configure `DATABASE_URL`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` in the deployment environment. The server starts a lightweight K-69 delivery worker when Push is configured.
+
+Important: Web Push can provide a lock-screen/system notification in the background; it cannot guarantee spoken TTS while an iPhone/Android browser is suspended. The existing Android APK is a web wrapper pointing at the live HaniaION site, so its web content receives these deployed changes, but a future native Android build can add true system-level spoken audio.
