@@ -1,11 +1,11 @@
-const CACHE_NAME = "haniaion-v2-23-k69-alerts";
+const CACHE_NAME = "haniaion-v2-24-k69-diagnostics";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
   "/static/style.css?v=55",
-  "/static/app.js?v=58",
+  "/static/app.js?v=57",
   "/static/wind.css?v=45",
   "/static/wind.js?v=45",
   "/static/satellite.css?v=21",
@@ -132,20 +132,9 @@ self.addEventListener("push", event => {
     const windows = await clients.matchAll({type: "window", includeUncontrolled: true});
     const visibleClient = windows.find(client => client.visibilityState === "visible");
 
-    // K-69 alerts must still create a real system notification when the
-    // installed PWA is visible. SpeechSynthesis from a push event is not
-    // guaranteed to have user activation, so forwarding only to the page can
-    // result in no audible/visible alert at all. We therefore ALWAYS show the
-    // system notification, and additionally notify the visible page so it can
-    // attempt spoken Hebrew while foregrounded.
-    if (payload.data?.type === "k69-alert" && visibleClient) {
-      visibleClient.postMessage({
-        type: "k69-alert",
-        seconds_before: Number(payload.data.seconds_before) || 0,
-        cycle_at: payload.data.cycle_at || ""
-      });
-    }
-
+    // Always create a real system notification. The foreground page may also
+    // receive the event and attempt Hebrew speech, but it must never suppress
+    // the OS notification.
     await self.registration.showNotification(
       payload.title,
       {
@@ -154,8 +143,6 @@ self.addEventListener("push", event => {
         badge: "/static/icons/icon.svg",
         tag: payload.tag || "haniaion-v2-update",
         renotify: true,
-        silent: false,
-        vibrate: [250, 100, 250],
         requireInteraction: false,
         data: {
           url: payload.url || "/",
@@ -163,6 +150,14 @@ self.addEventListener("push", event => {
         }
       }
     );
+
+    if (payload.data?.type === "k69-alert" && visibleClient) {
+      visibleClient.postMessage({
+        type: "k69-alert",
+        seconds_before: Number(payload.data.seconds_before) || 0,
+        cycle_at: payload.data.cycle_at || ""
+      });
+    }
   })());
 });
 

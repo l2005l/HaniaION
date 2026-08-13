@@ -1186,12 +1186,55 @@ function initializeK69Monitor() {
 document.addEventListener("DOMContentLoaded", initializeK69Monitor);
 
 
+async function refreshK69PushDiagnostics() {
+  const status = byId("k69DiagnosticsStatus");
+  const details = byId("k69DiagnosticsDetails");
+  if (!status) return;
+  try {
+    const response = await fetch("/api/push/diagnostics", {cache: "no-store"});
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.detail || `HTTP ${response.status}`);
+    const dbOk = payload.database?.connected;
+    const pushOk = payload.push?.configured;
+    const subs = Number(payload.push?.subscribers || 0);
+    const worker = payload.k69?.worker_should_start;
+    const allOk = Boolean(payload.ok && dbOk && pushOk && worker && subs > 0);
+    status.textContent = allOk
+      ? `✓ שירות Push מוכן · ${subs} מכשיר(ים) רשומים · שרת ${payload.server_time_utc || ""}`
+      : `⚠ שירות Push עדיין לא מוכן · ${payload.server_time_utc || ""}`;
+    status.className = `k69-diagnostics-status ${allOk ? "is-ok" : "is-error"}`;
+    if (details) {
+      const yes = value => value ? "✓ כן" : "✗ לא";
+      details.hidden = false;
+      details.innerHTML = [
+        `<div><span>מסד נתונים מחובר</span><strong>${yes(dbOk)}</strong></div>`,
+        `<div><span>pywebpush מותקן</span><strong>${yes(payload.push?.pywebpush_loaded)}</strong></div>`,
+        `<div><span>VAPID Public</span><strong>${yes(payload.push?.vapid_public_key_present)}</strong></div>`,
+        `<div><span>VAPID Private</span><strong>${yes(payload.push?.vapid_private_key_present)}</strong></div>`,
+        `<div><span>מכשירים רשומים</span><strong>${subs}</strong></div>`,
+        `<div><span>Worker K-69 יכול לפעול</span><strong>${yes(worker)}</strong></div>`,
+        `<div><span>התראות K-69 שממתינות כרגע</span><strong>${Number(payload.k69?.due_unsent_now || 0)}</strong></div>`
+      ].join("");
+    }
+    return payload;
+  } catch (error) {
+    status.textContent = `✗ לא ניתן לבדוק את שירות Push: ${error?.message || "שגיאה"}`;
+    status.className = "k69-diagnostics-status is-error";
+    if (details) details.hidden = true;
+    return null;
+  }
+}
+
 function initializeK69Alerts() {
   const scheduleButton = byId("k69ScheduleButton");
   const testButton = byId("k69TestVoiceButton");
   const enabled = byId("k69AlertsEnabled");
   const status = byId("k69ScheduleStatus");
   if (!scheduleButton || !enabled) return;
+
+  const diagnosticsButton = byId("k69DiagnosticsButton");
+  diagnosticsButton?.addEventListener("click", () => refreshK69PushDiagnostics());
+  refreshK69PushDiagnostics();
 
   const checks = () => [...document.querySelectorAll(".k69-alert-check:checked")]
     .map(input => Number(input.value))
@@ -1294,6 +1337,7 @@ function initializeK69Alerts() {
     } catch (error) {
       status.textContent = error?.message || "אירעה שגיאה בתזמון.";
       status.className = "k69-schedule-status is-error";
+      refreshK69PushDiagnostics();
     } finally {
       scheduleButton.disabled = false;
     }

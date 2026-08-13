@@ -348,18 +348,21 @@ def process_k69_alerts_once() -> None:
                 },
             },
         )
-        # Do not consume a scheduled alert when delivery failed. The one-second
-        # worker will retry it while it remains due. A 404/410 means the
-        # subscription is gone and is safe to consume.
-        delivered = stats["sent"] > 0 or stats["removed"] > 0
-        if delivered:
+        if stats["sent"] > 0:
             mark_k69_alert_sent(item["id"])
-        add_monitor_log(
-            "info" if delivered else "warning",
-            "k69_alert_sent" if delivered else "k69_alert_delivery_retry",
-            f"K69 alert {seconds}s before cycle",
-            {"push": stats, "cycle_at": item["cycle_at"].isoformat(), "consumed": delivered},
-        )
+            add_monitor_log(
+                "info",
+                "k69_alert_sent",
+                f"K69 alert {seconds}s before cycle",
+                {"push": stats, "cycle_at": item["cycle_at"].isoformat()},
+            )
+        else:
+            add_monitor_log(
+                "error",
+                "k69_alert_delivery_failed",
+                f"K69 alert {seconds}s before cycle was not delivered",
+                {"push": stats, "cycle_at": item["cycle_at"].isoformat()},
+            )
 
 
 def k69_alert_worker() -> None:
@@ -891,3 +894,54 @@ def calculate(request: Request):
             status_code=500,
             detail=str(error),
         ) from error
+
+@app.get("/api/push/diagnostics")
+def push_diagnostics():
+    """Return safe, non-secret Push diagnostics for the current deployment."""
+    db = database_status()
+    has_public = bool(VAPID_PUBLIC_KEY)
+    has_private = bool(VAPID_PRIVATE_KEY)
+    webpush_loaded = webpush is not None
+    configured = bool(DATABASE_ENABLED and webpush_loaded and has_public and has_private)
+    subscribers = push_subscription_count() if DATABASE_ENABLED else 0
+    due = len(due_k69_alerts()) if DATABASE_ENABLED else 0
+    return {
+        "ok": configured and db.get("connected", False),
+        "database": {
+            "enabled": bool(db.get("enabled")),
+            "connected": bool(db.get("connected")),
+            "message": db.get("message"),
+        },
+        "push": {
+            "pywebpush_loaded": webpush_loaded,
+            "vapid_public_key_present": has_public,
+            "vapid_private_key_present": has_private,
+            "vapid_subject_present": bool(VAPID_SUBJECT),
+            "configured": bool(webpush_loaded and has_public and has_private),
+            "subscribers": subscribers,
+        },
+        "k69": {
+            "worker_should_start": configured,
+            "due_unsent_now": due,
+        },
+        "server_time_utc": datetime.now(timezone.utc).isoformat(),
+        "version": APP_VERSION,
+    }
+
+
+@app.post("/api/k69/process-due")
+def k69_process_due(authorization: str | None = Header(default=None)):
+    """Process due K-69 Push alerts; intended for an external cron/uptime scheduler."""
+    if not CRON_SECRET:
+        raise HTTPException(status_code=503, detail="CRON_SECRET is not configured")
+    if authorization != f"Bearer {CRON_SECRET}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if not DATABASE_ENABLED:
+        raise HTTPException(status_code=503, detail="DATABASE_URL is not configured")
+    if webpush is None or not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+        raise HTTPException(status_code=503, detail="Push notifications are not configured")
+    before = len(due_k69_alerts())
+    process_k69_alerts_once()
+    after = len(due_k69_alerts())
+    return {"ok": True, "processed": max(0, before - after), "remaining_due": after, "server_time_utc": datetime.now(timezone.utc).isoformat()}
+

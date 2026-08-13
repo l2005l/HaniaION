@@ -229,7 +229,12 @@
           <button id="k69ScheduleButton" class="button button-primary" type="button">⏱ תזמן את ההתראות למחזור הבא</button>
         </div>
         <div id="k69ScheduleStatus" class="k69-schedule-status" role="status">בחר זמנים ולחץ על תזמון המחזור.</div>
-        <small class="k69-alert-note">כשהאפליקציה פתוחה: המכשיר יכול להשמיע את המשפט. ברקע/מסך נעול: תישלח התראת מערכת עם צליל ברירת המחדל של הטלפון.</small>
+        <div class="k69-diagnostics">
+          <div class="k69-diagnostics-head"><strong>בדיקת שירות Push</strong><button id="k69DiagnosticsButton" class="button button-secondary" type="button">🔎 בדוק עכשיו</button></div>
+          <div id="k69DiagnosticsStatus" class="k69-diagnostics-status" role="status">בודק את שרת ההתראות…</div>
+          <div id="k69DiagnosticsDetails" class="k69-diagnostics-details" hidden></div>
+        </div>
+        <small class="k69-alert-note">כשהאפליקציה פתוחה: תופיע גם התראת מערכת וגם ניסיון להקראת המשפט. ברקע/מסך נעול: תישלח התראת מערכת עם צליל ברירת המחדל של הטלפון.</small>
       </article>
       </article>
       <div class="section-return"><a href="#quick-menu">↑ חזרה לתפריט</a></div>
@@ -248,7 +253,7 @@
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/static/spoofing.js?v=5" defer></script>
-  <script src="/static/app.js?v=60" defer></script>
+  <script src="/static/app.js?v=61" defer></script>
   <script src="/static/data-status.js?v=4"></script>
 </body>
 </html>

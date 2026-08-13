@@ -1448,3 +1448,12 @@ iframe {
   .k69-alert-options{grid-template-columns:1fr}
   .k69-alert-actions .button{width:100%}
 }
+
+.k69-diagnostics{margin-top:12px;padding:14px 15px;border:1px solid rgba(71,213,242,.25);border-radius:16px;background:rgba(8,26,45,.55)}
+.k69-diagnostics-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.k69-diagnostics-head .button{padding:9px 13px;font-size:.9rem}
+.k69-diagnostics-status{margin-top:10px;padding:10px 12px;border-radius:12px;background:rgba(8,26,45,.7);color:rgba(240,248,255,.8)}
+.k69-diagnostics-status.is-ok{border:1px solid rgba(60,224,161,.45);color:#aaf4d0}
+.k69-diagnostics-status.is-error{border:1px solid rgba(255,98,111,.5);color:#ffc2c7}
+.k69-diagnostics-details{margin-top:10px;display:grid;gap:6px;font-size:.88rem;color:rgba(240,248,255,.68)}
+.k69-diagnostics-details div{display:flex;justify-content:space-between;gap:12px}
