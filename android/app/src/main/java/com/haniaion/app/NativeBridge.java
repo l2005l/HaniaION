@@ -35,6 +35,7 @@ public class NativeBridge {
             K69Scheduler.schedule(activity, cycleAt, seconds);
             return "ok";
         } catch (Exception error) {
+            if (error instanceof SecurityException && error.getMessage() != null) return error.getMessage();
             return "לא ניתן לתזמן התראות Android: " + error.getClass().getSimpleName();
         }
     }

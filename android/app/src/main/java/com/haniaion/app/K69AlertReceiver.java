@@ -6,11 +6,20 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.PowerManager;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class K69AlertReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
         int seconds = intent.getIntExtra("seconds", 0);
         showNotification(context, seconds, (int) (System.currentTimeMillis() % Integer.MAX_VALUE));
+        speakInBackground(context, seconds, goAsync());
     }
 
     static void showNotification(Context context, int seconds, int notificationId) {
@@ -26,5 +35,47 @@ public class K69AlertReceiver extends BroadcastReceiver {
             .build();
         ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE))
             .notify(notificationId, notification);
+    }
+
+    private static void speakInBackground(Context context, int seconds, PendingResult pending) {
+        Context app = context.getApplicationContext();
+        PowerManager power = (PowerManager) app.getSystemService(Context.POWER_SERVICE);
+        PowerManager.WakeLock wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "HaniaION:K69Speech");
+        wakeLock.acquire(12_000L);
+        AtomicBoolean finished = new AtomicBoolean(false);
+        TextToSpeech[] holder = new TextToSpeech[1];
+
+        Runnable finish = () -> {
+            if (!finished.compareAndSet(false, true)) return;
+            if (holder[0] != null) { holder[0].stop(); holder[0].shutdown(); }
+            if (wakeLock.isHeld()) wakeLock.release();
+            pending.finish();
+        };
+
+        new Handler(Looper.getMainLooper()).postDelayed(finish, 9_000L);
+        holder[0] = new TextToSpeech(app, status -> {
+            if (status != TextToSpeech.SUCCESS || holder[0] == null) { finish.run(); return; }
+            TextToSpeech speech = holder[0];
+            speech.setLanguage(new Locale("he", "IL"));
+            speech.setAudioAttributes(new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build());
+            speech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override public void onStart(String id) {}
+                @Override public void onDone(String id) { finish.run(); }
+                @Override public void onError(String id) { finish.run(); }
+            });
+            int result = speech.speak(spokenText(seconds), TextToSpeech.QUEUE_FLUSH, null, "haniaion-k69-background");
+            if (result == TextToSpeech.ERROR) finish.run();
+        });
+    }
+
+    private static String spokenText(int seconds) {
+        if (seconds == 0) return "מפתח קיי הגיע עכשיו";
+        if (seconds == 60) return "בעוד דקה יגיע המפתח";
+        if (seconds == 30) return "בעוד שלושים שניות יגיע המפתח";
+        if (seconds == 10) return "בעוד עשר שניות יגיע המפתח";
+        return "בעוד " + seconds + " שניות יגיע המפתח";
     }
 }

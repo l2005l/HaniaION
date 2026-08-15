@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v3-1-live-imagery-alert-fixes";
+const CACHE_NAME = "haniaion-v3-1-background-speech-fixes";
 
 const APP_SHELL = [
   "/",
@@ -9,9 +9,7 @@ const APP_SHELL = [
   "/static/wind.css?v=45",
   "/static/wind.js?v=45",
   "/static/satellite.css?v=21",
-  "/static/satellite-imagery.css?v=1",
-  "/static/satellite.js?v=23",
-  "/static/satellite-imagery.js?v=1",
+  "/static/satellite.js?v=24",
   "/static/data-status.css?v=4",
   "/static/data-status.js?v=4",
   "/static/icons/icon.svg",
