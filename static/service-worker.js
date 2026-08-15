@@ -1,15 +1,17 @@
-const CACHE_NAME = "haniaion-v3-cross-platform-alerts";
+const CACHE_NAME = "haniaion-v3-1-live-imagery-alert-fixes";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
   "/static/style.css?v=55",
-  "/static/app.js?v=70",
+  "/static/app.js?v=71",
   "/static/wind.css?v=45",
   "/static/wind.js?v=45",
   "/static/satellite.css?v=21",
-  "/static/satellite.js?v=21",
+  "/static/satellite-imagery.css?v=1",
+  "/static/satellite.js?v=23",
+  "/static/satellite-imagery.js?v=1",
   "/static/data-status.css?v=4",
   "/static/data-status.js?v=4",
   "/static/icons/icon.svg",
@@ -182,8 +184,8 @@ async function armK69Alerts(payload) {
 
   k69ArmedCycles.set(cycleAt, timers);
 
-  // Confirm receipt to the server. Once acknowledged, the server will not
-  // send duplicate per-alert pushes for this cycle.
+  // Confirm receipt for diagnostics. The server remains an independent
+  // fallback because mobile browsers may suspend this worker before a timer.
   try {
     const subscription = await self.registration.pushManager.getSubscription();
     if (subscription) {

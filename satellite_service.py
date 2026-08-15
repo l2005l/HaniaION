@@ -13,15 +13,17 @@ from sgp4.api import Satrec, jday
 from urllib3.util.retry import Retry
 
 CELESTRAK_RESOURCE_URLS = [
-    "https://celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle",
-    "https://www.celestrak.org/NORAD/elements/gp.php?GROUP=resource&FORMAT=tle",
+    "https://celestrak.org/NORAD/elements/gp.php?GROUP=RESOURCE&FORMAT=TLE",
+    "https://www.celestrak.org/NORAD/elements/gp.php?GROUP=RESOURCE&FORMAT=TLE",
+    "https://celestrak.com/NORAD/elements/gp.php?GROUP=RESOURCE&FORMAT=TLE",
+    "https://www.celestrak.com/NORAD/elements/gp.php?GROUP=RESOURCE&FORMAT=TLE",
 ]
 BOOTSTRAP_TLE_PATH = os.path.join("data", "resource_bootstrap.tle")
 LAST_GOOD_TLE_PATH = os.path.join("data", "resource_last_good.tle")
 ISRAEL_LAT = 31.5
 ISRAEL_LON = 34.8
 EARTH_RADIUS_KM = 6371.0
-CACHE_SECONDS = 30 * 60
+CACHE_SECONDS = 2 * 60 * 60
 MAX_OBJECTS = 180
 
 _cache_lock = threading.Lock()
@@ -37,7 +39,11 @@ def _session() -> requests.Session:
     retry = Retry(total=3, connect=3, read=3, backoff_factor=0.8,
                   status_forcelist=[429, 500, 502, 503, 504], allowed_methods=["GET"])
     session.mount("https://", HTTPAdapter(max_retries=retry))
-    session.headers.update({"User-Agent": "HaniaION-Satellite/1.2", "Accept": "text/plain"})
+    session.headers.update({
+        "User-Agent": "HaniaION-Satellite/3.1 (+https://haniaion.onrender.com)",
+        "Accept": "text/plain,text/*;q=0.9,*/*;q=0.5",
+        "Cache-Control": "no-cache",
+    })
     return session
 
 
@@ -100,9 +106,10 @@ def get_records() -> tuple[list[dict[str, Any]], str, str, str | None]:
             return _cache["records"], _cache["fetched_at"], _cache["mode"], _cache["warning"]
 
     errors: list[str] = []
+    session = _session()
     for url in CELESTRAK_RESOURCE_URLS:
         try:
-            response = _session().get(url, timeout=(7, 22))
+            response = session.get(url, timeout=(8, 30), allow_redirects=True)
             response.raise_for_status()
             records = _parse_tle(response.text)
             if not records:
@@ -115,14 +122,19 @@ def get_records() -> tuple[list[dict[str, Any]], str, str, str | None]:
         except Exception as error:
             errors.append(f"{url}: {error}")
 
-    for path, mode, ttl in ((LAST_GOOD_TLE_PATH, "last_good_cache", 10 * 60), (BOOTSTRAP_TLE_PATH, "bundled_fallback", 5 * 60)):
+    for path, mode, ttl in ((LAST_GOOD_TLE_PATH, "last_good_cache", 30 * 60), (BOOTSTRAP_TLE_PATH, "bundled_fallback", 15 * 60)):
         try:
             text = _read_local_tle(path)
             records = _parse_tle(text)
             if not records:
                 continue
             fetched_at = datetime.fromtimestamp(os.path.getmtime(path), timezone.utc).isoformat()
-            warning = "CelesTrak אינו זמין כרגע; מוצגים נתוני מסלול שמורים."
+            age = max(0.0, now - os.path.getmtime(path))
+            warning = (
+                "החיבור החי ל-CelesTrak אינו זמין; נתוני TLE שמורים ועדכניים יחסית נמצאים בשימוש."
+                if age <= 24 * 60 * 60
+                else "החיבור החי ל-CelesTrak אינו זמין; נתוני TLE שמורים וישנים נמצאים בשימוש."
+            )
             with _cache_lock:
                 _cache.update(records=records, expires=now + ttl, fetched_at=fetched_at, mode=mode, warning=warning)
             return records, fetched_at, mode, warning
@@ -214,6 +226,9 @@ def build_coverage(minutes_ahead: int = 90, step_seconds: int = 60) -> dict[str,
         "generated_at": now.isoformat(), "tle_fetched_at": fetched_at,
         "source": "CelesTrak Earth Resources GP/TLE + SGP4",
         "source_mode": source_mode, "source_warning": source_warning,
+        "source_fresh": source_mode == "live" or (
+            bool(fetched_at) and (now - datetime.fromisoformat(fetched_at).astimezone(timezone.utc)) <= timedelta(hours=24)
+        ),
         "definition": "Public Earth-observation orbit geometry; sensor activity and pointing are unknown.",
         "location": {"name": "Israel", "lat": ISRAEL_LAT, "lon": ISRAEL_LON},
         "counts": {"total": len(objects), "visible": len(visible), "near": sum(x["status"] == "near" for x in objects),

@@ -419,7 +419,6 @@ def due_k69_alerts(now: datetime | None = None) -> list[dict[str, Any]]:
             select(K69AlertSchedule)
             .where(
                 K69AlertSchedule.sent_at.is_(None),
-                K69AlertSchedule.armed_at.is_(None),
                 K69AlertSchedule.cycle_at >= now - timedelta(seconds=30),
                 K69AlertSchedule.cycle_at <= now + timedelta(seconds=61),
             )

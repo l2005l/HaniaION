@@ -8,6 +8,8 @@ import android.app.NotificationManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.media.AudioAttributes;
+import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -24,13 +26,15 @@ import java.util.List;
 
 public class MainActivity extends android.app.Activity {
     private static final String HOME_URL = "https://haniaion-preview.onrender.com";
+    static final String K69_CHANNEL_ID = "k69_alerts_v2";
     private WebView webView;
+    private NativeBridge nativeBridge;
 
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         createNotificationChannel();
-        requestNotificationPermission();
+        requestAppPermissions();
 
         webView = new WebView(this);
         setContentView(webView);
@@ -40,7 +44,8 @@ public class MainActivity extends android.app.Activity {
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setUserAgentString(settings.getUserAgentString() + " HaniaIONNative/3.0");
-        webView.addJavascriptInterface(new NativeBridge(this), "HaniaAndroid");
+        nativeBridge = new NativeBridge(this);
+        webView.addJavascriptInterface(nativeBridge, "HaniaAndroid");
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri uri = Uri.parse(url);
@@ -52,7 +57,9 @@ public class MainActivity extends android.app.Activity {
         });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
-                callback.invoke(origin, true, false);
+                boolean granted = checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+                callback.invoke(origin, granted, false);
             }
             @Override public void onPermissionRequest(PermissionRequest request) { request.grant(request.getResources()); }
         });
@@ -61,17 +68,30 @@ public class MainActivity extends android.app.Activity {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel("k69_alerts", "התראות K-69", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel(K69_CHANNEL_ID, "התראות K-69 עם קול", NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("התראות למחזורי K-69");
             channel.enableVibration(true);
+            channel.setVibrationPattern(new long[]{0, 350, 180, 350});
+            channel.setSound(
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build()
+            );
             getSystemService(NotificationManager.class).createNotificationChannel(channel);
         }
     }
 
-    private void requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4100);
+    private void requestAppPermissions() {
+        List<String> missing = new ArrayList<>();
+        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
+        if (checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.ACCESS_COARSE_LOCATION);
+        }
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            missing.add(Manifest.permission.POST_NOTIFICATIONS);
+        }
+        if (!missing.isEmpty()) requestPermissions(missing.toArray(new String[0]), 4100);
         if (Build.VERSION.SDK_INT >= 31) {
             AlarmManager alarms = getSystemService(AlarmManager.class);
             if (!alarms.canScheduleExactAlarms()) {
@@ -83,5 +103,11 @@ public class MainActivity extends android.app.Activity {
 
     @Override public void onBackPressed() {
         if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed();
+    }
+
+    @Override protected void onDestroy() {
+        if (nativeBridge != null) nativeBridge.shutdown();
+        if (webView != null) webView.destroy();
+        super.onDestroy();
     }
 }

@@ -1278,6 +1278,13 @@ function initializeK69Alerts() {
   }
 
   const speakK69Alert = seconds => {
+    if (window.HaniaAndroid && typeof window.HaniaAndroid.speakK69Alert === "function") {
+      try {
+        return String(window.HaniaAndroid.speakK69Alert(Number(seconds)) || "") === "ok";
+      } catch (_) {
+        // Fall through to the browser speech engine when the native bridge fails.
+      }
+    }
     if (!("speechSynthesis" in window)) return false;
     const text = seconds === 0
       ? "מפתח קיי הגיע עכשיו"
@@ -1295,9 +1302,20 @@ function initializeK69Alerts() {
   };
 
   testButton?.addEventListener("click", () => {
-    const ok = speakK69Alert(30);
+    let ok = false;
+    if (window.HaniaAndroid && typeof window.HaniaAndroid.testK69Alert === "function") {
+      try {
+        ok = String(window.HaniaAndroid.testK69Alert(30) || "") === "ok";
+      } catch (_) {
+        ok = false;
+      }
+    } else {
+      ok = speakK69Alert(30);
+    }
     status.textContent = ok
-      ? "בדיקת הקול הופעלה. אם לא שמעת, בדוק שעוצמת המדיה במכשיר פעילה."
+      ? (nativeAlerts
+        ? "✓ נשלחה התראת בדיקה והופעל קול Android. אם לא שמעת, בדוק את עוצמת ההתראות והמדיה."
+        : "בדיקת הקול הופעלה. אם לא שמעת, בדוק שעוצמת המדיה במכשיר פעילה.")
       : "הדפדפן לא מאפשר השמעת קול. ההתראות ברקע עדיין יישלחו כהתראות מערכת.";
     status.className = `k69-schedule-status ${ok ? "is-ok" : "is-error"}`;
   });
