@@ -1,17 +1,19 @@
-const CACHE_NAME = "haniaion-v3-1-background-speech-fixes";
+const CACHE_NAME = "haniaion-v3-2-ui-satellite-wind-fixes";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
   "/static/style.css?v=55",
-  "/static/app.js?v=71",
+  "/static/gnss-result.css?v=1",
+  "/static/app.js?v=72",
   "/static/wind.css?v=45",
-  "/static/wind.js?v=45",
+  "/static/wind.js?v=47",
   "/static/satellite.css?v=21",
-  "/static/satellite.js?v=24",
-  "/static/data-status.css?v=4",
-  "/static/data-status.js?v=4",
+  "/static/satellite.js?v=25",
+  "/static/data-status.css?v=5",
+  "/static/data-status-compact.css?v=1",
+  "/static/data-status.js?v=5",
   "/static/icons/icon.svg",
   "/manifest.webmanifest"
 ];

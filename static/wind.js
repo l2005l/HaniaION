@@ -1,5 +1,6 @@
 const $ = id => document.getElementById(id);
 const altitudeSelect = $("altitudeSelect"), forecastSelect = $("forecastSelect"), refreshWind = $("refreshWind");
+const windRegion = $("windRegion"), windOverlay = $("windOverlay");
 const windFrame = $("windFrame"), loading = $("windLoading"), levelLabel = $("levelLabel"), mapSummary = $("mapSummary");
 
 const LEVEL_LABELS={surface:"Surface wind","850h":"850 hPa · approximately 5,000 ft","700h":"700 hPa · approximately 10,000 ft","600h":"600 hPa · approximately 14,000 ft","500h":"500 hPa · approximately 18,000 ft","400h":"400 hPa · approximately 24,000 ft","300h":"300 hPa · approximately 30,000 ft","250h":"250 hPa · approximately 34,000 ft","200h":"200 hPa · approximately 39,000 ft","150h":"150 hPa · approximately 44,000 ft","100h":"100 hPa · approximately 52,000 ft"};
@@ -8,12 +9,14 @@ const ALT_TEXT={surface:"Surface","850h":"5,000 ft","700h":"10,000 ft","600h":"1
 function updateClock(){ $("utcClock").textContent=new Date().toISOString().slice(11,19); }
 setInterval(updateClock,1000); updateClock();
 
-function buildWindyUrl(){const p=new URLSearchParams({lat:"30.5",lon:"42.0",detailLat:"31.8",detailLon:"35.2",zoom:"4",level:altitudeSelect.value,overlay:"wind",product:"ecmwf",menu:"true",message:"true",marker:"true",calendar:"now",pressure:"true",type:"map",location:"coordinates",detail:"true",metricWind:"kt",metricTemp:"°C",radarRange:"-1",forecast:String(Number(forecastSelect.value||0))});return `https://embed.windy.com/embed2.html?${p}`;}
-function weatherText(){return `${ALT_TEXT[altitudeSelect.value]||altitudeSelect.value} · ${forecastSelect.value==="0"?"Now":`+${forecastSelect.value} h`}`;}
+const REGION_CONFIG={israel:{lat:"31.5",lon:"34.8",zoom:"7"},"middle-east":{lat:"30.5",lon:"42.0",zoom:"4"},europe:{lat:"38.5",lon:"24.0",zoom:"4"},world:{lat:"18.0",lon:"15.0",zoom:"2"}};
+const OVERLAY_TEXT={wind:"רוח",gust:"משבים",rain:"גשם",temp:"טמפרטורה",clouds:"עננות"};
+function buildWindyUrl(){const region=REGION_CONFIG[windRegion?.value]||REGION_CONFIG.israel,overlay=windOverlay?.value||"wind";const p=new URLSearchParams({lat:region.lat,lon:region.lon,detailLat:"31.8",detailLon:"35.2",zoom:region.zoom,level:altitudeSelect.value,overlay,product:"ecmwf",menu:"true",message:"true",marker:"true",calendar:"now",pressure:"true",type:"map",location:"coordinates",detail:"true",metricWind:"kt",metricTemp:"°C",metricRain:"mm",radarRange:"-1",forecast:String(Number(forecastSelect.value||0))});return `https://embed.windy.com/embed2.html?${p}`;}
+function weatherText(){return `${OVERLAY_TEXT[windOverlay?.value]||"רוח"} · ${ALT_TEXT[altitudeSelect.value]||altitudeSelect.value} · ${forecastSelect.value==="0"?"עכשיו":`+${forecastSelect.value} שעות`}`;}
 function loadWindMap(){loading.classList.remove("hidden");refreshWind.disabled=true;levelLabel.textContent=LEVEL_LABELS[altitudeSelect.value]||altitudeSelect.value;mapSummary.textContent=forecastSelect.value==="0"?"Current model time":`Forecast +${forecastSelect.value} hours`;$("routeWeatherLayer").textContent=weatherText();$("summaryWeather").textContent=weatherText();windFrame.src=buildWindyUrl();}
 windFrame.addEventListener("load",()=>{loading.classList.add("hidden");refreshWind.disabled=false;});
 setTimeout(()=>{loading.classList.add("hidden");refreshWind.disabled=false;},12000);
-refreshWind.addEventListener("click",loadWindMap);altitudeSelect.addEventListener("change",loadWindMap);forecastSelect.addEventListener("change",loadWindMap);
+refreshWind.addEventListener("click",loadWindMap);altitudeSelect.addEventListener("change",loadWindMap);forecastSelect.addEventListener("change",loadWindMap);windRegion?.addEventListener("change",loadWindMap);windOverlay?.addEventListener("change",loadWindMap);
 
 function openTab(name){document.querySelectorAll(".tab-button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));$(`${name}Tab`).classList.add("active");if(name==="planner"&&routeMap)setTimeout(()=>routeMap.invalidateSize(),80);}
 document.querySelectorAll(".tab-button").forEach(b=>b.addEventListener("click",()=>openTab(b.dataset.tab)));

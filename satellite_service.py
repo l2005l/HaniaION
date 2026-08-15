@@ -24,7 +24,7 @@ ISRAEL_LAT = 31.5
 ISRAEL_LON = 34.8
 EARTH_RADIUS_KM = 6371.0
 CACHE_SECONDS = 2 * 60 * 60
-MAX_OBJECTS = 180
+MAX_OBJECTS = 500
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {"expires": 0.0, "records": [], "fetched_at": None, "mode": None, "warning": None}
@@ -190,7 +190,9 @@ def build_coverage(minutes_ahead: int = 90, step_seconds: int = 60) -> dict[str,
             if pos is None:
                 continue
             distance = _distance_km(ISRAEL_LAT, ISRAEL_LON, pos["lat"], pos["lon"])
-            capable = distance <= record["footprint_km"]
+            horizon_km = EARTH_RADIUS_KM * math.acos(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + max(1.0, pos["alt_km"])))
+            coverage_radius_km = max(record["footprint_km"], min(2600.0, horizon_km * 0.72))
+            capable = distance <= coverage_radius_km
             if capable:
                 visible_indices.append(idx)
             if idx == 0 or idx % 3 == 0:
@@ -199,7 +201,9 @@ def build_coverage(minutes_ahead: int = 90, step_seconds: int = 60) -> dict[str,
         if current is None:
             continue
         current_distance = _distance_km(ISRAEL_LAT, ISRAEL_LON, current["lat"], current["lon"])
-        status = "visible" if current_distance <= record["footprint_km"] else "away"
+        current_horizon = EARTH_RADIUS_KM * math.acos(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + max(1.0, current["alt_km"])))
+        coverage_radius = max(record["footprint_km"], min(2600.0, current_horizon * 0.72))
+        status = "visible" if current_distance <= coverage_radius else "away"
         next_entry = next((i for i in visible_indices if i > 0), None)
         if status == "away" and next_entry is not None and next_entry * step_seconds <= 15 * 60:
             status = "near"
@@ -208,7 +212,7 @@ def build_coverage(minutes_ahead: int = 90, step_seconds: int = 60) -> dict[str,
             "mission": record["mission"], "status": status,
             "lat": round(current["lat"], 3), "lon": round(current["lon"], 3),
             "alt_km": round(current["alt_km"], 1), "distance_km": round(current_distance, 1),
-            "estimated_footprint_km": record["footprint_km"],
+            "estimated_footprint_km": round(coverage_radius, 1),
             "next_entry_minutes": round(next_entry * step_seconds / 60) if next_entry is not None else None,
             "track": points,
             "windows": _windows(visible_indices, future_times, step_seconds),

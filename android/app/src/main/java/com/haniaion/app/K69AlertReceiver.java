@@ -10,6 +10,7 @@ import android.media.AudioAttributes;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.Bundle;
 import android.speech.tts.TextToSpeech;
 import android.speech.tts.UtteranceProgressListener;
 import java.util.Locale;
@@ -66,7 +67,9 @@ public class K69AlertReceiver extends BroadcastReceiver {
                 @Override public void onDone(String id) { finish.run(); }
                 @Override public void onError(String id) { finish.run(); }
             });
-            int result = speech.speak(spokenText(seconds), TextToSpeech.QUEUE_FLUSH, null, "haniaion-k69-background");
+            Bundle speechOptions = new Bundle();
+            speechOptions.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
+            int result = speech.speak(spokenText(seconds), TextToSpeech.QUEUE_FLUSH, speechOptions, "haniaion-k69-background");
             if (result == TextToSpeech.ERROR) finish.run();
         });
     }

@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
   <link rel="stylesheet" href="/static/wind.css?v=41">
   <title>HaniaION — Mission Weather Center V8.1</title>
-  <link rel="stylesheet" href="/static/data-status.css?v=4">
+  <link rel="stylesheet" href="/static/data-status.css?v=5"><link rel="stylesheet" href="/static/data-status-compact.css?v=1">
 </head>
 <body class="wind-body">
   <main class="mission-shell">
@@ -29,6 +29,8 @@
         <h1>מפת רוחות ותכנון מסלול</h1>
         <p>מפת Windy מציגה את שכבת הרוח. כלי המסלול פועל מקומית בדפדפן.</p>
       </div>
+      <label><span>אזור תצוגה</span><select id="windRegion"><option value="israel" selected>ישראל</option><option value="middle-east">המזרח התיכון</option><option value="europe">אירופה והים התיכון</option><option value="world">עולם</option></select></label>
+      <label><span>שכבת מידע</span><select id="windOverlay"><option value="wind" selected>רוח</option><option value="gust">משבי רוח</option><option value="rain">גשם</option><option value="temp">טמפרטורה</option><option value="clouds">עננות</option></select></label>
       <label><span>גובה</span>
         <select id="altitudeSelect">
           <option value="surface">פני הקרקע</option><option value="850h">~5,000 ft</option>
@@ -120,7 +122,7 @@
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="/static/wind.js?v=46"></script>
-  <script src="/static/data-status.js?v=4"></script>
+  <script src="/static/wind.js?v=47"></script>
+  <script src="/static/data-status.js?v=5"></script>
 </body>
 </html>
