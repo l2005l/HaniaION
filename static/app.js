@@ -1344,8 +1344,10 @@ function initializeK69Alerts() {
           next.toISOString(),
           JSON.stringify(futureSelected)
         ) || "");
-        if (result && result !== "ok") throw new Error(result);
-        status.textContent = `✓ ${futureSelected.length} התראות Android נקבעו למחזור K של ${formatK69Local(next)} ויפעלו גם כשהאפליקציה סגורה.`;
+        if (result && !result.startsWith("ok:")) throw new Error(result);
+        const confirmed = Number(result.split(":")[1] || 0);
+        if (confirmed !== futureSelected.length) throw new Error(`Android אישר רק ${confirmed} מתוך ${futureSelected.length} התראות.`);
+        status.textContent = `✓ אומתו ${confirmed} התראות בשעון Android המקומי למחזור K של ${formatK69Local(next)}. הן אינן תלויות ב־Push או באפליקציה הפתוחה.`;
         status.className = "k69-schedule-status is-ok";
         return;
       }

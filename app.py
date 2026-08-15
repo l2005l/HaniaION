@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import math
 import os
 import re
 import threading
@@ -208,7 +209,7 @@ if VAPID_KEY_VALID and VAPID_SIGNER is None:
     VAPID_KEY_STATUS = "VAPID private key could not be loaded by pywebpush"
 CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
-APP_VERSION = os.getenv("APP_VERSION", "3.2.0").strip()
+APP_VERSION = os.getenv("APP_VERSION", "3.3.1").strip()
 
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -788,6 +789,51 @@ def satellite_coverage(minutes: int = Query(90, ge=15, le=360)):
         raise HTTPException(status_code=502, detail=f"Satellite source unavailable: {error}") from error
     except Exception as error:
         raise HTTPException(status_code=500, detail=f"Satellite calculation failed: {error}") from error
+
+
+_iss_lock = threading.Lock()
+_iss_cache: dict[str, Any] = {"expires": 0.0, "value": None}
+
+
+@app.get("/api/satellites/iss")
+def iss_live_position():
+    """Server-side HTTPS feed shared by the website and Android app."""
+    now = time.time()
+    with _iss_lock:
+        if _iss_cache["value"] and now < _iss_cache["expires"]:
+            return _iss_cache["value"]
+    try:
+        response = requests.get(
+            "https://api.wheretheiss.at/v1/satellites/25544",
+            timeout=(5, 12),
+            headers={"User-Agent": "HaniaION-ISS/3.3", "Accept": "application/json"},
+        )
+        response.raise_for_status()
+        raw = response.json()
+        lat, lon = float(raw["latitude"]), float(raw["longitude"])
+        lat1, lat2 = math.radians(31.5), math.radians(lat)
+        dlat, dlon = lat2 - lat1, math.radians(lon - 34.8)
+        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        distance = 6371.0 * 2 * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1 - a)))
+        value = {
+            "available": True,
+            "latitude": lat,
+            "longitude": lon,
+            "altitude_km": round(float(raw.get("altitude", 0.0)), 1),
+            "velocity_kmh": round(float(raw.get("velocity", 0.0))),
+            "visibility": raw.get("visibility", "unknown"),
+            "distance_from_israel_km": round(distance),
+            "timestamp": datetime.fromtimestamp(float(raw.get("timestamp", now)), timezone.utc).isoformat(),
+        }
+        with _iss_lock:
+            _iss_cache.update(value=value, expires=now + 8)
+        return value
+    except Exception as error:
+        with _iss_lock:
+            cached = _iss_cache.get("value")
+        if cached:
+            return {**cached, "available": False, "cached": True}
+        raise HTTPException(status_code=502, detail=f"ISS position unavailable: {error}") from error
 
 
 @app.get("/k69-embed", response_class=HTMLResponse)

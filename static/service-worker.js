@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v3-2-ui-satellite-wind-fixes";
+const CACHE_NAME = "haniaion-v3-3-1-native-gnss-iss-alarm";
 
 const APP_SHELL = [
   "/",
@@ -6,11 +6,11 @@ const APP_SHELL = [
   "/satellite",
   "/static/style.css?v=55",
   "/static/gnss-result.css?v=1",
-  "/static/app.js?v=72",
+  "/static/app.js?v=73",
   "/static/wind.css?v=45",
   "/static/wind.js?v=47",
-  "/static/satellite.css?v=21",
-  "/static/satellite.js?v=25",
+  "/static/satellite.css?v=30",
+  "/static/satellite.js?v=30",
   "/static/data-status.css?v=5",
   "/static/data-status-compact.css?v=1",
   "/static/data-status.js?v=5",
