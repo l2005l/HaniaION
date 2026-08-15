@@ -20,9 +20,11 @@ from fastapi.staticfiles import StaticFiles
 from requests.adapters import HTTPAdapter
 try:
     from pywebpush import WebPushException, webpush
+    from py_vapid import Vapid
 except ImportError:  # The main RAAM application can still run before push dependencies are installed.
     WebPushException = Exception
     webpush = None
+    Vapid = None
 from urllib3.util.retry import Retry
 
 from satellite_service import build_coverage
@@ -184,9 +186,29 @@ def _validate_vapid_pair(public_key: str, private_pem: str) -> tuple[bool, str]:
 
 VAPID_PRIVATE_KEY, VAPID_KEY_ERROR = _normalize_vapid_private_key(VAPID_PRIVATE_KEY_RAW)
 VAPID_KEY_VALID, VAPID_KEY_STATUS = _validate_vapid_pair(VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
+
+
+def _create_vapid_signer():
+    """Load the normalized PEM once instead of passing PEM text as base64url.
+
+    pywebpush treats a string argument as a raw/base64url key. Passing PEM text
+    through that path raises a decoding exception before a Push request is sent.
+    """
+    if not VAPID_KEY_VALID or Vapid is None:
+        return None
+    try:
+        return Vapid.from_pem(VAPID_PRIVATE_KEY.encode("ascii"))
+    except Exception:
+        return None
+
+
+VAPID_SIGNER = _create_vapid_signer()
+if VAPID_KEY_VALID and VAPID_SIGNER is None:
+    VAPID_KEY_VALID = False
+    VAPID_KEY_STATUS = "VAPID private key could not be loaded by pywebpush"
 CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
-APP_VERSION = os.getenv("APP_VERSION", "2.29").strip()
+APP_VERSION = os.getenv("APP_VERSION", "3.0.0").strip()
 
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -438,13 +460,13 @@ def send_push_to_all(payload: dict[str, Any]) -> dict[str, int]:
             webpush(
                 subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
                 data=data,
-                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_private_key=VAPID_SIGNER,
                 vapid_claims={"sub": VAPID_SUBJECT},
                 ttl=3600,
             )
             mark_push_success(subscription["id"])
             stats["sent"] += 1
-        except WebPushException as error:
+        except Exception as error:
             status = getattr(getattr(error, "response", None), "status_code", None)
             if status in (404, 410):
                 delete_push_subscription_by_id(subscription["id"])
@@ -527,13 +549,13 @@ def send_push_to_all_for_endpoints(endpoints: list[str], payload: dict[str, Any]
             webpush(
                 subscription_info={"endpoint": subscription["endpoint"], "keys": subscription["keys"]},
                 data=data,
-                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_private_key=VAPID_SIGNER,
                 vapid_claims={"sub": VAPID_SUBJECT},
                 ttl=120,
             )
             mark_push_success(subscription["id"])
             stats["sent"] += 1
-        except WebPushException as error:
+        except Exception as error:
             status = getattr(getattr(error, "response", None), "status_code", None)
             if status in (404, 410):
                 delete_push_subscription_by_id(subscription["id"])
@@ -1180,4 +1202,3 @@ def k69_process_due(authorization: str | None = Header(default=None)):
     process_k69_alerts_once()
     after = len(due_k69_alerts())
     return {"ok": True, "processed": max(0, before - after), "remaining_due": after, "server_time_utc": datetime.now(timezone.utc).isoformat()}
-

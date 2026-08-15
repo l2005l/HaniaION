@@ -1,11 +1,11 @@
-const CACHE_NAME = "haniaion-v2-27-k69-armed-push";
+const CACHE_NAME = "haniaion-v3-cross-platform-alerts";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
   "/static/style.css?v=55",
-  "/static/app.js?v=62",
+  "/static/app.js?v=70",
   "/static/wind.css?v=45",
   "/static/wind.js?v=45",
   "/static/satellite.css?v=21",

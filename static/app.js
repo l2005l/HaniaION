@@ -1264,6 +1264,19 @@ function initializeK69Alerts() {
     .map(input => Number(input.value))
     .filter(Number.isFinite);
 
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia?.("(display-mode: standalone)")?.matches || navigator.standalone === true;
+  const nativeAlerts = window.HaniaAndroid && typeof window.HaniaAndroid.scheduleK69Alerts === "function";
+
+  if (nativeAlerts) {
+    status.textContent = "✓ אפליקציית Android מחוברת להתראות המקומיות של המכשיר.";
+    status.className = "k69-schedule-status is-ok";
+    if (diagnosticsButton) diagnosticsButton.hidden = true;
+  } else if (isIos && !isStandalone) {
+    status.textContent = "באייפון: הוסף תחילה את HaniaION למסך הבית, פתח אותה מהסמל ואז אשר התראות.";
+    status.className = "k69-schedule-status";
+  }
+
   const speakK69Alert = seconds => {
     if (!("speechSynthesis" in window)) return false;
     const text = seconds === 0
@@ -1302,6 +1315,26 @@ function initializeK69Alerts() {
       if (!enabled.checked) throw new Error("הפעל את ההתראות לפני התזמון.");
       const selected = checks();
       if (!selected.length) throw new Error("בחר לפחות זמן התראה אחד.");
+
+      const {next} = calculateNextK69(new Date());
+      const now = Date.now();
+      const futureSelected = selected.filter(seconds => next.getTime() - seconds * 1000 > now + 1500);
+      if (!futureSelected.length) throw new Error("המחזור הבא קרוב מדי. המתן למחזור K הבא.");
+
+      if (nativeAlerts) {
+        const result = String(window.HaniaAndroid.scheduleK69Alerts(
+          next.toISOString(),
+          JSON.stringify(futureSelected)
+        ) || "");
+        if (result && result !== "ok") throw new Error(result);
+        status.textContent = `✓ ${futureSelected.length} התראות Android נקבעו למחזור K של ${formatK69Local(next)} ויפעלו גם כשהאפליקציה סגורה.`;
+        status.className = "k69-schedule-status is-ok";
+        return;
+      }
+
+      if (isIos && !isStandalone) {
+        throw new Error("באייפון יש להוסיף את HaniaION למסך הבית ולפתוח אותה מהסמל לפני הפעלת התראות.");
+      }
 
       if (!("Notification" in window) || !("PushManager" in window) || !("serviceWorker" in navigator)) {
         throw new Error("הדפדפן הזה אינו תומך בהתראות Push ברקע.");
@@ -1344,11 +1377,6 @@ function initializeK69Alerts() {
         const prefPayload = await k69PrefResponse.json().catch(() => ({}));
         throw new Error(prefPayload.detail || "לא ניתן להפעיל את התראות K-69.");
       }
-
-      const {next} = calculateNextK69(new Date());
-      const now = Date.now();
-      const futureSelected = selected.filter(seconds => next.getTime() - seconds * 1000 > now + 1500);
-      if (!futureSelected.length) throw new Error("המחזור הבא קרוב מדי. המתן למחזור K הבא.");
 
       const response = await fetch("/api/k69/schedule", {
         method: "POST",
