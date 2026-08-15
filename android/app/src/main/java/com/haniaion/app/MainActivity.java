@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends android.app.Activity {
-    private static final String HOME_URL = "https://haniaion.onrender.com";
+    private static final String HOME_URL = "https://haniaion-preview.onrender.com";
     private WebView webView;
 
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
@@ -44,7 +44,8 @@ public class MainActivity extends android.app.Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri uri = Uri.parse(url);
-                if ("haniaion.onrender.com".equalsIgnoreCase(uri.getHost())) return false;
+                if ("haniaion-preview.onrender.com".equalsIgnoreCase(uri.getHost())
+        || "haniaion.onrender.com".equalsIgnoreCase(uri.getHost())) return false;
                 startActivity(new Intent(Intent.ACTION_VIEW, uri));
                 return true;
             }
