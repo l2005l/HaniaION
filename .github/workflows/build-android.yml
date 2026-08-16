@@ -10,7 +10,7 @@ on:
       - ".github/workflows/build-android.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -41,3 +41,11 @@ jobs:
           name: HaniaION-Android
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Publish permanent preview download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk HaniaION-preview.apk
+          gh release view preview-latest >/dev/null 2>&1 || gh release create preview-latest --title "HaniaION Android Preview" --notes "הגרסה העדכנית מענף feature/final-ui" --prerelease --target "$GITHUB_SHA"
+          gh release upload preview-latest HaniaION-preview.apk --clobber
