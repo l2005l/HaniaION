@@ -663,6 +663,7 @@ main > section { scroll-margin-top: 92px; }
 .ios-install-steps span { display: inline-grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-weight: 800; }
 .ios-install-steps i { color: var(--text-dim); font-style: normal; }
 body.install-modal-open { overflow: hidden; }
+.install-secondary-copy{margin-top:18px!important;margin-bottom:10px!important;font-size:.9rem}.install-instructions .button+.install-secondary-copy{border-top:1px solid var(--border);padding-top:17px}
 
 @media (max-width: 700px) {
   .status-pill { display: none; }
