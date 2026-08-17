@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/final-ui
+      - main
     paths:
       - "android/**"
       - ".github/workflows/build-android.yml"
@@ -31,21 +32,35 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
-      - name: Build APK
-        working-directory: android
-        run: gradle assembleDebug --no-daemon
+      - name: Restore release signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/haniaion-release.jks
 
-      - name: Save APK
+      - name: Build signed release APK and Play bundle
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_FILE: haniaion-release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: gradle assembleRelease bundleRelease --no-daemon
+
+      - name: Save signed APK and Play bundle
         uses: actions/upload-artifact@v4
         with:
-          name: HaniaION-Android
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: HaniaION-Android-Release
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
-      - name: Publish permanent preview download
+      - name: Publish permanent Android download
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk HaniaION-preview.apk
-          gh release view preview-latest >/dev/null 2>&1 || gh release create preview-latest --title "HaniaION Android Preview" --notes "הגרסה העדכנית מענף feature/final-ui" --prerelease --target "$GITHUB_SHA"
-          gh release upload preview-latest HaniaION-preview.apk --clobber
+          cp android/app/build/outputs/apk/release/app-release.apk HaniaION.apk
+          gh release view android-latest >/dev/null 2>&1 || gh release create android-latest --title "HaniaION Android" --notes "הגרסה החתומה העדכנית" --target "$GITHUB_SHA"
+          gh release upload android-latest HaniaION.apk --clobber
