@@ -46,6 +46,7 @@ const elements = {
   installIosInstructions: byId("installIosInstructions"),
   installFallbackInstructions: byId("installFallbackInstructions"),
   downloadAndroidApkButton: byId("downloadAndroidApkButton"),
+  checkUpdateButton: byId("checkUpdateButton"),
   confirmInstallButton: byId("confirmInstallButton"),
   historyCount: byId("historyCount"),
   historyEmpty: byId("historyEmpty"),
@@ -788,9 +789,33 @@ function initializeInstallExperience() {
 
   [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.addEventListener("click", openInstallModal));
   elements.confirmInstallButton?.addEventListener("click", confirmInstall);
+  elements.checkUpdateButton?.addEventListener("click", () => checkAndroidUpdate(true));
   elements.installModal?.querySelectorAll("[data-close-install]").forEach(node => node.addEventListener("click", closeInstallModal));
   document.addEventListener("keydown", event => { if (event.key === "Escape") closeInstallModal(); });
 }
+
+async function checkAndroidUpdate(manual = false) {
+  if (!window.HaniaAndroid || typeof window.HaniaAndroid.versionCode !== "function") {
+    if (manual) showToast("בדיקת עדכונים מלאה זמינה באפליקציית Android");
+    return;
+  }
+  try {
+    const response = await fetch("/api/app-version", { cache: "no-store" });
+    if (!response.ok) throw new Error("version-check-failed");
+    const latest = await response.json();
+    const currentCode = Number(window.HaniaAndroid.versionCode() || 0);
+    if (Number(latest.version_code) <= currentCode) {
+      if (manual) showToast(`הגרסה ${window.HaniaAndroid.versionName()} מעודכנת`);
+      return;
+    }
+    const accepted = window.confirm(`גרסה חדשה ${latest.version_name} זמינה. לעדכן עכשיו?`);
+    if (accepted) window.HaniaAndroid.openUpdate(latest.download_url);
+  } catch (error) {
+    if (manual) showToast("לא ניתן לבדוק עדכונים כרגע");
+  }
+}
+
+window.addEventListener("load", () => window.setTimeout(() => checkAndroidUpdate(false), 1800));
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {

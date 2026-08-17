@@ -61,6 +61,9 @@ from database import (
 
 
 APP_NAME = "HaniaION RAAM"
+ANDROID_VERSION_CODE = 30400
+ANDROID_VERSION_NAME = "3.4.0"
+ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-latest/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
@@ -902,6 +905,17 @@ def health():
     return {
         "status": "ok" if (not db["enabled"] or db["connected"]) else "degraded",
         "database": db,
+    }
+
+
+@app.get("/api/app-version")
+def app_version():
+    return {
+        "platform": "android",
+        "version_code": ANDROID_VERSION_CODE,
+        "version_name": ANDROID_VERSION_NAME,
+        "download_url": ANDROID_APK_URL,
+        "required": False,
     }
 
 

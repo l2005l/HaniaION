@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.location.GnssStatus;
 import android.location.Location;
 import android.location.LocationListener;
@@ -178,4 +179,23 @@ public class NativeBridge {
     }
 
     @JavascriptInterface public String platform() { return "android-native"; }
+
+    @JavascriptInterface public int versionCode() {
+        try {
+            if (Build.VERSION.SDK_INT >= 28) return (int) activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).getLongVersionCode();
+            return activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).versionCode;
+        } catch (Exception ignored) { return 0; }
+    }
+
+    @JavascriptInterface public String versionName() {
+        try { return activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).versionName; }
+        catch (Exception ignored) { return "unknown"; }
+    }
+
+    @JavascriptInterface public void openUpdate(String url) {
+        activity.runOnUiThread(() -> {
+            try { activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
+            catch (Exception ignored) { }
+        });
+    }
 }
