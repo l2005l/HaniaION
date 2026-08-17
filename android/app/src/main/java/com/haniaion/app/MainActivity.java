@@ -48,7 +48,8 @@ public class MainActivity extends android.app.Activity {
                 top = insets.getSystemWindowInsetTop();
                 bottom = insets.getSystemWindowInsetBottom();
             }
-            view.setPadding(0, top, 0, bottom);
+            int extraTop = Math.round(18 * getResources().getDisplayMetrics().density);
+            view.setPadding(0, top + extraTop, 0, bottom);
             return insets;
         });
         setContentView(webView);
