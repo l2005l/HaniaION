@@ -48,7 +48,13 @@ public class NativeBridge {
         locationManager = (LocationManager) activity.getSystemService(Activity.LOCATION_SERVICE);
         speech = new TextToSpeech(activity.getApplicationContext(), status -> {
             speechReady = status == TextToSpeech.SUCCESS;
-            if (speechReady && speech != null) speech.setLanguage(new Locale("he", "IL"));
+            if (speechReady && speech != null) {
+                speech.setLanguage(new Locale("he", "IL"));
+                speech.setAudioAttributes(new android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build());
+            }
         });
     }
 
@@ -150,7 +156,9 @@ public class NativeBridge {
         if (!speechReady) return "מנוע הקול עדיין נטען. נסה שוב בעוד רגע.";
         activity.runOnUiThread(() -> {
             speech.stop();
-            speech.speak(message(seconds), TextToSpeech.QUEUE_FLUSH, null, "haniaion-k69-test");
+            Bundle options = new Bundle();
+            options.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
+            speech.speak(message(seconds), TextToSpeech.QUEUE_FLUSH, options, "haniaion-k69-test");
         });
         return "ok";
     }

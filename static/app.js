@@ -1,5 +1,7 @@
 "use strict";
 
+if (window.HaniaAndroid) document.documentElement.classList.add("android-native");
+
 const byId = id => document.getElementById(id);
 
 function scrollToTarget(id, block = "start", offset = 0) {

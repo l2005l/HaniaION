@@ -253,6 +253,11 @@ html[data-theme="light"] .card { background: linear-gradient(145deg, rgba(255,25
 .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; padding: 11px 15px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface-solid); color: var(--text); box-shadow: var(--shadow); font-size: .78rem; transition: opacity .2s, transform .2s; z-index: 100; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+/* Native Android WebView: keep app chrome clear of system status/navigation bars. */
+.android-native body.focused-app { padding-top: 38px; }
+.android-native .focused-header { top: 38px; }
+.android-native .toast { bottom: 108px; }
+
 @media (max-width: 1050px) {
   .topnav { display: none; }
   .hero-section { grid-template-columns: 1fr; padding-top: 70px; }
