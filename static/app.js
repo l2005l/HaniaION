@@ -789,7 +789,10 @@ function initializeInstallExperience() {
 
   [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.addEventListener("click", openInstallModal));
   elements.confirmInstallButton?.addEventListener("click", confirmInstall);
-  elements.checkUpdateButton?.addEventListener("click", () => checkAndroidUpdate(true));
+  elements.checkUpdateButton?.addEventListener("click", () => {
+    closeInstallModal();
+    window.setTimeout(() => checkAndroidUpdate(true), 120);
+  });
   elements.installModal?.querySelectorAll("[data-close-install]").forEach(node => node.addEventListener("click", closeInstallModal));
   document.addEventListener("keydown", event => { if (event.key === "Escape") closeInstallModal(); });
 }
