@@ -813,6 +813,10 @@ async function checkAndroidUpdate(manual = false) {
       if (manual) showToast(`הגרסה ${window.HaniaAndroid.versionName()} מעודכנת`);
       return;
     }
+    if (!latest.available) {
+      if (manual) showToast("העדכון עדיין בהכנה — נסה שוב בעוד מספר דקות");
+      return;
+    }
     const accepted = window.confirm(`גרסה חדשה ${latest.version_name} זמינה. לעדכן עכשיו?`);
     if (accepted) window.HaniaAndroid.openUpdate(latest.download_url);
   } catch (error) {
@@ -1315,9 +1319,11 @@ function initializeK69Alerts() {
       }
     }
     if (!("speechSynthesis" in window)) return false;
-    const text = seconds === 0
-      ? "מפתח קיי הגיע עכשיו"
-      : `בעוד ${seconds === 60 ? "דקה" : seconds === 30 ? "שלושים שניות" : "עשר שניות"} יגיע המפתח`;
+    const text = seconds === 300
+      ? "הגיע הזמן להדליק איגי"
+      : seconds === 0
+        ? "מפתח קיי הגיע עכשיו"
+        : `בעוד ${seconds === 60 ? "דקה" : seconds === 30 ? "שלושים שניות" : "עשר שניות"} יגיע המפתח`;
     try {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);

@@ -27,7 +27,7 @@ import java.util.List;
 
 public class MainActivity extends android.app.Activity {
     private static final String HOME_URL = "https://haniaion-preview.onrender.com";
-    static final String K69_CHANNEL_ID = "k69_alerts_v2";
+    static final String K69_CHANNEL_ID = "k69_alerts_v3";
     private WebView webView;
     private NativeBridge nativeBridge;
 
@@ -83,13 +83,13 @@ public class MainActivity extends android.app.Activity {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(K69_CHANNEL_ID, "התראות K-69 עם קול", NotificationManager.IMPORTANCE_HIGH);
+            NotificationChannel channel = new NotificationChannel(K69_CHANNEL_ID, "התראות K-69", NotificationManager.IMPORTANCE_HIGH);
             channel.setDescription("התראות למחזורי K-69");
             channel.enableVibration(true);
             channel.setVibrationPattern(new long[]{0, 350, 180, 350});
             channel.setSound(
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).build()
+                new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build()
             );
             getSystemService(NotificationManager.class).createNotificationChannel(channel);
         }

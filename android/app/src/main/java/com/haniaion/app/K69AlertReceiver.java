@@ -24,14 +24,14 @@ public class K69AlertReceiver extends BroadcastReceiver {
     }
 
     static void showNotification(Context context, int seconds, int notificationId) {
-        String body = seconds == 0 ? "K הגיע עכשיו" : seconds == 60 ? "בעוד דקה יגיע K" : "בעוד " + seconds + " שניות יגיע K";
+        String body = seconds == 300 ? "הגיע הזמן להדליק איגי" : seconds == 0 ? "K הגיע עכשיו" : seconds == 60 ? "בעוד דקה יגיע K" : "בעוד " + seconds + " שניות יגיע K";
         Intent open = new Intent(context, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         PendingIntent content = PendingIntent.getActivity(context, 0, open, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification notification = new Notification.Builder(context, MainActivity.K69_CHANNEL_ID)
             .setSmallIcon(com.haniaion.app.R.drawable.ic_haniaion)
             .setContentTitle("HaniaION — התראת K-69")
             .setContentText(body).setContentIntent(content).setAutoCancel(true)
-            .setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setCategory(Notification.CATEGORY_REMINDER).setVisibility(Notification.VISIBILITY_PUBLIC)
             .setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL)
             .build();
         ((NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE))
@@ -59,7 +59,7 @@ public class K69AlertReceiver extends BroadcastReceiver {
             TextToSpeech speech = holder[0];
             speech.setLanguage(new Locale("he", "IL"));
             speech.setAudioAttributes(new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                 .build());
             speech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
@@ -75,6 +75,7 @@ public class K69AlertReceiver extends BroadcastReceiver {
     }
 
     private static String spokenText(int seconds) {
+        if (seconds == 300) return "הגיע הזמן להדליק איגי";
         if (seconds == 0) return "מפתח קיי הגיע עכשיו";
         if (seconds == 60) return "בעוד דקה יגיע המפתח";
         if (seconds == 30) return "בעוד שלושים שניות יגיע המפתח";

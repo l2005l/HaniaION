@@ -61,9 +61,9 @@ from database import (
 
 
 APP_NAME = "HaniaION RAAM"
-ANDROID_VERSION_CODE = 30403
-ANDROID_VERSION_NAME = "3.4.3"
-ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-latest/HaniaION.apk"
+ANDROID_VERSION_CODE = 30404
+ANDROID_VERSION_NAME = "3.4.4"
+ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.4.4/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
@@ -487,7 +487,9 @@ def process_k69_alerts_once() -> None:
         return
     for item in due_k69_alerts():
         seconds = int(item["seconds_before"])
-        if seconds == 0:
+        if seconds == 300:
+            body = "הגיע הזמן להדליק איגי 🔔"
+        elif seconds == 0:
             body = "K הגיע עכשיו 🔔"
         elif seconds == 1:
             body = "בעוד שנייה יגיע המפתח 🔔"
@@ -910,11 +912,17 @@ def health():
 
 @app.get("/api/app-version")
 def app_version():
+    available = False
+    try:
+        available = requests.head(ANDROID_APK_URL, allow_redirects=True, timeout=5).status_code == 200
+    except requests.RequestException:
+        pass
     return {
         "platform": "android",
         "version_code": ANDROID_VERSION_CODE,
         "version_name": ANDROID_VERSION_NAME,
         "download_url": ANDROID_APK_URL,
+        "available": available,
         "required": False,
     }
 

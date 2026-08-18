@@ -1,12 +1,12 @@
-const CACHE_NAME = "haniaion-v3-3-2-download-reset-result";
+const CACHE_NAME = "haniaion-v3-4-4-k69-five-minute";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
-  "/static/style.css?v=55",
+  "/static/style.css?v=57",
   "/static/gnss-result.css?v=2",
-  "/static/app.js?v=74",
+  "/static/app.js?v=78",
   "/static/wind.css?v=45",
   "/static/wind.js?v=47",
   "/static/satellite.css?v=31",
@@ -116,6 +116,7 @@ self.addEventListener("fetch", event => {
 const k69ArmedCycles = new Map();
 
 function k69NotificationText(seconds) {
+  if (seconds === 300) return "הגיע הזמן להדליק איגי 🔔";
   if (seconds === 0) return "המפתח הגיע עכשיו 🔔";
   if (seconds === 60) return "בעוד דקה יגיע המפתח 🔔";
   return `בעוד ${seconds} שניות יגיע המפתח 🔔`;

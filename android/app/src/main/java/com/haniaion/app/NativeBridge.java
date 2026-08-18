@@ -51,7 +51,7 @@ public class NativeBridge {
             if (speechReady && speech != null) {
                 speech.setLanguage(new Locale("he", "IL"));
                 speech.setAudioAttributes(new android.media.AudioAttributes.Builder()
-                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
                     .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build());
             }
@@ -174,6 +174,7 @@ public class NativeBridge {
     }
 
     private String message(int seconds) {
+        if (seconds == 300) return "הגיע הזמן להדליק איגי";
         if (seconds == 0) return "מפתח קיי הגיע עכשיו";
         if (seconds == 60) return "בעוד דקה יגיע המפתח";
         if (seconds == 30) return "בעוד שלושים שניות יגיע המפתח";
