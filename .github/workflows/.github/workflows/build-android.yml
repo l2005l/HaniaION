@@ -42,10 +42,18 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Publish permanent preview download
+      - name: Publish permanent Android download
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk HaniaION-preview.apk
-          gh release view preview-latest >/dev/null 2>&1 || gh release create preview-latest --title "HaniaION Android Preview" --notes "הגרסה העדכנית מענף feature/final-ui" --prerelease --target "$GITHUB_SHA"
-          gh release upload preview-latest HaniaION-preview.apk --clobber
+          cp android/app/build/outputs/apk/release/app-release.apk HaniaION.apk
+
+          VERSION_NAME=$(sed -n "s/.*versionName '\([^']*\)'.*/\1/p" android/app/build.gradle | head -1)
+          VERSION_TAG="android-v${VERSION_NAME}"
+          test -n "$VERSION_NAME"
+
+          gh release view "$VERSION_TAG" >/dev/null 2>&1 || gh release create "$VERSION_TAG" --title "HaniaION ${VERSION_NAME}" --notes "גרסת Android חתומה ${VERSION_NAME}" --target "$GITHUB_SHA"
+          gh release upload "$VERSION_TAG" HaniaION.apk --clobber
+
+          gh release view android-latest >/dev/null 2>&1 || gh release create android-latest --title "HaniaION Android" --notes "הגרסה החתומה העדכנית" --target "$GITHUB_SHA"
+          gh release upload android-latest HaniaION.apk --clobber
