@@ -61,8 +61,8 @@ from database import (
 
 
 APP_NAME = "HaniaION RAAM"
-ANDROID_VERSION_CODE = 30404
-ANDROID_VERSION_NAME = "3.4.4"
+ANDROID_VERSION_CODE = 30405
+ANDROID_VERSION_NAME = "3.4.5"
 ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.4.4/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
@@ -212,7 +212,7 @@ if VAPID_KEY_VALID and VAPID_SIGNER is None:
     VAPID_KEY_STATUS = "VAPID private key could not be loaded by pywebpush"
 CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
-APP_VERSION = os.getenv("APP_VERSION", "3.3.2").strip()
+APP_VERSION = os.getenv("APP_VERSION", "3.4.5").strip()
 
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")

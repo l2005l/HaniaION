@@ -26,8 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends android.app.Activity {
-    private static final String HOME_URL = "https://haniaion-preview.onrender.com";
-    static final String K69_CHANNEL_ID = "k69_alerts_v3";
+   private static final String HOME_URL = "https://haniaion-283044732985.me-west1.run.app";
+    static final String K69_CHANNEL_ID = "k69_alerts_v4";
     private WebView webView;
     private NativeBridge nativeBridge;
 
@@ -64,7 +64,8 @@ public class MainActivity extends android.app.Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri uri = Uri.parse(url);
-                if ("haniaion-preview.onrender.com".equalsIgnoreCase(uri.getHost())
+                if ("haniaion-283044732985.me-west1.run.app".equalsIgnoreCase(uri.getHost())
+        || "haniaion-preview.onrender.com".equalsIgnoreCase(uri.getHost())
         || "haniaion.onrender.com".equalsIgnoreCase(uri.getHost())) return false;
                 startActivity(new Intent(Intent.ACTION_VIEW, uri));
                 return true;
