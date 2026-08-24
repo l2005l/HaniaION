@@ -13,6 +13,9 @@ import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.view.View;
 import android.view.WindowInsets;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
@@ -20,6 +23,10 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -30,6 +37,7 @@ public class MainActivity extends android.app.Activity {
     static final String K69_CHANNEL_ID = "k69_alerts_v4";
     private WebView webView;
     private NativeBridge nativeBridge;
+    private View splashView;
 
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override protected void onCreate(Bundle state) {
@@ -37,8 +45,9 @@ public class MainActivity extends android.app.Activity {
         createNotificationChannel();
         requestAppPermissions();
 
-        webView = new WebView(this);
-        webView.setOnApplyWindowInsetsListener((view, insets) -> {
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(Color.rgb(6, 16, 29));
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
             int top;
             int bottom;
             if (Build.VERSION.SDK_INT >= 30) {
@@ -52,7 +61,42 @@ public class MainActivity extends android.app.Activity {
             view.setPadding(0, top + extraTop, 0, bottom);
             return insets;
         });
-        setContentView(webView);
+        webView = new WebView(this);
+        webView.setBackgroundColor(Color.rgb(6, 16, 29));
+        root.addView(webView, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        LinearLayout splash = new LinearLayout(this);
+        splash.setOrientation(LinearLayout.VERTICAL);
+        splash.setGravity(Gravity.CENTER);
+        splash.setPadding(dp(28), dp(28), dp(28), dp(28));
+        splash.setBackgroundColor(Color.rgb(6, 16, 29));
+
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.ic_haniaion);
+        LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(dp(92), dp(92));
+        logoParams.bottomMargin = dp(28);
+        splash.addView(logo, logoParams);
+
+        TextView message = new TextView(this);
+        message.setText("ההפעלה הראשונה עשויה להימשך מספר שניות");
+        message.setTextColor(Color.WHITE);
+        message.setTextSize(18);
+        message.setGravity(Gravity.CENTER);
+        message.setTextDirection(View.TEXT_DIRECTION_RTL);
+        splash.addView(message, new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        splashView = splash;
+        root.addView(splash, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        ));
+        setContentView(root);
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -62,6 +106,15 @@ public class MainActivity extends android.app.Activity {
         nativeBridge = new NativeBridge(this);
         webView.addJavascriptInterface(nativeBridge, "HaniaAndroid");
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (splashView != null && splashView.getVisibility() == View.VISIBLE) {
+                    splashView.animate().alpha(0f).setDuration(220).withEndAction(() ->
+                        splashView.setVisibility(View.GONE)
+                    ).start();
+                }
+            }
+
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri uri = Uri.parse(url);
                 if ("haniaion-283044732985.me-west1.run.app".equalsIgnoreCase(uri.getHost())
@@ -80,6 +133,10 @@ public class MainActivity extends android.app.Activity {
             @Override public void onPermissionRequest(PermissionRequest request) { request.grant(request.getResources()); }
         });
         webView.loadUrl(HOME_URL);
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
     private void createNotificationChannel() {
