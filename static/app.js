@@ -1828,6 +1828,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const panel = document.getElementById(id);
     if (!panel) return;
     panel.classList.remove("is-collapsed");
+    panel.classList.add("is-visible");
     window.setTimeout(() => scrollToTarget(id, "start", 92), 20);
   };
   const closePanel = id => {
@@ -1841,6 +1842,26 @@ document.addEventListener("DOMContentLoaded", () => {
   }));
   document.querySelectorAll("[data-panel-close]").forEach(button => button.addEventListener("click", () => closePanel(button.dataset.panelClose)));
   if (location.hash === "#history" || location.hash === "#analytics") openPanel(location.hash.slice(1));
+
+  const statusBar = document.getElementById("systemStatusBar");
+  if (statusBar) {
+    let hideStatusTimer;
+    const refreshStatusVisibility = () => {
+      clearTimeout(hideStatusTimer);
+      statusBar.style.display = "block";
+      if (statusBar.classList.contains("ok")) {
+        hideStatusTimer = window.setTimeout(() => {
+          if (statusBar.classList.contains("ok")) statusBar.style.display = "none";
+        }, 3000);
+      }
+    };
+    new MutationObserver(refreshStatusVisibility).observe(statusBar, {
+      attributes: true,
+      attributeFilter: ["class"],
+      childList: true
+    });
+    refreshStatusVisibility();
+  }
 });
 
 // v2.17 — receive native Android GNSS measurements when running inside HaniaION APK
