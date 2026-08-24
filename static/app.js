@@ -1846,14 +1846,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const statusBar = document.getElementById("systemStatusBar");
   if (statusBar) {
     let hideStatusTimer;
+    let okCountdownStarted = false;
     const refreshStatusVisibility = () => {
-      clearTimeout(hideStatusTimer);
-      statusBar.style.display = "block";
       if (statusBar.classList.contains("ok")) {
+        if (okCountdownStarted || statusBar.style.display === "none") return;
+        okCountdownStarted = true;
+        clearTimeout(hideStatusTimer);
         hideStatusTimer = window.setTimeout(() => {
           if (statusBar.classList.contains("ok")) statusBar.style.display = "none";
         }, 3000);
+        return;
       }
+      okCountdownStarted = false;
+      clearTimeout(hideStatusTimer);
+      statusBar.style.display = "block";
     };
     new MutationObserver(refreshStatusVisibility).observe(statusBar, {
       attributes: true,
