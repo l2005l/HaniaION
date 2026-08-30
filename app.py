@@ -218,6 +218,15 @@ app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+@app.middleware("http")
+async def require_web_app_revalidation(request: Request, call_next):
+    """Keep deployed web-app entry points from becoming stale in clients."""
+    response = await call_next(request)
+    if request.url.path in {"/", "/service-worker.js", "/static/app.js"}:
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
+
+
 @app.on_event("startup")
 def startup_database() -> None:
     """Create the small monitoring schema and start the K-69 scheduler."""
