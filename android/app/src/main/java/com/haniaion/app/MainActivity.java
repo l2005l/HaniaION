@@ -12,6 +12,8 @@ import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.graphics.Color;
 import android.view.Gravity;
@@ -19,11 +21,15 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.webkit.GeolocationPermissions;
 import android.webkit.PermissionRequest;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -33,11 +39,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends android.app.Activity {
-   private static final String HOME_URL = "https://haniaion-283044732985.me-west1.run.app";
+    private static final String HOME_URL = "https://haniaion-283044732985.me-west1.run.app";
+    private static final long[] RETRY_DELAYS_MS = {2_000, 4_000, 8_000};
     static final String K69_CHANNEL_ID = "k69_alerts_v4";
     private WebView webView;
     private NativeBridge nativeBridge;
     private View splashView;
+    private TextView splashMessage;
+    private Button retryButton;
+    private final Handler retryHandler = new Handler(Looper.getMainLooper());
+    private int retryCount;
+    private boolean loadFailed;
+    private boolean retryScheduled;
 
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override protected void onCreate(Bundle state) {
@@ -80,16 +93,28 @@ public class MainActivity extends android.app.Activity {
         logoParams.bottomMargin = dp(28);
         splash.addView(logo, logoParams);
 
-        TextView message = new TextView(this);
-        message.setText("ההפעלה הראשונה עשויה להימשך מספר שניות");
-        message.setTextColor(Color.WHITE);
-        message.setTextSize(18);
-        message.setGravity(Gravity.CENTER);
-        message.setTextDirection(View.TEXT_DIRECTION_RTL);
-        splash.addView(message, new LinearLayout.LayoutParams(
+        splashMessage = new TextView(this);
+        splashMessage.setText("ההפעלה הראשונה עשויה להימשך מספר שניות");
+        splashMessage.setTextColor(Color.WHITE);
+        splashMessage.setTextSize(18);
+        splashMessage.setGravity(Gravity.CENTER);
+        splashMessage.setTextDirection(View.TEXT_DIRECTION_RTL);
+        splash.addView(splashMessage, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ));
+
+        retryButton = new Button(this);
+        retryButton.setText("נסה שוב");
+        retryButton.setTextSize(17);
+        retryButton.setVisibility(View.GONE);
+        retryButton.setOnClickListener(view -> startInitialLoad());
+        LinearLayout.LayoutParams retryParams = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        retryParams.topMargin = dp(22);
+        splash.addView(retryButton, retryParams);
 
         splashView = splash;
         root.addView(splash, new FrameLayout.LayoutParams(
@@ -106,13 +131,34 @@ public class MainActivity extends android.app.Activity {
         nativeBridge = new NativeBridge(this);
         webView.addJavascriptInterface(nativeBridge, "HaniaAndroid");
         webView.setWebViewClient(new WebViewClient() {
+            @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                loadFailed = false;
+                retryScheduled = false;
+            }
+
             @Override public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                if (splashView != null && splashView.getVisibility() == View.VISIBLE) {
-                    splashView.animate().alpha(0f).setDuration(220).withEndAction(() ->
-                        splashView.setVisibility(View.GONE)
-                    ).start();
+                if (loadFailed || !isHomePage(url)) return;
+                view.evaluateJavascript(
+                    "(function(){return document.body && /rate\\s+exceeded/i.test(document.body.innerText || '');})()",
+                    result -> {
+                        if ("true".equals(result)) handleInitialLoadFailure();
+                        else if (!loadFailed) hideSplash();
+                    }
+                );
+            }
+
+            @Override public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
+                super.onReceivedHttpError(view, request, response);
+                if (request.isForMainFrame() && (response.getStatusCode() == 429 || response.getStatusCode() >= 500)) {
+                    handleInitialLoadFailure();
                 }
+            }
+
+            @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                super.onReceivedError(view, request, error);
+                if (request.isForMainFrame()) handleInitialLoadFailure();
             }
 
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -132,7 +178,55 @@ public class MainActivity extends android.app.Activity {
             }
             @Override public void onPermissionRequest(PermissionRequest request) { request.grant(request.getResources()); }
         });
+        startInitialLoad();
+    }
+
+    private boolean isHomePage(String url) {
+        if (url == null) return false;
+        String host = Uri.parse(url).getHost();
+        return "haniaion-283044732985.me-west1.run.app".equalsIgnoreCase(host)
+            || "haniaion-preview.onrender.com".equalsIgnoreCase(host)
+            || "haniaion.onrender.com".equalsIgnoreCase(host);
+    }
+
+    private void startInitialLoad() {
+        retryHandler.removeCallbacksAndMessages(null);
+        retryCount = 0;
+        loadFailed = false;
+        retryScheduled = false;
+        splashView.animate().cancel();
+        splashView.setAlpha(1f);
+        splashView.setVisibility(View.VISIBLE);
+        splashMessage.setText("ההפעלה הראשונה עשויה להימשך מספר שניות");
+        retryButton.setVisibility(View.GONE);
         webView.loadUrl(HOME_URL);
+    }
+
+    private void handleInitialLoadFailure() {
+        if (splashView.getVisibility() != View.VISIBLE || retryScheduled) return;
+        loadFailed = true;
+        if (retryCount < RETRY_DELAYS_MS.length) {
+            long delay = RETRY_DELAYS_MS[retryCount++];
+            retryScheduled = true;
+            webView.stopLoading();
+            splashMessage.setText("לא הצלחנו להתחבר. מנסים שוב בעוד " + (delay / 1000) + " שניות…");
+            retryHandler.postDelayed(() -> {
+                retryScheduled = false;
+                webView.loadUrl(HOME_URL);
+            }, delay);
+        } else {
+            webView.stopLoading();
+            splashMessage.setText("לא ניתן להתחבר לשירות כרגע. בדקו את החיבור לאינטרנט ונסו שוב.");
+            retryButton.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideSplash() {
+        retryHandler.removeCallbacksAndMessages(null);
+        if (splashView.getVisibility() != View.VISIBLE) return;
+        splashView.animate().alpha(0f).setDuration(220).withEndAction(() ->
+            splashView.setVisibility(View.GONE)
+        ).start();
     }
 
     private int dp(int value) {
@@ -179,6 +273,7 @@ public class MainActivity extends android.app.Activity {
     }
 
     @Override protected void onDestroy() {
+        retryHandler.removeCallbacksAndMessages(null);
         if (nativeBridge != null) nativeBridge.shutdown();
         if (webView != null) webView.destroy();
         super.onDestroy();
