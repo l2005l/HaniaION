@@ -1491,8 +1491,19 @@ document.addEventListener("DOMContentLoaded", initializeK69Alerts);
   const dist=(a,b)=>{const R=6371000,p=Math.PI/180,dLat=(b.latitude-a.latitude)*p,dLon=(b.longitude-a.longitude)*p,x=Math.sin(dLat/2)**2+Math.cos(a.latitude*p)*Math.cos(b.latitude*p)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
   const setLive=(title,text)=>{const el=$('gnssLiveStatus'); if(el) el.innerHTML=`<strong>${title}</strong><span>${text}</span>`;};
   const progressEl=$('gnssTestProgress'),stageEl=$('gnssTestStage'),etaEl=$('gnssTestEta'),metaEl=$('gnssTestProgressMeta'),progressBar=$('gnssTestProgressBar');
+  const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+  const keepGnssVisible=(target,force=false)=>{
+    if(!target)return;
+    const header=$('top')?.previousElementSibling?.classList.contains('focused-header')?$('top').previousElementSibling:document.querySelector('.focused-header');
+    const visibleTop=Math.max(0,header?.getBoundingClientRect().bottom||0)+12;
+    const visibleBottom=window.innerHeight-12;
+    const rect=target.getBoundingClientRect();
+    if(!force&&rect.top>=visibleTop&&rect.bottom<=visibleBottom)return;
+    const top=window.scrollY+rect.top-visibleTop;
+    window.scrollTo({top:Math.max(0,top),behavior:reducedMotion.matches?'auto':'smooth'});
+  };
   const clearResult=()=>{const target=$('gnss-status-target');if(!target)return;target.classList.remove('has-result','result-ok','result-warn','result-alert','result-neutral');};
-  const emphasizeResult=(kind='neutral')=>{const target=$('gnss-status-target');if(!target)return;clearResult();target.classList.add('has-result',`result-${kind}`);window.setTimeout(()=>scrollToTarget('gnss-status-target','center',0),80);};
+  const emphasizeResult=(kind='neutral')=>{const target=$('gnss-status-target');if(!target)return;clearResult();target.classList.add('has-result',`result-${kind}`);window.setTimeout(()=>keepGnssVisible(target,true),80);};
   function showProgress(show=true){if(progressEl)progressEl.classList.toggle('hidden',!show);}
   function updateProgress(m){
     if(!progressEl)return;
@@ -1506,6 +1517,7 @@ document.addEventListener("DOMContentLoaded", initializeK69Alerts);
     if(metaEl)metaEl.textContent=`${count} דגימות · ביטחון ${conf||0}%`;
     if(etaEl)etaEl.textContent=firstFix ? (remain>0?`זמן משוער: עד ${remain} שנ׳`:'עשוי להסתיים בכל רגע') : 'ממתין ל־Fix ראשון';
     if(progressBar)progressBar.style.width=`${Math.min(96,stageProgress)}%`;
+    if(firstFix)window.requestAnimationFrame(()=>keepGnssVisible(progressEl));
   }
   function resetButton(){button.disabled=false;button.textContent='📱 בדוק GPS עכשיו';}
   function stopWatch(){if(watchId!==null) navigator.geolocation.clearWatch(watchId);if(timer)clearInterval(timer);watchId=null;timer=null;}
@@ -1818,7 +1830,7 @@ else{
     $('gnssBadge').className='gnss-badge '+cls;$('gnssBadge').textContent=title;$('gnssReason').textContent=reason;setLive(title,`${samples.length} דגימות נותחו · ביטחון ${m.confidence}%${nativeLabel}`);emphasizeResult(cls==='ok'?'ok':cls==='warn'?'warn':'alert');const last=samples[samples.length-1];regional(last.latitude,last.longitude,$('gnssShare').checked,m.score,m.accuracy,m.fixRatio);
   }
   function maybeFinish(){const m=metrics();if(!m)return;paint(m);const enoughNative=m.nativeReady&&samples.length>=6&&m.elapsed>=10&&m.confidence>=70&&m.accuracy<=25&&Number(m.native?.satellitesUsed||0)>=4;const enoughStable=samples.length>=8&&m.elapsed>=15&&m.confidence>=75&&m.accuracy<=25;const enoughAny=samples.length>=12&&m.elapsed>=22&&m.confidence>=82;if(enoughNative||enoughStable||enoughAny)finish();}
-  function begin(){if(firstFix)return;firstFix=true;started=Date.now();updateProgress(metrics());scrollToTarget('gnss-status-target','start',112);setLive('בודק GPS בזמן אמת','אוסף דגימות ומעריך אם כבר יש מספיק מידע.');timer=setInterval(()=>{const m=metrics();if(m){paint(m);updateProgress(m);button.textContent=`בודק… ${samples.length} דגימות`;if(m.elapsed>=45)finish(true);else maybeFinish();}},1000);}
+  function begin(){if(firstFix)return;firstFix=true;started=Date.now();updateProgress(metrics());window.requestAnimationFrame(()=>keepGnssVisible(progressEl,true));setLive('בודק GPS בזמן אמת','אוסף דגימות ומעריך אם כבר יש מספיק מידע.');timer=setInterval(()=>{const m=metrics();if(m){paint(m);updateProgress(m);button.textContent=`בודק… ${samples.length} דגימות`;if(m.elapsed>=45)finish(true);else maybeFinish();}},1000);}
   button.addEventListener('click',()=>{if(!navigator.geolocation){$('gnssReason').textContent='הדפדפן אינו תומך בבדיקת מיקום.';return;}clearResult();$('gnssBadge').className='gnss-badge neutral';$('gnssBadge').textContent='בדיקה חדשה';['gnssAccuracy','gnssFix','gnssJumps','gnssScore','gnssSamples','gnssConfidence'].forEach(id=>{const e=$(id);if(e)e.textContent='—';});if($('gnssMeter'))$('gnssMeter').style.width='0%';samples=[];firstFix=false;lastSampleAt=0;button.disabled=true;button.textContent='📍 מבקש הרשאת מיקום…';showProgress(true);updateProgress(null);setLive('ממתין להרשאה','הרשאת Location נדרשת רק לבדיקה המקומית.');$('gnssReason').textContent='התוצאה הקודמת נוקתה. אוסף נתונים לבדיקה החדשה…';watchId=navigator.geolocation.watchPosition(p=>{begin();const now=Date.now();samples.push({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy,t:now});lastSampleAt=now;const m=metrics();paint(m);setLive('בודק GPS בזמן אמת',`נאספו ${samples.length} דגימות · ביטחון ${m?m.confidence:0}%`);$('gnssReason').textContent=p.coords.accuracy>35?'הקליטה כרגע חלשה. אם המצב נמשך, עבור לאזור פתוח לשמיים.':'הבדיקה פעילה והמדדים מתעדכנים בזמן אמת.';maybeFinish();},permissionError,{enableHighAccuracy:true,maximumAge:0,timeout:15000});});
 })();
 
