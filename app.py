@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import logging
 import math
 import os
 import re
@@ -69,6 +70,8 @@ EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
 VAPID_PRIVATE_KEY_RAW = os.getenv("VAPID_PRIVATE_KEY", "").replace("\\n", "\n").strip()
 VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com").strip()
+
+logger = logging.getLogger(__name__)
 
 
 def _normalize_vapid_private_key(value: str) -> tuple[str, str | None]:
@@ -221,7 +224,18 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.on_event("startup")
 def startup_database() -> None:
     """Create the small monitoring schema and start the K-69 scheduler."""
-    initialize_database()
+    try:
+        initialize_database()
+    except Exception as error:
+        # Deliberately omit the exception message: database driver errors can
+        # include connection details that must not be written to application logs.
+        logger.error(
+            "Database initialization failed; continuing without the K-69 alert worker "
+            "(exception type: %s)",
+            type(error).__name__,
+        )
+        return
+
     if DATABASE_ENABLED and webpush is not None and VAPID_KEY_VALID:
         worker = threading.Thread(target=k69_alert_worker, name="k69-alert-worker", daemon=True)
         worker.start()
