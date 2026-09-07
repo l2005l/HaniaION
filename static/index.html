@@ -12,6 +12,14 @@
   <link rel="stylesheet" href="/static/style.css?v=57">
   <title>HaniaION — BRDC to RAAM</title>
   <link rel="stylesheet" href="/static/data-status.css?v=5"><link rel="stylesheet" href="/static/data-status-compact.css?v=1"><link rel="stylesheet" href="/static/gnss-result.css?v=2">
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-45QVN8YE3W"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-45QVN8YE3W');
+  </script>
 </head>
 <body class="focused-app">
   <header class="focused-header">
@@ -256,5 +264,13 @@
   <script src="/static/spoofing.js?v=5" defer></script>
   <script src="/static/app.js?v=81" defer></script>
   <script src="/static/data-status.js?v=5"></script>
+  <script>
+    document.addEventListener('click', function(event) {
+      const link = event.target.closest('a[href$=".apk"]');
+      if (link && typeof gtag === 'function') {
+        gtag('event', 'apk_download', {file_name: 'HaniaION.apk', link_url: link.href});
+      }
+    });
+  </script>
 </body>
 </html>
