@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- The original 512-unit website logo is scaled into Android's 66dp safe zone. -->
+    <group
+        android:scaleX="0.12890625"
+        android:scaleY="0.12890625"
+        android:translateX="21"
+        android:translateY="21">
+        <path android:pathData="M146,24H366A122,122 0,0 1,488 146V366A122,122 0,0 1,366 488H146A122,122 0,0 1,24 366V146A122,122 0,0 1,146 24Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:endX="456"
+                    android:endY="480"
+                    android:startX="56"
+                    android:startY="32"
+                    android:type="linear">
+                    <item android:color="#FF0EA5E9" android:offset="0" />
+                    <item android:color="#FF2563EB" android:offset="0.48" />
+                    <item android:color="#FF071B35" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M146,24H366A122,122 0,0 1,488 146V366A122,122 0,0 1,366 488H146A122,122 0,0 1,24 366V146A122,122 0,0 1,146 24Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:centerX="170"
+                    android:centerY="132"
+                    android:gradientRadius="330"
+                    android:type="radial">
+                    <item android:color="#BF67E8F9" android:offset="0" />
+                    <item android:color="#0067E8F9" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:fillColor="#80061A32"
+            android:pathData="M256,138A118,118 0,1 0,256 374A118,118 0,1 0,256 138Z"
+            android:strokeColor="#FFE0F2FE"
+            android:strokeWidth="15" />
+        <group
+            android:pivotX="256"
+            android:pivotY="256"
+            android:rotation="-22">
+            <path
+                android:fillColor="#00000000"
+                android:pathData="M78,256A178,74 0,1 0,434 256A178,74 0,1 0,78 256Z"
+                android:strokeColor="#FF7DD3FC"
+                android:strokeLineCap="round"
+                android:strokeWidth="14" />
+        </group>
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M256,112L256,400M112,256L400,256"
+            android:strokeAlpha="0.9"
+            android:strokeColor="#FFE0F2FE"
+            android:strokeLineCap="round"
+            android:strokeWidth="13" />
+        <path android:fillColor="#FFF8FAFC" android:pathData="M256,232A24,24 0,1 0,256 280A24,24 0,1 0,256 232Z" />
+        <path
+            android:fillColor="#FF34D399"
+            android:pathData="M409,178A18,18 0,1 0,409 214A18,18 0,1 0,409 178Z"
+            android:strokeColor="#FFECFDF5"
+            android:strokeWidth="8" />
+    </group>
+</vector>
