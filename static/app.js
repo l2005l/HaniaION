@@ -207,7 +207,7 @@ function displayResult(data) {
       historyWarning.innerHTML = saveFailed
         ? `<strong>⚠️ לא ניתן לשמור כרגע בהיסטוריה בענן</strong><span>נתוני NASA והחישוב תקינים. התוצאה נשמרה במכשיר בלבד.</span>`
         : databaseDisabled
-          ? `<strong>היסטוריה בענן אינה מוגדרת</strong><span>התוצאה נשמרה במכשיר הזה. יש להגדיר DATABASE_URL ב-Render כדי לסנכרן בין מכשירים.</span>`
+          ? `<strong>היסטוריה בענן אינה מוגדרת</strong><span>התוצאה נשמרה במכשיר הזה. יש להגדיר DATABASE_URL בשירות הענן כדי לסנכרן בין מכשירים.</span>`
           : "";
     }
   }
@@ -932,12 +932,12 @@ async function refreshMonitorStatus() {
     const pushConfigured = Boolean(payload.push?.configured);
     elements.monitorBadge.textContent = databaseEnabled ? "ניטור פעיל" : "מוכן להגדרה";
     elements.monitorStatus.textContent = databaseEnabled
-      ? `הבדיקה מתבצעת כל 3 שעות. ${pushConfigured ? "שירות Push מוכן." : "יש להוסיף מפתחות Push ב־Render."}`
-      : "האתר עובד כרגיל. להפעלת ניטור אוטומטי והתראות יש לחבר DATABASE_URL ומפתחות VAPID ב־Render.";
+      ? `הבדיקה מתבצעת כל 3 שעות. ${pushConfigured ? "שירות Push מוכן." : "יש להוסיף מפתחות Push ב־Google Cloud Run."}`
+      : "האתר עובד כרגיל. להפעלת ניטור אוטומטי והתראות יש לחבר DATABASE_URL ומפתחות VAPID ב־Google Cloud Run.";
     if (elements.notificationDescription) {
       elements.notificationDescription.textContent = pushConfigured
         ? "קבלת התראה רק כאשר מתפרסם קובץ BRDC חדש. ניתן להפעיל או לבטל בכל עת."
-        : "הכפתור יהיה זמין לאחר הגדרת מסד הנתונים ומפתחות ההתראות ב־Render.";
+        : "הכפתור יהיה זמין לאחר הגדרת מסד הנתונים ומפתחות ההתראות ב־Google Cloud Run.";
     }
     if (!pushConfigured && elements.notificationButton) {
       elements.notificationButton.disabled = true;
