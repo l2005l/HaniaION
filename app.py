@@ -593,12 +593,15 @@ def require_admin(x_admin_secret: str | None) -> None:
 
 def next_scheduled_check(now: datetime | None = None) -> str:
     now = now or datetime.now(timezone.utc)
-    next_hour = ((now.hour // 3) + 1) * 3
-    day = now.date()
-    if next_hour >= 24:
-        next_hour = 0
-        day += timedelta(days=1)
-    return datetime.combine(day, datetime.min.time(), tzinfo=timezone.utc).replace(hour=next_hour).isoformat()
+    candidate = now.replace(
+        hour=(now.hour // 3) * 3,
+        minute=17,
+        second=0,
+        microsecond=0,
+    )
+    if candidate <= now:
+        candidate += timedelta(hours=3)
+    return candidate.isoformat()
 
 
 def run_monitor() -> dict[str, Any]:
