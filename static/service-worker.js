@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v3-4-5-google-cloud-cache-fix-1";
+const CACHE_NAME = "haniaion-v3-4-8-monitoring-fix-1";
 
 const APP_SHELL = [
   "/",
