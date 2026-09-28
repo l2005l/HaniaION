@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v3-4-8-monitoring-fix-1";
+const CACHE_NAME = "haniaion-v3-4-9-k69-cancel-1";
 
 const APP_SHELL = [
   "/",
@@ -216,6 +216,17 @@ async function armK69Alerts(payload) {
   await new Promise(resolve => setTimeout(resolve, Math.min(maxDelay + 1500, 75_000)));
 }
 
+function cancelArmedK69Alerts() {
+  for (const timers of k69ArmedCycles.values()) {
+    for (const timer of timers) clearTimeout(timer);
+  }
+  k69ArmedCycles.clear();
+}
+
+self.addEventListener("message", event => {
+  if (event.data?.type === "k69-cancel") cancelArmedK69Alerts();
+});
+
 self.addEventListener("push", event => {
   let payload = {
     title: "HaniaION",
@@ -235,6 +246,10 @@ self.addEventListener("push", event => {
   }
 
   event.waitUntil((async () => {
+    if (payload.data?.type === "k69-cancel") {
+      cancelArmedK69Alerts();
+      return;
+    }
     if (payload.data?.type === "k69-arm") {
       await armK69Alerts(payload);
       return;
