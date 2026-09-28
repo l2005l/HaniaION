@@ -14,6 +14,7 @@ final class K69Scheduler {
         if (android.os.Build.VERSION.SDK_INT >= 31 && !manager.canScheduleExactAlarms()) {
             throw new SecurityException("יש לאשר 'התראות ותזכורות' בהגדרות Android ואז לתזמן שוב");
         }
+        cancelAll(context);
         JSONArray saved = new JSONArray();
         int scheduled = 0;
         int base = (int) ((cycleAt / 1000L) % 1_000_000L);
@@ -33,5 +34,30 @@ final class K69Scheduler {
         }
         context.getSharedPreferences("k69", Context.MODE_PRIVATE).edit().putString("alarms", saved.toString()).apply();
         return scheduled;
+    }
+
+    static int cancelAll(Context context) {
+        int cancelled = 0;
+        try {
+            AlarmManager manager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            String raw = context.getSharedPreferences("k69", Context.MODE_PRIVATE).getString("alarms", "[]");
+            JSONArray rows = new JSONArray(raw);
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                long cycleAt = row.getLong("cycle");
+                int seconds = row.getInt("seconds");
+                int requestCode = (int) ((cycleAt / 1000L) % 1_000_000L) + seconds;
+                Intent intent = new Intent(context, K69AlertReceiver.class)
+                    .putExtra("seconds", seconds).putExtra("cycle_at", cycleAt);
+                PendingIntent pending = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
+                if (pending != null) {
+                    manager.cancel(pending);
+                    pending.cancel();
+                    cancelled++;
+                }
+            }
+        } catch (Exception ignored) { }
+        context.getSharedPreferences("k69", Context.MODE_PRIVATE).edit().remove("alarms").apply();
+        return cancelled;
     }
 }
