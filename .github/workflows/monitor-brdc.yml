@@ -1,0 +1,37 @@
+name: Monitor BRDC source
+
+on:
+  schedule:
+    # Avoid the busiest top-of-hour window while keeping the promised 3-hour cadence.
+    - cron: "17 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitor-brdc
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify required secret
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: test -n "$CRON_SECRET"
+
+      - name: Check service health
+        run: curl --fail --silent --show-error --retry 3 --retry-all-errors --max-time 60 https://gps.hania360.com/api/health
+
+      - name: Check BRDC and notify subscribers when data changes
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 180 \
+            -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            https://gps.hania360.com/api/monitor/run
