@@ -1284,6 +1284,7 @@ async function refreshK69PushDiagnostics() {
 
 function initializeK69Alerts() {
   const scheduleButton = byId("k69ScheduleButton");
+  const cancelButton = byId("k69CancelButton");
   const testButton = byId("k69TestVoiceButton");
   const enabled = byId("k69AlertsEnabled");
   const status = byId("k69ScheduleStatus");
@@ -1359,6 +1360,42 @@ function initializeK69Alerts() {
     document.querySelectorAll(".k69-alert-check").forEach(input => {
       input.disabled = !enabled.checked;
     });
+  });
+
+  cancelButton?.addEventListener("click", async () => {
+    cancelButton.disabled = true;
+    status.className = "k69-schedule-status";
+    try {
+      window.__haniaK69AlertTimers?.forEach(timer => clearTimeout(timer));
+      window.__haniaK69AlertTimers = [];
+
+      if (nativeAlerts && typeof window.HaniaAndroid.cancelK69Alerts === "function") {
+        const result = String(window.HaniaAndroid.cancelK69Alerts() || "");
+        if (result !== "ok") throw new Error(result || "לא ניתן לבטל את התראות Android.");
+      } else {
+        const registration = await navigator.serviceWorker?.ready;
+        const subscription = await registration?.pushManager?.getSubscription();
+        registration?.active?.postMessage({type: "k69-cancel"});
+        if (subscription) {
+          const response = await fetch("/api/k69/cancel", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({endpoint: subscription.endpoint})
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.detail || "לא ניתן לבטל את ההתראות בשרת.");
+        }
+      }
+
+      document.querySelectorAll(".k69-alert-check").forEach(input => { input.checked = false; });
+      status.textContent = "✓ כל התראות K המתוזמנות בוטלו.";
+      status.className = "k69-schedule-status is-ok";
+    } catch (error) {
+      status.textContent = error?.message || "אירעה שגיאה בביטול ההתראות.";
+      status.className = "k69-schedule-status is-error";
+    } finally {
+      cancelButton.disabled = false;
+    }
   });
 
   scheduleButton.addEventListener("click", async () => {
@@ -1446,7 +1483,7 @@ function initializeK69Alerts() {
       if (!response.ok) throw new Error(payload.detail || `לא ניתן לתזמן את ההתראות (HTTP ${response.status}).`);
 
       // Foreground voice timers are only a convenience. The schedule is first
-      // armed immediately in the Service Worker so the Free Render instance
+      // armed immediately in the Service Worker so the Cloud Run instance
       // does not have to stay awake until the K time.
       window.__haniaK69AlertTimers?.forEach(timer => clearTimeout(timer));
       window.__haniaK69AlertTimers = futureSelected.map(seconds => {
