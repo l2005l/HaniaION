@@ -49,6 +49,7 @@ from database import (
     set_push_preferences,
     get_push_preferences,
     replace_k69_alert_schedule,
+    cancel_pending_k69_alerts,
     get_k69_schedule_ids,
     mark_k69_alerts_armed,
     due_k69_alerts,
@@ -62,9 +63,9 @@ from database import (
 
 
 APP_NAME = "HaniaION RAAM"
-ANDROID_VERSION_CODE = 30408
-ANDROID_VERSION_NAME = "3.4.8"
-ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.4.8/HaniaION.apk"
+ANDROID_VERSION_CODE = 30409
+ANDROID_VERSION_NAME = "3.4.9"
+ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.4.9/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
@@ -215,7 +216,7 @@ if VAPID_KEY_VALID and VAPID_SIGNER is None:
     VAPID_KEY_STATUS = "VAPID private key could not be loaded by pywebpush"
 CRON_SECRET = os.getenv("CRON_SECRET", "").strip()
 ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
-APP_VERSION = os.getenv("APP_VERSION", "3.4.8").strip()
+APP_VERSION = os.getenv("APP_VERSION", "3.4.9").strip()
 
 app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -1063,7 +1064,7 @@ async def schedule_k69_alerts(request: Request):
     if not endpoint or not cycle_raw or not isinstance(selected, list):
         raise HTTPException(status_code=400, detail="Missing endpoint, cycle_at or seconds_before")
 
-    allowed = {0, 10, 30, 60}
+    allowed = {0, 10, 30, 60, 300}
     try:
         seconds_before = sorted({int(value) for value in selected if int(value) in allowed}, reverse=True)
         cycle_at = datetime.fromisoformat(cycle_raw.replace("Z", "+00:00")).astimezone(timezone.utc)
@@ -1127,6 +1128,32 @@ async def schedule_k69_alerts(request: Request):
         "arm_push_sent": arm_stats["sent"] > 0,
         "arm_push": arm_stats,
     }
+
+
+@app.post("/api/k69/cancel")
+async def cancel_k69_alerts(request: Request):
+    """Cancel every pending K-69 alert for one registered Push endpoint."""
+    if not DATABASE_ENABLED:
+        raise HTTPException(status_code=503, detail="DATABASE_URL is required")
+    body = await request.json()
+    endpoint = str(body.get("endpoint", "")).strip()
+    if not endpoint:
+        raise HTTPException(status_code=400, detail="Missing endpoint")
+    if get_push_subscription(endpoint) is None:
+        raise HTTPException(status_code=404, detail="Push subscription not found")
+
+    cancelled = cancel_pending_k69_alerts(endpoint)
+    push_stats = send_push_to_all_for_endpoints(
+        [endpoint],
+        {
+            "title": "HaniaION",
+            "body": "התראות K המתוזמנות בוטלו.",
+            "url": "/#k69-live-target",
+            "tag": "haniaion-k69-cancel",
+            "data": {"category": "k69", "type": "k69-cancel"},
+        },
+    )
+    return {"ok": True, "cancelled": cancelled, "cancel_push": push_stats}
 
 
 @app.post("/api/k69/arm-ack")
