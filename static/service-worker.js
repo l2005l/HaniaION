@@ -1,10 +1,10 @@
-const CACHE_NAME = "haniaion-v3-4-9-k69-cancel-1";
+const CACHE_NAME = "haniaion-v3-4-10-cosmetic-1";
 
 const APP_SHELL = [
   "/",
   "/wind",
   "/satellite",
-  "/static/style.css?v=57",
+  "/static/style.css?v=58",
   "/static/gnss-result.css?v=2",
   "/static/app.js?v=81",
   "/static/wind.css?v=45",
