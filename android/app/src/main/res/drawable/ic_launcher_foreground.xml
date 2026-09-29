@@ -5,13 +5,13 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- The original 512-unit website logo is scaled into Android's 66dp safe zone. -->
+    <!-- Fill the adaptive-icon canvas so Android's mask does not reveal a dark outer frame. -->
     <group
-        android:scaleX="0.12890625"
-        android:scaleY="0.12890625"
-        android:translateX="21"
-        android:translateY="21">
-        <path android:pathData="M146,24H366A122,122 0,0 1,488 146V366A122,122 0,0 1,366 488H146A122,122 0,0 1,24 366V146A122,122 0,0 1,146 24Z">
+        android:scaleX="0.2109375"
+        android:scaleY="0.2109375"
+        
+        >
+                <path android:pathData="M0,0H512V512H0Z">
             <aapt:attr name="android:fillColor">
                 <gradient
                     android:endX="456"
@@ -25,7 +25,7 @@
                 </gradient>
             </aapt:attr>
         </path>
-        <path android:pathData="M146,24H366A122,122 0,0 1,488 146V366A122,122 0,0 1,366 488H146A122,122 0,0 1,24 366V146A122,122 0,0 1,146 24Z">
+                <path android:pathData="M0,0H512V512H0Z">
             <aapt:attr name="android:fillColor">
                 <gradient
                     android:centerX="170"
