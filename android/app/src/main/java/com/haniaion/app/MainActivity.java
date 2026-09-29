@@ -88,7 +88,7 @@ public class MainActivity extends android.app.Activity {
         splash.setBackgroundColor(Color.rgb(6, 16, 29));
 
         ImageView logo = new ImageView(this);
-        logo.setImageResource(R.drawable.ic_haniaion);
+        logo.setImageResource(R.drawable.ic_launcher_foreground);
         LinearLayout.LayoutParams logoParams = new LinearLayout.LayoutParams(dp(92), dp(92));
         logoParams.bottomMargin = dp(28);
         splash.addView(logo, logoParams);
