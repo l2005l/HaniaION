@@ -59,6 +59,25 @@ body {
   overflow-x: hidden;
   transition: background .25s ease, color .25s ease;
 }
+
+
+/* v3.4.10 — preserve Android safe-area spacing without covering scrolled content. */
+.focused-app .focused-header {
+  position: relative;
+  top: auto;
+}
+.android-native .focused-header {
+  top: auto;
+}
+.focused-app .workspace-section,
+.focused-app .results-section,
+.focused-app .history-section,
+.focused-app .pulse-section {
+  scroll-margin-top: 16px;
+}
+.focused-app .anchor-target {
+  top: -12px;
+}
 body::before {
   content: "";
   position: fixed;
