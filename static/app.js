@@ -791,14 +791,40 @@ function initializeInstallExperience() {
 
   [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.addEventListener("click", openInstallModal));
   elements.confirmInstallButton?.addEventListener("click", confirmInstall);
-  elements.downloadAndroidApkButton?.addEventListener("click", () => {
+  elements.downloadAndroidApkButton?.addEventListener("click", async event => {
+    event.preventDefault();
     const button = elements.downloadAndroidApkButton;
     if (button.dataset.downloadStarted === "true") return;
     button.dataset.downloadStarted = "true";
-    button.textContent = "✓ ההורדה התחילה — בדוק את ההתראות";
+    button.textContent = "מוריד…";
     button.classList.add("is-installed");
     showToast("הורדת HaniaION התחילה. אין צורך ללחוץ שוב.");
-    window.setTimeout(() => { button.dataset.downloadStarted = "false"; button.textContent = "הורד אפליקציית Android המלאה"; button.classList.remove("is-installed"); }, 12000);
+    try {
+      const response = await fetch(button.href, { cache: "no-store" });
+      if (!response.ok) throw new Error("apk-download-failed");
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "HaniaION.apk";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+      button.textContent = "✓ הקובץ הורד בהצלחה";
+      showToast("הורדת HaniaION הסתיימה בהצלחה");
+    } catch (_) {
+      button.textContent = "נסה להוריד שוב";
+      showToast("ההורדה נכשלה — נסה שוב");
+      button.dataset.downloadStarted = "false";
+      button.classList.remove("is-installed");
+      return;
+    }
+    window.setTimeout(() => {
+      button.dataset.downloadStarted = "false";
+      button.textContent = "הורד אפליקציית Android המלאה";
+      button.classList.remove("is-installed");
+    }, 15000);
   });
   elements.checkUpdateButton?.addEventListener("click", () => {
     closeInstallModal();
@@ -826,7 +852,8 @@ async function checkAndroidUpdate(manual = false) {
       if (manual) showToast("העדכון עדיין בהכנה — נסה שוב בעוד מספר דקות");
       return;
     }
-    const accepted = window.confirm(`גרסה חדשה ${latest.version_name} זמינה. לעדכן עכשיו?`);
+    const currentName = window.HaniaAndroid.versionName();
+    const accepted = window.confirm(`מותקנת גרסה ${currentName}.\nגרסה חדשה ${latest.version_name} זמינה.\n\nלעדכן עכשיו?`);
     if (accepted) window.HaniaAndroid.openUpdate(latest.download_url);
   } catch (error) {
     if (manual) showToast("לא ניתן לבדוק עדכונים כרגע");
