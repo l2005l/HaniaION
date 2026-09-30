@@ -18,6 +18,7 @@ import android.provider.Settings;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileDescriptor;
 import java.util.Arrays;
 
 final class UpdateManager {
@@ -138,8 +139,9 @@ final class UpdateManager {
     }
 
     private void handleSuccessfulDownload(long id) {
-        File apk = downloadedFile();
-        String problem = verifyApk(apk);
+        Uri uri = downloads.getUriForDownloadedFile(id);
+        if (uri == null) { clearDownload(); toast("קובץ העדכון לא נמצא — נסה שוב"); return; }
+        String problem = verifyDownloadedApk(uri);
         if (problem != null) { clearDownload(); toast(problem); return; }
         if (!canInstall()) {
             prefs.edit().putString(KEY_STATE, STATE_AWAITING_PERMISSION).apply();
@@ -148,8 +150,6 @@ final class UpdateManager {
             catch (Exception error) { toast("פתח הגדרות ← אפליקציות ← HaniaION ← התקנת אפליקציות לא מוכרות"); }
             return;
         }
-        Uri uri = downloads.getUriForDownloadedFile(id);
-        if (uri == null) { clearDownload(); toast("קובץ העדכון לא נמצא — נסה שוב"); return; }
         prefs.edit().putString(KEY_STATE, STATE_READY).apply();
         toast("✓ הורדת העדכון הסתיימה — אשר את ההתקנה כדי להשלים את העדכון");
         try {
@@ -160,21 +160,26 @@ final class UpdateManager {
         } catch (Exception error) { toast("לא ניתן לפתוח את מסך ההתקנה — פתח את קובץ העדכון מהתראת ההורדה"); }
     }
 
-    private String verifyApk(File apk) {
-        if (apk == null || !apk.isFile() || apk.length() < 10_000) return "קובץ העדכון חסר או פגום — נסה שוב";
+    private String verifyDownloadedApk(Uri uri) {
         PackageManager pm = activity.getPackageManager();
         int flags = Build.VERSION.SDK_INT >= 28 ? PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES;
-        PackageInfo archive = pm.getPackageArchiveInfo(apk.getAbsolutePath(), flags);
-        if (archive == null) return "קובץ העדכון פגום — נסה שוב";
-        if (!activity.getPackageName().equals(archive.packageName)) return "קובץ העדכון אינו של HaniaION";
-        long archiveCode = Build.VERSION.SDK_INT >= 28 ? archive.getLongVersionCode() : archive.versionCode;
-        if (archiveCode <= installedVersionCode(activity)) return "הקובץ שהורד אינו חדש מהגרסה המותקנת";
-        if (Build.VERSION.SDK_INT < 28) return null;
-        try {
+        try (android.os.ParcelFileDescriptor pfd = activity.getContentResolver().openFileDescriptor(uri, "r")) {
+            if (pfd == null || pfd.getStatSize() < 10_000) return "קובץ העדכון חסר או פגום — נסה שוב";
+            String path = "/proc/self/fd/" + pfd.getFd();
+            PackageInfo archive = pm.getPackageArchiveInfo(path, flags);
+            if (archive == null) return "קובץ העדכון פגום — נסה שוב";
+            if (!activity.getPackageName().equals(archive.packageName)) return "קובץ העדכון אינו של HaniaION";
+            long archiveCode = Build.VERSION.SDK_INT >= 28 ? archive.getLongVersionCode() : archive.versionCode;
+            int expectedCode = prefs.getInt(KEY_TARGET, 0);
+            if (expectedCode > 0 && archiveCode != expectedCode) return "גרסת קובץ העדכון אינה תואמת לגרסה שהתבקשה";
+            if (archiveCode <= installedVersionCode(activity)) return "הקובץ שהורד אינו חדש מהגרסה המותקנת";
+            if (Build.VERSION.SDK_INT < 28) return null;
             PackageInfo installed = pm.getPackageInfo(activity.getPackageName(), flags);
             if (!Arrays.equals(signaturesOf(installed), signaturesOf(archive))) return "חתימת העדכון אינה תואמת — ההתקנה בוטלה";
-        } catch (Exception error) { return "לא ניתן לאמת את חתימת העדכון"; }
-        return null;
+            return null;
+        } catch (Exception error) {
+            return "לא ניתן לאמת את קובץ העדכון — נסה שוב";
+        }
     }
 
     private static Signature[] signaturesOf(PackageInfo info) {
