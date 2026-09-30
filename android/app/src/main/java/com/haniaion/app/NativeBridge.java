@@ -231,7 +231,11 @@ public class NativeBridge {
                         if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != downloadId) return;
                         try {
                             Uri apkUri = manager.getUriForDownloadedFile(downloadId);
-                            if (apkUri == null) return;
+                            if (apkUri == null) {
+                                Toast.makeText(activity, "הורדת העדכון לא הושלמה — נסה שוב", Toast.LENGTH_LONG).show();
+                                return;
+                            }
+                            Toast.makeText(activity, "✓ הורדת העדכון הסתיימה — אשר את ההתקנה כדי להשלים את העדכון", Toast.LENGTH_LONG).show();
                             Intent install = new Intent(Intent.ACTION_VIEW);
                             install.setDataAndType(apkUri, "application/vnd.android.package-archive");
                             install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
