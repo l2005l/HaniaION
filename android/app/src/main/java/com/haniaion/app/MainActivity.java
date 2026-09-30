@@ -268,6 +268,11 @@ public class MainActivity extends android.app.Activity {
         }
     }
 
+    @Override protected void onResume() {
+        super.onResume();
+        if (nativeBridge != null) nativeBridge.resumePendingInstall();
+    }
+
     @Override public void onBackPressed() {
         if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed();
     }
