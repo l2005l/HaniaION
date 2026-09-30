@@ -4,12 +4,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import org.json.JSONArray;
-import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BootReceiver extends BroadcastReceiver {
     @Override public void onReceive(Context context, Intent intent) {
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(intent.getAction())) {
+            UpdateManager.cleanupIfInstalled(context);
+        }
         try {
             String raw = context.getSharedPreferences("k69", Context.MODE_PRIVATE).getString("alarms", "[]");
             JSONArray rows = new JSONArray(raw);
