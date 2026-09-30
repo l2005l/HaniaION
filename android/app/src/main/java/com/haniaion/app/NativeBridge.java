@@ -5,8 +5,14 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
+import android.app.DownloadManager;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import androidx.core.content.FileProvider;
+import java.io.File;
 import android.location.GnssStatus;
 import android.location.Location;
 import android.location.LocationListener;
@@ -212,8 +218,35 @@ public class NativeBridge {
 
     @JavascriptInterface public void openUpdate(String url) {
         activity.runOnUiThread(() -> {
-            try { activity.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); }
-            catch (Exception ignored) { }
+            try {
+                DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+                DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                request.setTitle("HaniaION");
+                request.setDescription("מוריד עדכון לאפליקציה…");
+                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                request.setDestinationInExternalFilesDir(activity, android.os.Environment.DIRECTORY_DOWNLOADS, "HaniaION-update.apk");
+                long downloadId = manager.enqueue(request);
+                Toast.makeText(activity, "הורדת העדכון התחילה", Toast.LENGTH_LONG).show();
+                BroadcastReceiver receiver = new BroadcastReceiver() {
+                    @Override public void onReceive(Context context, Intent intent) {
+                        if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != downloadId) return;
+                        try {
+                            Uri apkUri = manager.getUriForDownloadedFile(downloadId);
+                            if (apkUri == null) return;
+                            Intent install = new Intent(Intent.ACTION_VIEW);
+                            install.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            activity.startActivity(install);
+                        } finally {
+                            try { activity.unregisterReceiver(this); } catch (Exception ignored) { }
+                        }
+                    }
+                };
+                if (Build.VERSION.SDK_INT >= 33) activity.registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED);
+                else activity.registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+            } catch (Exception error) {
+                Toast.makeText(activity, "לא ניתן להתחיל את העדכון", Toast.LENGTH_LONG).show();
+            }
         });
     }
 }
