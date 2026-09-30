@@ -48,6 +48,17 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle assembleRelease bundleRelease --no-daemon
 
+      - name: Verify APK is installable and correctly signed
+        working-directory: android
+        run: |
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/apk-badging.txt
+          grep -q "package: name='com.haniaion.app'" /tmp/apk-badging.txt
+          grep -q "versionCode='30410'" /tmp/apk-badging.txt
+          grep -q "versionName='3.4.10'" /tmp/apk-badging.txt
+
       - name: Save signed APK and Play bundle
         uses: actions/upload-artifact@v4
         with:
