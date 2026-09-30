@@ -55,8 +55,13 @@ jobs:
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/apk-badging.txt
           grep -q "package: name='com.haniaion.app'" /tmp/apk-badging.txt
-          grep -q "versionCode='30503'" /tmp/apk-badging.txt
-          grep -q "versionName='3.5.3'" /tmp/apk-badging.txt
+          VERSION_CODE=$(sed -n "s/.*versionCode \([0-9][0-9]*\).*/\\1/p" app/build.gradle | head -1)
+          VERSION_NAME=$(sed -n "s/.*versionName '\\([^']*\\)'.*/\\1/p" app/build.gradle | head -1)
+          test -n "$VERSION_CODE"
+          test -n "$VERSION_NAME"
+          grep -q "versionCode='$VERSION_CODE'" /tmp/apk-badging.txt
+          grep -q "versionName='$VERSION_NAME'" /tmp/apk-badging.txt
+          grep -q "android.permission.REQUEST_INSTALL_PACKAGES" <("$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$APK")
 
       - name: Save signed APK and Play bundle
         uses: actions/upload-artifact@v4
