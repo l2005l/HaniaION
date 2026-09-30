@@ -791,6 +791,15 @@ function initializeInstallExperience() {
 
   [elements.installAppButton, elements.heroInstallButton].filter(Boolean).forEach(button => button.addEventListener("click", openInstallModal));
   elements.confirmInstallButton?.addEventListener("click", confirmInstall);
+  elements.downloadAndroidApkButton?.addEventListener("click", () => {
+    const button = elements.downloadAndroidApkButton;
+    if (button.dataset.downloadStarted === "true") return;
+    button.dataset.downloadStarted = "true";
+    button.textContent = "✓ ההורדה התחילה — בדוק את ההתראות";
+    button.classList.add("is-installed");
+    showToast("הורדת HaniaION התחילה. אין צורך ללחוץ שוב.");
+    window.setTimeout(() => { button.dataset.downloadStarted = "false"; button.textContent = "הורד אפליקציית Android המלאה"; button.classList.remove("is-installed"); }, 12000);
+  });
   elements.checkUpdateButton?.addEventListener("click", () => {
     closeInstallModal();
     window.setTimeout(() => checkAndroidUpdate(true), 120);
