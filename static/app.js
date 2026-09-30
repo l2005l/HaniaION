@@ -854,7 +854,7 @@ async function checkAndroidUpdate(manual = false) {
     }
     const currentName = window.HaniaAndroid.versionName();
     const accepted = window.confirm(`מותקנת גרסה ${currentName}.\nגרסה חדשה ${latest.version_name} זמינה.\n\nלעדכן עכשיו?`);
-    if (accepted) window.HaniaAndroid.openUpdate(latest.download_url);
+    if (accepted) window.HaniaAndroid.openUpdate(latest.download_url, Number(latest.version_code));
   } catch (error) {
     if (manual) showToast("לא ניתן לבדוק עדכונים כרגע");
   }
