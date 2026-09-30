@@ -1,7 +1,7 @@
 {
-  "name": "HaniaION — GNSS Ionospheric Data Platform",
+  "name": "HaniaION — BRDC to RAAM",
   "short_name": "HaniaION",
-  "description": "Retrieve NASA CDDIS BRDC data, extract Klobuchar coefficients, and convert them for RAAM.",
+  "description": "חילוץ נתוני BRDC, המרה ל־RAAM, היסטוריה, התראות ומפת רוחות.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
@@ -9,8 +9,9 @@
   "orientation": "any",
   "background_color": "#06101d",
   "theme_color": "#07111f",
-  "lang": "en",
-  "categories": ["utilities", "developer tools", "navigation"],
+  "lang": "he",
+  "dir": "rtl",
+  "categories": ["utilities", "navigation"],
   "icons": [
     {
       "src": "/static/icons/icon.svg",

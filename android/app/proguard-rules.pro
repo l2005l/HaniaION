@@ -1,0 +1,1 @@
+-keepclassmembers class com.haniaion.app.NativeBridge { @android.webkit.JavascriptInterface <methods>; }

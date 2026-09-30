@@ -7,3 +7,8 @@
 @media(max-width:1100px){.mission-toolbar{grid-template-columns:1fr 1fr}.mission-intro{grid-column:1/-1}.planner-layout{grid-template-columns:280px 1fr}.route-results{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.route-results .section-kicker,.route-results button,.route-results .result-note{grid-column:1/-1}.summary-grid{grid-template-columns:1fr 1fr}}@media(max-width:760px){.mission-shell{padding:9px}.mission-header{grid-template-columns:1fr auto}.mission-clock{display:none}.mission-brand span{display:none}.mission-toolbar{grid-template-columns:1fr;padding:15px}.mission-intro{grid-column:auto}.mission-tabs{overflow-x:auto}.planner-layout{grid-template-columns:1fr}.planner-map-card{min-height:540px}.planner-map-card #routeMap{min-height:540px}.route-results{display:block}.summary-grid{grid-template-columns:1fr}.wind-frame-wrap{height:68vh;min-height:500px}.panel-heading small{margin-left:0;width:100%}}
 
 .route-arrow-icon{background:transparent!important;border:0!important}.route-arrow{width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#39d3ff;font-size:28px;line-height:1;text-shadow:0 0 5px #001522,0 0 12px rgba(57,211,255,.9);transform-origin:center center}.leaflet-tile-pane{filter:saturate(.92) contrast(1.05)}
+
+/* Hebrew interface refinements */
+.mission-header,.mission-toolbar,.mission-tabs,.planner-layout,.summary-grid{direction:rtl}
+.wind-frame-wrap,.planner-map-card,#routeMap,.coord-grid input,.route-results strong,.mission-clock{direction:ltr}
+.mission-brand{text-align:right}.panel-heading small{margin-right:auto;margin-left:0}
