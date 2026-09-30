@@ -219,9 +219,8 @@ app = FastAPI(title=APP_NAME)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
-@app.on_event("startup")
-def startup_database() -> None:
-    """Create the small monitoring schema and start the K-69 scheduler."""
+def initialize_background_services() -> None:
+    """Initialize database-backed services without blocking Cloud Run startup."""
     try:
         initialize_database()
     except Exception as error:
@@ -237,6 +236,16 @@ def startup_database() -> None:
     if DATABASE_ENABLED and webpush is not None and VAPID_KEY_VALID:
         worker = threading.Thread(target=k69_alert_worker, name="k69-alert-worker", daemon=True)
         worker.start()
+
+
+@app.on_event("startup")
+def startup_database() -> None:
+    """Let Uvicorn bind PORT immediately; database setup continues in background."""
+    threading.Thread(
+        target=initialize_background_services,
+        name="database-initializer",
+        daemon=True,
+    ).start()
 
 _cache_lock = threading.Lock()
 _cache: dict[str, Any] = {
