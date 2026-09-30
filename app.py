@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.backends import default_backend
 from fastapi import FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from requests.adapters import HTTPAdapter
 try:
@@ -938,6 +938,11 @@ def health():
         "status": "ok" if (not db["enabled"] or db["connected"]) else "degraded",
         "database": db,
     }
+
+
+@app.get("/download/android")
+def download_android():
+    return RedirectResponse(ANDROID_APK_URL, status_code=302)
 
 
 @app.get("/api/app-version")
