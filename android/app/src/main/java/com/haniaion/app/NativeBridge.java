@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.provider.Settings;
+import android.content.SharedPreferences;
 import android.app.DownloadManager;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -217,39 +219,78 @@ public class NativeBridge {
 
     @JavascriptInterface public void openUpdate(String url) {
         activity.runOnUiThread(() -> {
+            final String allowedPrefix = "https://github.com/l2005l/HaniaION/releases/download/";
+            if (url == null || !url.startsWith(allowedPrefix)) {
+                Toast.makeText(activity, "כתובת העדכון אינה מאושרת", Toast.LENGTH_LONG).show();
+                return;
+            }
             try {
                 DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+                SharedPreferences prefs = activity.getSharedPreferences("haniaion_updates", Context.MODE_PRIVATE);
+                long activeId = prefs.getLong("active_download_id", -1L);
+                if (activeId != -1L) {
+                    DownloadManager.Query activeQuery = new DownloadManager.Query().setFilterById(activeId);
+                    try (android.database.Cursor cursor = manager.query(activeQuery)) {
+                        if (cursor != null && cursor.moveToFirst()) {
+                            int status = cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS));
+                            if (status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PAUSED) {
+                                Toast.makeText(activity, "עדכון כבר נמצא בהורדה", Toast.LENGTH_LONG).show();
+                                return;
+                            }
+                        }
+                    }
+                    prefs.edit().remove("active_download_id").apply();
+                }
+
                 DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
                 request.setTitle("HaniaION");
                 request.setDescription("מוריד עדכון לאפליקציה…");
                 request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
                 request.setDestinationInExternalFilesDir(activity, android.os.Environment.DIRECTORY_DOWNLOADS, "HaniaION-update.apk");
                 long downloadId = manager.enqueue(request);
+                prefs.edit().putLong("active_download_id", downloadId).apply();
                 Toast.makeText(activity, "הורדת העדכון התחילה", Toast.LENGTH_LONG).show();
+
                 BroadcastReceiver receiver = new BroadcastReceiver() {
                     @Override public void onReceive(Context context, Intent intent) {
                         if (intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != downloadId) return;
+                        prefs.edit().remove("active_download_id").apply();
                         try {
+                            DownloadManager.Query query = new DownloadManager.Query().setFilterById(downloadId);
+                            try (android.database.Cursor cursor = manager.query(query)) {
+                                if (cursor == null || !cursor.moveToFirst() ||
+                                    cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS)) != DownloadManager.STATUS_SUCCESSFUL) {
+                                    Toast.makeText(activity, "הורדת העדכון נכשלה — נסה שוב", Toast.LENGTH_LONG).show();
+                                    return;
+                                }
+                            }
                             Uri apkUri = manager.getUriForDownloadedFile(downloadId);
                             if (apkUri == null) {
                                 Toast.makeText(activity, "הורדת העדכון לא הושלמה — נסה שוב", Toast.LENGTH_LONG).show();
                                 return;
                             }
                             Toast.makeText(activity, "✓ הורדת העדכון הסתיימה — אשר את ההתקנה כדי להשלים את העדכון", Toast.LENGTH_LONG).show();
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !activity.getPackageManager().canRequestPackageInstalls()) {
+                                Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.getPackageName()));
+                                activity.startActivity(settings);
+                                Toast.makeText(activity, "אפשר התקנת עדכונים מ-HaniaION ואז חזור לאפליקציה", Toast.LENGTH_LONG).show();
+                                return;
+                            }
                             Intent install = new Intent(Intent.ACTION_VIEW);
                             install.setDataAndType(apkUri, "application/vnd.android.package-archive");
                             install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
                             activity.startActivity(install);
+                        } catch (Exception error) {
+                            Toast.makeText(activity, "לא ניתן לפתוח את מתקין העדכון", Toast.LENGTH_LONG).show();
                         } finally {
                             try { activity.unregisterReceiver(this); } catch (Exception ignored) { }
                         }
                     }
                 };
-                if (Build.VERSION.SDK_INT >= 33) activity.registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_NOT_EXPORTED);
+                if (Build.VERSION.SDK_INT >= 33) activity.registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED);
                 else activity.registerReceiver(receiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
             } catch (Exception error) {
                 Toast.makeText(activity, "לא ניתן להתחיל את העדכון", Toast.LENGTH_LONG).show();
             }
         });
-    }
-}
+    }}
