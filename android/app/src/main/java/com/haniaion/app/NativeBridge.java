@@ -198,6 +198,25 @@ public class NativeBridge {
         return "בעוד " + seconds + " שניות יגיע המפתח";
     }
 
+    void resumePendingInstall() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || !activity.getPackageManager().canRequestPackageInstalls()) return;
+        SharedPreferences prefs = activity.getSharedPreferences("haniaion_updates", Context.MODE_PRIVATE);
+        long downloadId = prefs.getLong("pending_install_id", -1L);
+        if (downloadId == -1L) return;
+        try {
+            DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+            Uri apkUri = manager.getUriForDownloadedFile(downloadId);
+            if (apkUri == null) return;
+            Intent install = new Intent(Intent.ACTION_VIEW);
+            install.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            activity.startActivity(install);
+            prefs.edit().remove("pending_install_id").apply();
+        } catch (Exception error) {
+            Toast.makeText(activity, "לא ניתן לפתוח את מתקין העדכון", Toast.LENGTH_LONG).show();
+        }
+    }
+
     void shutdown() {
         stopGnssInternal();
         if (speech != null) { speech.stop(); speech.shutdown(); }
@@ -272,6 +291,7 @@ public class NativeBridge {
                             Toast.makeText(activity, "✓ הורדת העדכון הסתיימה — אשר את ההתקנה כדי להשלים את העדכון", Toast.LENGTH_LONG).show();
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !activity.getPackageManager().canRequestPackageInstalls()) {
                                 Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.getPackageName()));
+                                prefs.edit().putLong("pending_install_id", downloadId).apply();
                                 activity.startActivity(settings);
                                 Toast.makeText(activity, "אפשר התקנת עדכונים מ-HaniaION ואז חזור לאפליקציה", Toast.LENGTH_LONG).show();
                                 return;
