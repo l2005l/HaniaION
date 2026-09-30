@@ -834,7 +834,12 @@ async function checkAndroidUpdate(manual = false) {
     }
     const currentName = window.HaniaAndroid.versionName();
     const accepted = window.confirm(`מותקנת גרסה ${currentName}.\nגרסה חדשה ${latest.version_name} זמינה.\n\nלעדכן עכשיו?`);
-    if (accepted) window.HaniaAndroid.openUpdate(latest.download_url, Number(latest.version_code));
+    if (accepted) {
+      // NativeBridge before 3.5.3 exposed openUpdate(url) only. Keep the live
+      // website backward-compatible so 3.5.0/3.5.1 can bootstrap to the new updater.
+      if (currentCode < 30503) window.HaniaAndroid.openUpdate(latest.download_url);
+      else window.HaniaAndroid.openUpdate(latest.download_url, Number(latest.version_code));
+    }
   } catch (error) {
     if (manual) showToast("לא ניתן לבדוק עדכונים כרגע");
   }
