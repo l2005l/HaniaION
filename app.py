@@ -59,7 +59,9 @@ from database import (
     get_admin_statistics,
     save_gnss_sample,
     get_gnss_region,
-)APP_NAME = "HaniaION RAAM"
+)
+
+APP_NAME = "HaniaION RAAM"
 ANDROID_VERSION_CODE = 30410
 ANDROID_VERSION_NAME = "3.4.10"
 ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.4.10/HaniaION.apk"
