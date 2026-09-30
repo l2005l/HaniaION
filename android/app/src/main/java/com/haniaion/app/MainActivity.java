@@ -127,7 +127,7 @@ public class MainActivity extends android.app.Activity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " HaniaIONNative/3.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " HaniaIONNative/" + BuildConfig.VERSION_NAME);
         nativeBridge = new NativeBridge(this);
         webView.addJavascriptInterface(nativeBridge, "HaniaAndroid");
         webView.setWebViewClient(new WebViewClient() {
@@ -270,7 +270,12 @@ public class MainActivity extends android.app.Activity {
 
     @Override protected void onResume() {
         super.onResume();
-        if (nativeBridge != null) nativeBridge.resumePendingInstall();
+        if (nativeBridge != null) nativeBridge.onResume();
+    }
+
+    @Override protected void onPause() {
+        if (nativeBridge != null) nativeBridge.onPause();
+        super.onPause();
     }
 
     @Override public void onBackPressed() {

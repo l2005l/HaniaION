@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.backends import default_backend
 from fastapi import FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from requests.adapters import HTTPAdapter
 try:
@@ -62,9 +62,9 @@ from database import (
 )
 
 APP_NAME = "HaniaION RAAM"
-ANDROID_VERSION_CODE = 30502
-ANDROID_VERSION_NAME = "3.5.2"
-ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.5.2/HaniaION.apk"
+ANDROID_VERSION_CODE = 30503
+ANDROID_VERSION_NAME = "3.5.3"
+ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.5.3/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
@@ -938,6 +938,11 @@ def health():
         "status": "ok" if (not db["enabled"] or db["connected"]) else "degraded",
         "database": db,
     }
+
+
+@app.get("/download/android")
+def download_android():
+    return RedirectResponse(ANDROID_APK_URL, status_code=302)
 
 
 @app.get("/api/app-version")
