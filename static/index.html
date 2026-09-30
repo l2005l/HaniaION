@@ -67,7 +67,7 @@
       <div class="gnss-head"><div><span class="section-kicker">GNSS INTERFERENCE</span><h2>בדיקת תקינות GPS</h2></div><span id="gnssBadge" class="gnss-badge neutral">טרם נבדק</span></div>
       <p class="gnss-explain">בדיקה בזמן אמת לזיהוי חוסר קליטה, חוסר יציבות וסימנים אפשריים להפרעת GPS.</p>
       <div id="gnss-action-target" class="gnss-action-target">
-        <div class="gnss-permission-note"><strong>📍 הרשאת מיקום נדרשת רק לבדיקה מהטלפון</strong><span>בלחיצה על הבדיקה הדפדפן יבקש מהאתר הרשאת מיקום. הבדיקה מתחילה רק אחרי דגימת מיקום ראשונה. המפה האזורית אינה דורשת הרשאה.</span></div>
+        <div id="gnssPermissionNote" class="gnss-permission-note"><strong id="gnssPermissionTitle">📍 בודק הרשאת מיקום…</strong><span id="gnssPermissionText">הרשאת המיקום משמשת רק לבדיקת GPS במכשיר. המפה האזורית אינה דורשת הרשאה.</span></div>
         <div class="gnss-actions"><button id="gnssTestButton" class="button button-primary" type="button">📱 בדוק GPS עכשיו</button><label><input id="gnssShare" type="checkbox"> שתף מדגם אזורי אנונימי (מיקום מעוגל לכ־10 ק״מ)</label></div>
       </div>
       <div id="gnssTestProgress" class="gnss-test-progress hidden" aria-live="polite">
@@ -255,7 +255,7 @@
 
   <div id="installModal" class="install-modal hidden" role="dialog" aria-modal="true" aria-labelledby="installModalTitle">
     <div class="install-modal-backdrop" data-close-install></div><div class="install-modal-card"><button class="install-modal-close" type="button" data-close-install aria-label="סגירה">×</button><div class="install-app-icon"><img src="/static/icons/icon.svg" alt="" width="58" height="58"></div><span class="section-kicker">INSTALL HaniaION</span><h2 id="installModalTitle">הוספה לטלפון</h2>
-      <div id="installAndroidInstructions" class="install-instructions hidden"><p><strong>APK מלא:</strong> כולל לווייני הטלפון, קול והתראות Android ברקע.</p><a id="downloadAndroidApkButton" class="button button-primary full-width" href="https://github.com/l2005l/HaniaION/releases/download/android-latest/HaniaION.apk">הורד אפליקציית Android המלאה</a><button id="checkUpdateButton" class="button button-secondary full-width" type="button">בדוק עדכונים</button><p class="install-secondary-copy"><strong>קיצור דרך לאתר:</strong> נראה כמו אפליקציה, אך אינו יכול לקרוא את לווייני הטלפון.</p><button id="confirmInstallButton" class="button button-secondary full-width" type="button">הוסף את האתר למסך הבית</button></div>
+      <div id="installAndroidInstructions" class="install-instructions hidden"><p><strong>APK מלא:</strong> כולל לווייני הטלפון, קול והתראות Android ברקע.</p><a id="downloadAndroidApkButton" class="button button-primary full-width" href="/static/app-release.apk" download="HaniaION.apk">הורד אפליקציית Android המלאה</a><button id="checkUpdateButton" class="button button-secondary full-width" type="button">בדוק עדכונים</button><p class="install-secondary-copy"><strong>קיצור דרך לאתר:</strong> נראה כמו אפליקציה, אך אינו יכול לקרוא את לווייני הטלפון.</p><button id="confirmInstallButton" class="button button-secondary full-width" type="button">הוסף את האתר למסך הבית</button></div>
       <div id="installIosInstructions" class="install-instructions hidden"><p>באייפון פתח ב־<strong>Safari</strong>, לחץ על <strong>שיתוף</strong> ולאחר מכן <strong>הוסף למסך הבית</strong>.</p><div class="ios-install-steps"><span>1</span> שיתוף <i>←</i><span>2</span> הוסף למסך הבית</div></div>
       <div id="installFallbackInstructions" class="install-instructions hidden"><p>פתח את תפריט הדפדפן ובחר <strong>התקנת אפליקציה</strong> או <strong>הוספה למסך הבית</strong>.</p></div>
     </div>
@@ -263,7 +263,7 @@
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/static/spoofing.js?v=5" defer></script>
-  <script src="/static/app.js?v=81" defer></script>
+  <script src="/static/app.js?v=82" defer></script>
   <script src="/static/data-status.js?v=5"></script>
   <script>
     document.addEventListener('click', function(event) {
