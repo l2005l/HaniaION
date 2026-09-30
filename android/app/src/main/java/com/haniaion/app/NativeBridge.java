@@ -219,6 +219,9 @@ public class NativeBridge {
         }
     }
 
+    void onResume() { updateManager.onResume(); }
+    void onPause() { updateManager.onPause(); }
+
     void shutdown() {
         stopGnssInternal();
         if (speech != null) { speech.stop(); speech.shutdown(); }
