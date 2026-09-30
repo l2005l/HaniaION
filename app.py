@@ -62,9 +62,9 @@ from database import (
 )
 
 APP_NAME = "HaniaION RAAM"
-ANDROID_VERSION_CODE = 30505
-ANDROID_VERSION_NAME = "3.5.5"
-ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.5.5/HaniaION.apk"
+ANDROID_VERSION_CODE = 30506
+ANDROID_VERSION_NAME = "3.5.6"
+ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.5.6/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
