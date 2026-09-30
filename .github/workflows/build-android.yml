@@ -62,6 +62,9 @@ jobs:
           grep -q "versionCode='$VERSION_CODE'" /tmp/apk-badging.txt
           grep -q "versionName='$VERSION_NAME'" /tmp/apk-badging.txt
           grep -q "android.permission.REQUEST_INSTALL_PACKAGES" <("$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions "$APK")
+          grep -q "ANDROID_VERSION_CODE = $VERSION_CODE" ../app.py
+          grep -q "ANDROID_VERSION_NAME = \"$VERSION_NAME\"" ../app.py
+          grep -q "releases/download/android-v$VERSION_NAME/HaniaION.apk" ../app.py
 
       - name: Save signed APK and Play bundle
         uses: actions/upload-artifact@v4
