@@ -14,6 +14,8 @@ import android.app.DownloadManager;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.location.GnssStatus;
+import android.location.GnssMeasurement;
+import android.location.GnssMeasurementsEvent;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -39,8 +41,28 @@ public class NativeBridge {
     private final LocationManager locationManager;
     private volatile String gnssSnapshot = "{\"supported\":true,\"active\":false,\"satellites\":[]}";
     private volatile boolean gnssRunning;
+    // The last fixes from the satellites and from the network (cell towers and WiFi), and the
+    // receiver's gain (AGC): together they show jamming and spoofing that the position alone hides.
+    private volatile Location lastGnss;
+    private volatile Location lastNetwork;
+    private volatile long gnssTimeOffsetMs;
+    private volatile boolean gnssTimeOffsetKnown;
+    private volatile String agcJson = "[]";
+    private final LocationListener networkListener = new LocationListener() {
+        @Override public void onLocationChanged(Location location) { lastNetwork = location; }
+        @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
+        @Override public void onProviderEnabled(String provider) { }
+        @Override public void onProviderDisabled(String provider) { }
+    };
+    private final GnssMeasurementsEvent.Callback measurementsCallback = new GnssMeasurementsEvent.Callback() {
+        @Override public void onGnssMeasurementsReceived(GnssMeasurementsEvent event) { readAgc(event); }
+    };
     private final LocationListener locationListener = new LocationListener() {
-        @Override public void onLocationChanged(Location location) { }
+        @Override public void onLocationChanged(Location location) {
+            lastGnss = location;
+            gnssTimeOffsetMs = location.getTime() - System.currentTimeMillis();
+            gnssTimeOffsetKnown = true;
+        }
         @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
         @Override public void onProviderEnabled(String provider) { }
         @Override public void onProviderDisabled(String provider) { }
@@ -80,6 +102,20 @@ public class NativeBridge {
                         locationManager.registerGnssStatusCallback(gnssCallback, new Handler(Looper.getMainLooper()));
                     }
                     locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 0f, locationListener);
+                    try {
+                        if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10000L, 0f, networkListener);
+                            Location known = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                            if (known != null && System.currentTimeMillis() - known.getTime() < 10 * 60 * 1000L) lastNetwork = known;
+                        }
+                    } catch (Exception ignored) { }
+                    try {
+                        if (Build.VERSION.SDK_INT >= 30) {
+                            locationManager.registerGnssMeasurementsCallback(activity.getMainExecutor(), measurementsCallback);
+                        } else {
+                            locationManager.registerGnssMeasurementsCallback(measurementsCallback, new Handler(Looper.getMainLooper()));
+                        }
+                    } catch (Exception ignored) { }
                     gnssRunning = true;
                 }
             } catch (Exception error) {
@@ -123,7 +159,65 @@ public class NativeBridge {
             root.put("used", used);
             root.put("updated_at", System.currentTimeMillis());
             root.put("satellites", satellites);
+            Location fix = lastGnss;
+            if (fix != null) root.put("location", locationJson(fix));
+            Location net = lastNetwork;
+            if (net != null) root.put("network", locationJson(net));
+            if (gnssTimeOffsetKnown) root.put("time_offset_ms", gnssTimeOffsetMs);
+            root.put("agc", new JSONArray(agcJson));
             gnssSnapshot = root.toString();
+        } catch (Exception ignored) { }
+    }
+
+    private JSONObject locationJson(Location l) throws Exception {
+        JSONObject o = new JSONObject();
+        o.put("lat", l.getLatitude());
+        o.put("lon", l.getLongitude());
+        o.put("time", l.getTime());
+        o.put("age_ms", System.currentTimeMillis() - l.getTime());
+        if (l.hasAccuracy()) o.put("accuracy", Math.round(l.getAccuracy() * 10f) / 10.0);
+        if (l.hasSpeed()) o.put("speed", Math.round(l.getSpeed() * 10f) / 10.0);
+        o.put("provider", l.getProvider());
+        boolean mock = Build.VERSION.SDK_INT >= 31 ? l.isMock() : l.isFromMockProvider();
+        o.put("mock", mock);
+        return o;
+    }
+
+    /** The receiver's gain per system and band. It drops sharply when a jammer floods the band. */
+    @SuppressWarnings("deprecation")
+    private void readAgc(GnssMeasurementsEvent event) {
+        try {
+            JSONArray out = new JSONArray();
+            if (Build.VERSION.SDK_INT >= 33) {
+                for (android.location.GnssAutomaticGainControl agc : event.getGnssAutomaticGainControls()) {
+                    JSONObject o = new JSONObject();
+                    o.put("constellation", constellationName(agc.getConstellationType()));
+                    o.put("frequency_mhz", Math.round(agc.getCarrierFrequencyHz() / 100000.0) / 10.0);
+                    o.put("db", Math.round(agc.getLevelDb() * 10.0) / 10.0);
+                    out.put(o);
+                }
+            }
+            if (out.length() == 0) {
+                java.util.Map<String, double[]> sums = new java.util.HashMap<>();
+                for (GnssMeasurement m : event.getMeasurements()) {
+                    if (!m.hasAutomaticGainControlLevelDb()) continue;
+                    double mhz = m.hasCarrierFrequencyHz() ? Math.round(m.getCarrierFrequencyHz() / 1e6) : 0;
+                    String key = constellationName(m.getConstellationType()) + "|" + mhz;
+                    double[] acc = sums.get(key);
+                    if (acc == null) { acc = new double[2]; sums.put(key, acc); }
+                    acc[0] += m.getAutomaticGainControlLevelDb();
+                    acc[1] += 1;
+                }
+                for (java.util.Map.Entry<String, double[]> e : sums.entrySet()) {
+                    String[] parts = e.getKey().split("\\|");
+                    JSONObject o = new JSONObject();
+                    o.put("constellation", parts[0]);
+                    o.put("frequency_mhz", Double.parseDouble(parts[1]));
+                    o.put("db", Math.round(e.getValue()[0] / e.getValue()[1] * 10.0) / 10.0);
+                    out.put(o);
+                }
+            }
+            agcJson = out.toString();
         } catch (Exception ignored) { }
     }
 
@@ -144,6 +238,8 @@ public class NativeBridge {
         if (!gnssRunning) return;
         try { locationManager.unregisterGnssStatusCallback(gnssCallback); } catch (Exception ignored) { }
         try { locationManager.removeUpdates(locationListener); } catch (Exception ignored) { }
+        try { locationManager.removeUpdates(networkListener); } catch (Exception ignored) { }
+        try { locationManager.unregisterGnssMeasurementsCallback(measurementsCallback); } catch (Exception ignored) { }
         gnssRunning = false;
     }
 
