@@ -240,19 +240,22 @@
   function render(result) {
     card.dataset.level = result.level;
     $("ifTitle").textContent = result.title;
-    $("ifScores").textContent = "הטעיה " + result.spoof + "/100 · שיבוש " + result.jam + "/100 · " + result.used + "/" + result.visible + " לוויינים" + (result.cn0 ? " · " + result.cn0.toFixed(0) + " dB-Hz" : "") + (result.netDistKm != null ? " · מרחק מהרשת " + (result.netDistKm < 1 ? Math.round(result.netDistKm * 1000) + " מ׳" : result.netDistKm.toFixed(1) + " ק״מ") : "");
+    $("ifScores").textContent = summary(result) + (result.netDistKm != null ? " · מרחק מהמיקום לפי הרשת " + (result.netDistKm < 1 ? Math.round(result.netDistKm * 1000) + " מ׳" : result.netDistKm.toFixed(1) + " ק״מ") : "");
     const ul = $("ifReasons"); ul.textContent = "";
     if (!result.reasons.length) ul.append(el("li", "ok", result.level === "wait" ? "מתחבר למקלט ה־GNSS…" : "כל הבדיקות עברו: המיקום תואם לרשת, האות נראה טבעי והלוויינים במקום שלהם."));
     for (const r of result.reasons) ul.append(el("li", r.sev, r.text));
   }
 
+  const signal = (c) => (c == null ? "" : " · עוצמת אות " + c.toFixed(0) + " (" + (c >= 35 ? "חזקה" : c >= 25 ? "טובה" : c >= 18 ? "חלשה, אולי בתוך מבנה" : "חלשה מאוד") + ")");
+  const summary = (r) => "ודאות הטעיה " + r.spoof + "% · ודאות שיבוש " + r.jam + "% · " + r.used + " מתוך " + r.visible + " לוויינים בשימוש" + signal(r.cn0);
   function finishCheck() {
     const v = verdict(results);
     stopReceiver();
     card.dataset.level = v.level;
     $("ifTitle").textContent = "תוצאה: " + v.title;
     const quality = (() => { const a = $("gnssAccuracy"), c = $("gnssConfidence"); const t = [a && a.textContent.trim() !== "—" ? "דיוק " + a.textContent.trim() : "", c && c.textContent.trim() !== "—" ? "ביטחון " + c.textContent.trim() : ""].filter(Boolean).join(" · "); return t ? " · איכות קליטה: " + t : ""; })();
-    $("ifScores").textContent = "בדיקה של " + CHECK_SECONDS + " שניות, " + v.samples + " מדידות · הטעיה " + v.spoof + "/100 · שיבוש " + v.jam + "/100 · " + v.used + "/" + v.visible + " לוויינים" + quality + " · " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+    v.cn0 = median(results.map((r) => r.cn0).filter((x) => x != null));
+    $("ifScores").textContent = summary(v) + quality + " · נבדק ב־" + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
     const ul = $("ifReasons"); ul.textContent = "";
     if (!v.reasons.length) ul.append(el("li", "ok", v.level === "weak" ? "לא נמצאו סימני שיבוש או הטעיה, אבל היו מעט לוויינים. כדאי לחזור על הבדיקה במקום פתוח." : "כל הבדיקות עברו לאורך כל הדקה: המיקום תואם לרשת, האות נראה טבעי והלוויינים במקום שלהם."));
     for (const r of v.reasons) ul.append(el("li", r.sev, r.text + (r.kind === "space" ? "" : " (ב־" + r.share + "% מהמדידות)")));
@@ -273,7 +276,7 @@
       const left = Math.max(0, CHECK_SECONDS - Math.round((now - startedAt) / 1000));
       card.dataset.level = "wait";
       $("ifTitle").textContent = "בודק… עוד " + left + " שניות";
-      $("ifScores").textContent = results.length + " מדידות · " + result.used + "/" + result.visible + " לוויינים" + (result.cn0 ? " · " + result.cn0.toFixed(0) + " dB-Hz" : "") + ". כדאי להישאר במקום פתוח.";
+      $("ifScores").textContent = result.used + " מתוך " + result.visible + " לוויינים בשימוש" + signal(result.cn0) + ". כדאי להישאר במקום פתוח, ואפשר לגלול בחופשיות.";
       $("ifBar").style.width = Math.min(100, ((now - startedAt) / (CHECK_SECONDS * 1000)) * 100) + "%";
       if (left <= 0) finishCheck();
     } else {
@@ -325,7 +328,12 @@
   $("ifDownload").addEventListener("click", () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv()], { type: "text/csv" })); a.download = "haniaion-interference.csv"; document.body.append(a); a.click(); a.remove(); });
   $("ifClear").addEventListener("click", (e) => { if (!e.currentTarget.dataset.armed) { e.currentTarget.dataset.armed = "1"; e.currentTarget.textContent = "ללחוץ שוב למחיקה"; return; } store.set("log", []); renderLog(); e.currentTarget.textContent = "מחיקת היומן"; delete e.currentTarget.dataset.armed; });
   if (native()) { $("ifWeb").hidden = true; card.dataset.level = "idle"; $("ifTitle").textContent = "מוכן לבדיקה"; }
-  else { $("ifControls").hidden = true; card.dataset.level = "web"; $("ifTitle").textContent = "הבדיקה המלאה עובדת באפליקציית Android"; $("ifScores").textContent = "בדפדפן אין גישה לנתוני הלוויינים. כאן אפשר לראות מזג אוויר בחלל ודיווחים מהקהילה."; }
+  else {
+    card.dataset.level = "web"; $("ifWatch").hidden = true; $("ifStart").textContent = "לבדוק איכות קליטה";
+    $("ifTitle").textContent = "בדפדפן אפשר לבדוק רק איכות קליטה";
+    $("ifScores").textContent = "זיהוי שיבוש והטעיה צריך גישה ללוויינים עצמם, ויש אותה רק באפליקציית Android.";
+    $("ifStart").addEventListener("click", () => { const d = $("gnssTech"); if (d) d.open = true; const b = $("gnssTestButton"); if (b && !b.disabled) b.click(); });
+  }
   renderLog(); loadKp(); loadCommunity();
   setInterval(loadKp, 15 * 60 * 1000); setInterval(loadCommunity, 2 * 60 * 1000);
 })(typeof window !== "undefined" ? window : globalThis);

@@ -27,3 +27,8 @@
 @media(max-width:700px){.if-split{grid-template-columns:1fr}.if-card{padding:15px 12px}}
 .if-progress{height:8px;border-radius:99px;background:#10273c;overflow:hidden;margin:-2px 0 12px}.if-progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#818cf8);transition:width .9s linear}
 .if-watchnote{color:#9fb9cb;width:100%}
+.gnss-tech{margin-top:16px;border:1px solid rgba(148,163,184,.22);border-radius:18px;padding:10px 14px;background:rgba(255,255,255,.02)}
+.gnss-tech>summary{cursor:pointer;font-weight:700;color:#cfe3f5;padding:4px 0}
+.gnss-tech[open]>summary{margin-bottom:10px}
+#gnss-monitor>.if-card{margin-top:14px}
+.if-card [hidden],.if-card[hidden]{display:none!important}
