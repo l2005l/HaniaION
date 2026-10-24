@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v3-6-0-interference-3";
+const CACHE_NAME = "haniaion-v3-6-0-interference-4";
 
 const APP_SHELL = [
   "/",
@@ -7,8 +7,8 @@ const APP_SHELL = [
   "/static/style.css?v=58",
   "/static/gnss-result.css?v=2",
   "/static/interference.css?v=3",
-  "/static/interference.js?v=3",
-  "/static/app.js?v=85",
+  "/static/interference.js?v=4",
+  "/static/app.js?v=86",
   "/static/wind.css?v=45",
   "/static/wind.js?v=47",
   "/static/satellite.css?v=31",
