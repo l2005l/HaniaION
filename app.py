@@ -30,6 +30,7 @@ except ImportError:  # The main RAAM application can still run before push depen
 from urllib3.util.retry import Retry
 
 from satellite_service import build_coverage
+from gnss_sky import expected_sky, space_weather
 
 from database import (
     DATABASE_ENABLED,
@@ -58,13 +59,15 @@ from database import (
     get_monitor_logs,
     get_admin_statistics,
     save_gnss_sample,
+    save_interference_report,
+    recent_interference,
     get_gnss_region,
 )
 
 APP_NAME = "HaniaION RAAM"
-ANDROID_VERSION_CODE = 30506
-ANDROID_VERSION_NAME = "3.5.6"
-ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.5.6/HaniaION.apk"
+ANDROID_VERSION_CODE = 30600
+ANDROID_VERSION_NAME = "3.6.0"
+ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.6.0/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
@@ -984,6 +987,34 @@ async def gnss_sample(request: Request):
 @app.get("/api/gnss/region")
 def gnss_region(lat_cell: float = Query(...), lon_cell: float = Query(...)):
     return get_gnss_region(lat_cell, lon_cell)
+
+@app.get("/api/gnss/expected")
+def gnss_expected(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180)):
+    """Where each GPS satellite should be in the sky right now, for the spoofing check."""
+    return expected_sky(lat, lon)
+
+
+@app.get("/api/spaceweather")
+def spaceweather():
+    """The current planetary K index (NOAA SWPC), to tell storms from jammers."""
+    return space_weather()
+
+
+@app.post("/api/gnss/interference")
+async def gnss_interference_report(request: Request):
+    check_rate_limit((request.client.host if request.client else "unknown") + ":interference")
+    try:
+        payload = await request.json()
+        ok = save_interference_report(payload["lat_cell"], payload["lon_cell"], str(payload["kind"]), int(payload["score"]))
+        return {"ok": ok}
+    except (KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="invalid interference report")
+
+
+@app.get("/api/gnss/interference")
+def gnss_interference_recent(hours: int = Query(3, ge=1, le=24)):
+    return recent_interference(hours)
+
 
 @app.get("/api/monitor/status")
 def monitor_status():

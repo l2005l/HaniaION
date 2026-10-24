@@ -1,3 +1,10 @@
+## v3.6.0 — Jamming and spoofing monitor
+- New card "שיבוש והטעיית GPS" with the reasons for every suspicion, an incident log (CSV) and anonymous community reports.
+- Spoofing: GNSS fix vs. network fix, landings at known spoofing spots, uniform C/N0, elevation vs. C/N0, GPS satellites where the real sky (SGP4, CelesTrak gps-ops) has none, other constellations vanishing, mock location, satellite time offset, impossible jumps.
+- Jamming: C/N0 drop across all satellites, AGC drop, satellites in view without a fix; weighed against NOAA Kp.
+- Android 3.6.0: the app now sends the GNSS fix, the network fix, AGC, mock flag and time offset; the older GNSS panels finally receive data.
+- Server: /api/gnss/expected, /api/spaceweather, /api/gnss/interference.
+
 ## v2.29
 - VAPID generator now emits raw 32-byte P-256 private scalar as base64url; avoids PEM/BEGIN/END formatting issues.
 - Public/private pair remains matched and is validated server-side.\n\n

@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
   <link rel="stylesheet" href="/static/style.css?v=58">
   <title>HaniaION — BRDC to RAAM</title>
-  <link rel="stylesheet" href="/static/data-status.css?v=5"><link rel="stylesheet" href="/static/data-status-compact.css?v=1"><link rel="stylesheet" href="/static/gnss-result.css?v=2">
+  <link rel="stylesheet" href="/static/data-status.css?v=5"><link rel="stylesheet" href="/static/data-status-compact.css?v=1"><link rel="stylesheet" href="/static/gnss-result.css?v=2"><link rel="stylesheet" href="/static/interference.css?v=1">
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-45QVN8YE3W"></script>
   <script>
@@ -98,6 +98,25 @@
   </div>
   <div class="gnss-constellations"><small>מערכות לוויין שנקלטות</small><div id="nativeConstellations">—</div></div>
   <div class="native-gnss-note" id="nativeGnssNote">ממתין למדידות GNSS מהמכשיר…</div>
+</section>
+<section id="interference" class="if-card" data-level="idle" aria-label="שיבוש והטעיה">
+  <div class="if-head"><div><span class="section-kicker">JAMMING · SPOOFING</span><h3>שיבוש והטעיית GPS</h3></div><span class="if-kp" id="ifKp">Kp …</span></div>
+  <div class="if-status"><span class="if-dot" aria-hidden="true"></span><div><strong id="ifTitle">הבדיקה כבויה</strong><small id="ifScores">משווה את הלוויינים לרשת הסלולרית, בודק את האות ואת מיקום הלוויינים בשמיים.</small></div></div>
+  <div class="if-controls" id="ifControls"><button class="button button-primary" type="button" id="ifStart">להתחיל בדיקה</button><button class="button button-secondary" type="button" id="ifStop" hidden>לעצור</button>
+    <label class="if-share"><input type="checkbox" id="ifShare"> לשתף דיווח אנונימי (אזור של 10 ק״מ בלבד)</label></div>
+  <p class="if-web" id="ifWeb"><a class="button button-secondary" href="/download/android">להוריד את אפליקציית Android</a></p>
+  <h4>למה</h4>
+  <ul class="if-reasons" id="ifReasons"><li class="ok">כאן יופיעו הסימנים שזוהו, אחד אחד.</li></ul>
+  <details class="if-more"><summary>מה נבדק</summary><ul>
+    <li><b>הטעיה:</b> מרחק בין המיקום מהלוויינים למיקום לפי הרשת, "נחיתה" בנקודות מוכרות כמו נמל התעופה של ביירות, עוצמת אות אחידה מדי, לוויינים נמוכים חזקים מגבוהים, לווייני GPS שנראים במקום שבו הם לא נמצאים, היעלמות של Galileo, GLONASS ו־BeiDou, אפליקציית מיקום מדומה, שעון לוויינים שונה וקפיצות מיקום.</li>
+    <li><b>שיבוש:</b> ירידה פתאומית באות של כל הלוויינים, ירידה ברמת ההגבר במקלט (AGC), ולוויינים בשמיים בלי קביעת מיקום.</li>
+    <li><b>מזג אוויר בחלל:</b> מדד Kp מ־NOAA. בסערה גיאומגנטית ירידה בקליטה יכולה להיות טבעית, ולכן החשד לשיבוש נחלש.</li>
+  </ul></details>
+  <div class="if-split">
+    <div><div class="if-subhead"><h4>יומן אירועים</h4><small id="ifLogCount"></small></div><div id="ifLog"></div>
+      <div class="if-logbtns"><button class="button button-secondary" type="button" id="ifCopy">העתקה כ־CSV</button><button class="button button-secondary" type="button" id="ifDownload">הורדה</button><button class="button button-secondary" type="button" id="ifClear">מחיקת היומן</button></div></div>
+    <div><div class="if-subhead"><h4>דיווחים מהקהילה</h4><small>3 השעות האחרונות</small></div><div id="ifCommunity"><p class="if-muted">טוען…</p></div></div>
+  </div>
 </section>
 <div class="regional-gnss community-regional"><div><span class="section-kicker">HANIAION COMMUNITY</span><h3>מדידות HaniaION באזור</h3></div><strong id="regionalGnss">אין עדיין מדידות באזור</strong><small id="regionalGnssDetail">מבוסס רק על בדיקות אנונימיות של HaniaION, אם משתמשים בחרו לשתף.</small></div>
     </section>
@@ -265,6 +284,7 @@
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/static/spoofing.js?v=5" defer></script>
+  <script src="/static/interference.js?v=1" defer></script>
   <script src="/static/app.js?v=84" defer></script>
   <script src="/static/data-status.js?v=5"></script>
   <script>
