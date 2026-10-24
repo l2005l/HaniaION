@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="/static/icons/icon.svg?v=43">
   <link rel="stylesheet" href="/static/style.css?v=58">
   <title>HaniaION — BRDC to RAAM</title>
-  <link rel="stylesheet" href="/static/data-status.css?v=5"><link rel="stylesheet" href="/static/data-status-compact.css?v=1"><link rel="stylesheet" href="/static/gnss-result.css?v=2"><link rel="stylesheet" href="/static/interference.css?v=1">
+  <link rel="stylesheet" href="/static/data-status.css?v=5"><link rel="stylesheet" href="/static/data-status-compact.css?v=1"><link rel="stylesheet" href="/static/gnss-result.css?v=2"><link rel="stylesheet" href="/static/interference.css?v=2">
   <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-45QVN8YE3W"></script>
   <script>
@@ -101,8 +101,10 @@
 </section>
 <section id="interference" class="if-card" data-level="idle" aria-label="שיבוש והטעיה">
   <div class="if-head"><div><span class="section-kicker">JAMMING · SPOOFING</span><h3>שיבוש והטעיית GPS</h3></div><span class="if-kp" id="ifKp">Kp …</span></div>
-  <div class="if-status"><span class="if-dot" aria-hidden="true"></span><div><strong id="ifTitle">הבדיקה כבויה</strong><small id="ifScores">משווה את הלוויינים לרשת הסלולרית, בודק את האות ואת מיקום הלוויינים בשמיים.</small></div></div>
-  <div class="if-controls" id="ifControls"><button class="button button-primary" type="button" id="ifStart">להתחיל בדיקה</button><button class="button button-secondary" type="button" id="ifStop" hidden>לעצור</button>
+  <div class="if-status"><span class="if-dot" aria-hidden="true"></span><div><strong id="ifTitle">מוכן לבדיקה</strong><small id="ifScores">בדיקה של דקה ובסופה תוצאה. למעקב בנסיעה או בעבודת שטח: מעקב רציף, שנעצר לבד אחרי 30 דקות.</small></div></div>
+  <div class="if-progress" id="ifProgress" hidden><span id="ifBar"></span></div>
+  <div class="if-controls" id="ifControls"><button class="button button-primary" type="button" id="ifStart">בדיקה (דקה)</button><button class="button button-secondary" type="button" id="ifWatch">מעקב רציף</button><button class="button button-secondary" type="button" id="ifStop" hidden>לעצור</button>
+    <small class="if-watchnote" id="ifWatchNote" hidden></small>
     <label class="if-share"><input type="checkbox" id="ifShare"> לשתף דיווח אנונימי (אזור של 10 ק״מ בלבד)</label></div>
   <p class="if-web" id="ifWeb"><a class="button button-secondary" href="/download/android">להוריד את אפליקציית Android</a></p>
   <h4>למה</h4>
@@ -284,7 +286,7 @@
   <button id="floatingTopButton" class="floating-top-button" type="button" aria-label="חזרה לראש העמוד" title="חזרה לראש העמוד">↑</button>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/static/spoofing.js?v=5" defer></script>
-  <script src="/static/interference.js?v=1" defer></script>
+  <script src="/static/interference.js?v=2" defer></script>
   <script src="/static/app.js?v=84" defer></script>
   <script src="/static/data-status.js?v=5"></script>
   <script>
