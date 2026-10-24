@@ -1580,15 +1580,15 @@ document.addEventListener("DOMContentLoaded", initializeK69Alerts);
     if(!progressEl||progressEl.classList.contains('hidden')||progressScrollInFlight)return;
     const rect=progressEl.getBoundingClientRect(),headerBottom=stickyHeaderBottom(),gap=12;
     const hiddenBehindHeader=rect.top<headerBottom;
-    // Avoid repeated scrolling while values update; only a header-obscured top needs correction.
-    if(!force&&!hiddenBehindHeader)return;
+    // Never pull the page back while the user scrolls; only the explicit start may scroll once.
+    if(!force||rect.height===0||!hiddenBehindHeader&&rect.top<window.innerHeight)return;
     progressScrollInFlight=true;
     const top=rect.top+window.scrollY-headerBottom-gap;
     window.scrollTo({top:Math.max(0,top),behavior:scrollBehavior()});
     window.setTimeout(()=>{progressScrollInFlight=false;},scrollBehavior()==='smooth'?500:0);
   };
   const clearResult=()=>{const target=$('gnss-status-target');if(!target)return;target.classList.remove('has-result','result-ok','result-warn','result-alert','result-neutral');};
-  const emphasizeResult=(kind='neutral')=>{const target=$('gnss-status-target');if(!target)return;clearResult();target.classList.add('has-result',`result-${kind}`);if(!finalResultScrolled){finalResultScrolled=true;window.setTimeout(()=>{const live=$('gnssLiveStatus');if(!live)return;const top=live.getBoundingClientRect().top+window.scrollY-stickyHeaderBottom()-12;window.scrollTo({top:Math.max(0,top),behavior:scrollBehavior()});},80);}};
+  const emphasizeResult=(kind='neutral')=>{const target=$('gnss-status-target');if(!target)return;clearResult();target.classList.add('has-result',`result-${kind}`);finalResultScrolled=true;};
   function showProgress(show=true){if(progressEl)progressEl.classList.toggle('hidden',!show);}
   function updateProgress(m){
     if(!progressEl)return;
