@@ -25,3 +25,5 @@
 .if-crow small{color:#91aabd}
 .if-muted{color:#91aabd;margin:4px 0}
 @media(max-width:700px){.if-split{grid-template-columns:1fr}.if-card{padding:15px 12px}}
+.if-progress{height:8px;border-radius:99px;background:#10273c;overflow:hidden;margin:-2px 0 12px}.if-progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#818cf8);transition:width .9s linear}
+.if-watchnote{color:#9fb9cb;width:100%}
