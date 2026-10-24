@@ -116,9 +116,9 @@
     if (visible >= 8 && used.length === 0) {
       const since = hist.slice().reverse().findIndex((h) => h.used > 0);
       const blind = since === -1 ? (hist.length ? (now - hist[0].t) / 1000 : 0) : (now - hist[hist.length - 1 - since].t) / 1000;
-      if (blind >= 20) add("nofix", "jam", 25, "רואים " + visible + " לוויינים, אבל כבר " + Math.round(blind) + " שניות אי אפשר לקבוע מיקום.");
+      if (blind >= 20 && baseCn0 != null && baseCn0 >= 25) add("nofix", "jam", 25, "רואים " + visible + " לוויינים, אבל כבר " + Math.round(blind) + " שניות אי אפשר לקבוע מיקום.");
     }
-    if (cn0Now != null && cn0Now < 20 && visible >= 6) add("weak", "jam", 10, "האות מכל הלוויינים חלש מאוד (" + cn0Now.toFixed(0) + " dB-Hz בממוצע).", "low");
+    if (cn0Now != null && cn0Now < 22 && visible >= 6 && !(baseCn0 != null && baseCn0 >= 25)) reasons.push({ id: "indoor", kind: "info", pts: 0, sev: "info", text: "האות חלש מכל הלוויינים מתחילת הבדיקה (" + cn0Now.toFixed(0) + " dB-Hz). כך זה נראה בתוך מבנה או ליד חלון, ולא בשיבוש. לתוצאה בטוחה כדאי לצאת למקום פתוח." });
 
     let spoof = Math.min(100, reasons.filter((r) => r.kind === "spoof").reduce((s, r) => s + r.pts, 0));
     let jam = Math.min(100, reasons.filter((r) => r.kind === "jam").reduce((s, r) => s + r.pts, 0));
@@ -145,7 +145,7 @@
     const seen = new Map();
     for (const r of results) for (const x of r.reasons) { const e = seen.get(x.id) || { ...x, hits: 0 }; e.hits++; if (x.pts >= e.pts) Object.assign(e, x, { hits: e.hits }); seen.set(x.id, e); }
     const need = Math.max(3, Math.ceil(n / 5));
-    const kept = [...seen.values()].filter((e) => e.hits >= need || e.kind === "space").sort((a, b) => b.pts - a.pts);
+    const kept = [...seen.values()].filter((e) => e.hits >= need || e.kind === "space" || (e.kind === "info" && e.hits >= need)).sort((a, b) => b.pts - a.pts);
     const spoof = Math.min(100, kept.filter((r) => r.kind === "spoof").reduce((s, r) => s + r.pts, 0));
     let jam = Math.min(100, kept.filter((r) => r.kind === "jam").reduce((s, r) => s + r.pts, 0));
     if (kept.some((r) => r.kind === "space")) jam = Math.round(jam * 0.6);
@@ -155,7 +155,7 @@
     else if (jam >= 50) { level = "high"; kind = "jam"; title = "חשד חזק לשיבוש GPS"; }
     else if (spoof >= 35) { level = "warn"; kind = "spoof"; title = "חשד להטעיית מיקום"; }
     else if (jam >= 30) { level = "warn"; kind = "jam"; title = "חשד לשיבוש GPS"; }
-    else if (usedMed < 4) { level = "weak"; title = "הקליטה חלשה מדי לתוצאה בטוחה"; }
+    else if (usedMed < 4) { level = "weak"; title = kept.some((r) => r.id === "indoor") ? "הקליטה חלשה, כנראה בתוך מבנה" : "הקליטה חלשה מדי לתוצאה בטוחה"; }
     for (const e of kept) e.share = Math.round((e.hits / n) * 100);
     return { level, kind, title, spoof, jam, reasons: kept, samples: n, used: usedMed, visible: visMed };
   }
@@ -258,9 +258,12 @@
     $("ifScores").textContent = summary(v) + quality + " · נבדק ב־" + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
     const ul = $("ifReasons"); ul.textContent = "";
     if (!v.reasons.length) ul.append(el("li", "ok", v.level === "weak" ? "לא נמצאו סימני שיבוש או הטעיה, אבל היו מעט לוויינים. כדאי לחזור על הבדיקה במקום פתוח." : "כל הבדיקות עברו לאורך כל הדקה: המיקום תואם לרשת, האות נראה טבעי והלוויינים במקום שלהם."));
-    for (const r of v.reasons) ul.append(el("li", r.sev, r.text + (r.kind === "space" ? "" : " (ב־" + r.share + "% מהמדידות)")));
+    for (const r of v.reasons) ul.append(el("li", r.sev, r.text + (r.kind === "space" || r.kind === "info" ? "" : " (ב־" + r.share + "% מהמדידות)")));
     if (v.kind) logEntry(v.kind, v.kind === "spoof" ? v.spoof : v.jam, v.title, v.reasons.map((r) => r.text), lastSnap);
     $("ifProgress").hidden = true;
+    // Bring the answer into view once, under the sticky header.
+    const box = card.querySelector(".if-status");
+    if (box) { const head = Math.max(0, ...Array.from(document.querySelectorAll(".focused-header")).map((x) => (getComputedStyle(x).position === "sticky" || getComputedStyle(x).position === "fixed" ? x.getBoundingClientRect().bottom : 0))); root.scrollTo({ top: Math.max(0, box.getBoundingClientRect().top + root.scrollY - head - 12), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
   }
   function tick() {
     let snap;
@@ -273,16 +276,16 @@
     lastSnap = snap;
     if (mode === "check") {
       results.push(result);
-      const left = Math.max(0, CHECK_SECONDS - Math.round((now - startedAt) / 1000));
+      const left = Math.max(0, CHECK_SECONDS - results.length);
       card.dataset.level = "wait";
       $("ifTitle").textContent = "בודק… עוד " + left + " שניות";
       $("ifScores").textContent = result.used + " מתוך " + result.visible + " לוויינים בשימוש" + signal(result.cn0) + ". כדאי להישאר במקום פתוח, ואפשר לגלול בחופשיות.";
-      $("ifBar").style.width = Math.min(100, ((now - startedAt) / (CHECK_SECONDS * 1000)) * 100) + "%";
+      $("ifBar").style.width = Math.min(100, (results.length / CHECK_SECONDS) * 100) + "%";
       if (left <= 0) finishCheck();
     } else {
       render(result); log(result, snap);
       const left = WATCH_MINUTES * 60 - Math.round((now - startedAt) / 1000);
-      $("ifWatchNote").textContent = "מעקב רציף · נעצר לבד בעוד " + Math.max(0, Math.ceil(left / 60)) + " דקות";
+      $("ifWatchNote").textContent = "מעקב רציף · נעצר לבד בעוד " + Math.max(0, Math.ceil(left / 60)) + " דקות · ביציאה מהאפליקציה המעקב מושהה וממשיך כשחוזרים";
       if (left <= 0) { stop(); $("ifTitle").textContent = "המעקב הרציף נעצר אחרי " + WATCH_MINUTES + " דקות"; }
     }
     // Feed the older GNSS panels on the page, which wait for this event.
@@ -317,7 +320,11 @@
   const oldBtn = $("gnssTestButton");
   if (oldBtn) oldBtn.addEventListener("click", () => { if (native() && !mode) { startedFromOld = true; start("check"); startedFromOld = false; } });
   // Leaving the screen stops the receiver: no battery drain in the background.
-  document.addEventListener("visibilitychange", () => { if (document.hidden && mode === "watch") { stop(); $("ifTitle").textContent = "המעקב נעצר כשיצאת מהמסך"; } else if (document.hidden && mode === "check") { stop(); } });
+  // Leaving the app pauses the check (Android stops the page); coming back continues it from where it was.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && mode === "check" && results.length) $("ifScores").textContent = "חזרת לאפליקציה, הבדיקה ממשיכה מ־" + results.length + " מדידות.";
+    if (!document.hidden && mode) { try { root.HaniaAndroid.startGnssMonitor(); } catch {} }
+  });
 
   $("ifShare").checked = !!store.get("share", false);
   $("ifShare").addEventListener("change", (e) => store.set("share", e.target.checked));
