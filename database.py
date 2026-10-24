@@ -512,3 +512,45 @@ def get_gnss_region(lat_cell: float, lon_cell: float, hours: int = 2) -> dict[st
         if not rows: return {"available": True, "count": 0}
         scores=[r.score for r in rows]; accuracies=[r.accuracy_m for r in rows]
         return {"available": True, "count": len(rows), "score": round(sum(scores)/len(scores)), "accuracy_m": round(sum(accuracies)/len(accuracies),1), "updated_at": max(r.created_at for r in rows).isoformat()}
+
+
+class GnssInterferenceReport(Base):
+    """An anonymous report of jamming or spoofing: a 0.1-degree cell (about 10 km), never a precise place."""
+    __tablename__ = "gnss_interference_reports"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    lat_cell: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    lon_cell: Mapped[float] = mapped_column(Float, nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(8), nullable=False)
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+
+
+def save_interference_report(lat_cell: float, lon_cell: float, kind: str, score: int) -> bool:
+    if not DATABASE_ENABLED or kind not in ("jam", "spoof"):
+        return False
+    lat, lon = round(float(lat_cell), 1), round(float(lon_cell), 1)
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return False
+    with session_scope() as session:
+        session.add(GnssInterferenceReport(created_at=datetime.now(timezone.utc), lat_cell=lat, lon_cell=lon, kind=kind, score=max(0, min(100, int(score)))))
+    return True
+
+
+def recent_interference(hours: int = 3) -> dict[str, Any]:
+    if not DATABASE_ENABLED:
+        return {"available": False, "cells": []}
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, min(int(hours), 24)))
+    with session_scope() as session:
+        rows = session.scalars(select(GnssInterferenceReport).where(GnssInterferenceReport.created_at >= cutoff)).all()
+        cells: dict[tuple[float, float, str], dict[str, Any]] = {}
+        for r in rows:
+            key = (r.lat_cell, r.lon_cell, r.kind)
+            c = cells.setdefault(key, {"lat_cell": r.lat_cell, "lon_cell": r.lon_cell, "kind": r.kind, "count": 0, "max_score": 0, "last": r.created_at})
+            c["count"] += 1
+            c["max_score"] = max(c["max_score"], r.score)
+            if r.created_at > c["last"]:
+                c["last"] = r.created_at
+        out = sorted(cells.values(), key=lambda c: c["last"], reverse=True)[:200]
+        for c in out:
+            c["last"] = c["last"].isoformat()
+        return {"available": True, "hours": hours, "cells": out}
