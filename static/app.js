@@ -833,19 +833,54 @@ async function checkAndroidUpdate(manual = false) {
       return;
     }
     const currentName = window.HaniaAndroid.versionName();
-    const accepted = window.confirm(`מותקנת גרסה ${currentName}.\nגרסה חדשה ${latest.version_name} זמינה.\n\nלעדכן עכשיו?`);
-    if (accepted) {
-      // NativeBridge before 3.5.3 exposed openUpdate(url) only. Keep the live
-      // website backward-compatible so 3.5.0/3.5.1 can bootstrap to the new updater.
-      if (currentCode < 30503) window.HaniaAndroid.openUpdate(latest.download_url);
-      else window.HaniaAndroid.openUpdate(latest.download_url, Number(latest.version_code));
+    const native = window.HaniaAndroid;
+    const state = typeof native.updateState === "function" ? String(native.updateState() || "idle") : "idle";
+    const KEY = "haniaion-update-started";
+    let started = null;
+    try { started = JSON.parse(localStorage.getItem(KEY) || "null"); } catch {}
+    const startedAt = started && started.code === Number(latest.version_code) ? Number(started.at) : 0;
+    const stuck = !startedAt || Date.now() - startedAt > 3 * 60 * 1000;
+    const viaBrowser = () => { window.location.href = latest.download_url; };
+    const install = () => {
+      try { localStorage.setItem(KEY, JSON.stringify({ code: Number(latest.version_code), at: Date.now() })); } catch {}
+      // NativeBridge before 3.5.3 exposed openUpdate(url) only.
+      if (currentCode < 30503) native.openUpdate(latest.download_url);
+      else native.openUpdate(latest.download_url, Number(latest.version_code));
+    };
+    if (state === "downloading") {
+      const pct = typeof native.updateProgress === "function" ? Number(native.updateProgress()) : -1;
+      if (!stuck) { if (manual) showToast(pct >= 0 ? `העדכון בהורדה (${pct}%)` : "העדכון בהורדה — תופיע הודעה כשיסתיים"); return; }
+      if (!manual && sessionStorage.getItem("haniaion-update-nag")) return;
+      sessionStorage.setItem("haniaion-update-nag", "1");
+      // From 3.6.2 the app restarts a stuck download itself; older versions can only be rescued through the browser.
+      if (currentCode >= 30602) { install(); return; }
+      if (window.confirm(`ההורדה של ${latest.version_name} בתוך האפליקציה לא מתקדמת.\n\nלהוריד את העדכון דרך הדפדפן?\n(אחרי ההורדה פותחים את הקובץ ומאשרים התקנה)`)) viaBrowser();
+      return;
     }
+    if (state === "ready") {
+      if (window.confirm(`העדכון ${latest.version_name} כבר הורד.\n\nלהתקין עכשיו?`)) install();
+      return;
+    }
+    if (!manual && sessionStorage.getItem("haniaion-update-nag")) return;
+    sessionStorage.setItem("haniaion-update-nag", "1");
+    const accepted = window.confirm(`מותקנת גרסה ${currentName}.\nגרסה חדשה ${latest.version_name} זמינה.\n\nלעדכן עכשיו?`);
+    if (accepted) install();
   } catch (error) {
     if (manual) showToast("לא ניתן לבדוק עדכונים כרגע");
   }
 }
 
 window.addEventListener("load", () => window.setTimeout(() => checkAndroidUpdate(false), 1800));
+// The footer shows the real installed version (app) or the latest published one (web).
+window.addEventListener("load", async () => {
+  const node = document.getElementById("footerVersion");
+  if (!node) return;
+  try {
+    if (window.HaniaAndroid && typeof window.HaniaAndroid.versionName === "function") { node.textContent = "HaniaION v" + window.HaniaAndroid.versionName(); return; }
+    const response = await fetch("/api/app-version", { cache: "no-store" });
+    if (response.ok) { const v = await response.json(); if (v.version_name) node.textContent = "HaniaION v" + v.version_name; }
+  } catch {}
+});
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {

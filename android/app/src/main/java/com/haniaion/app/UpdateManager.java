@@ -26,6 +26,8 @@ final class UpdateManager {
     private static final String KEY_ID = "download_id";
     private static final String KEY_TARGET = "target_version_code";
     private static final String KEY_STATE = "state";
+    private static final String KEY_STARTED = "started_at";
+    private static final long STUCK_MS = 3 * 60 * 1000L;
     private static final String STATE_DOWNLOADING = "downloading";
     private static final String STATE_READY = "ready";
     private static final String STATE_AWAITING_PERMISSION = "awaiting_install_permission";
@@ -51,8 +53,14 @@ final class UpdateManager {
         int existingTarget = prefs.getInt(KEY_TARGET, 0);
         if (existingId != -1 && existingTarget == targetVersionCode) {
             int status = queryStatus(existingId)[0];
+            long age = System.currentTimeMillis() - prefs.getLong(KEY_STARTED, 0);
+            if (status == DownloadManager.STATUS_RUNNING && age < STUCK_MS) {
+                int pct = progress();
+                toast(pct >= 0 ? "העדכון בהורדה (" + pct + "%) — תופיע הודעה כשיסתיים" : "העדכון בהורדה — תופיע הודעה כשיסתיים"); return;
+            }
+            // A download that waits, pauses or runs for too long is stuck: start it again instead of waiting forever.
             if (status == DownloadManager.STATUS_RUNNING || status == DownloadManager.STATUS_PENDING || status == DownloadManager.STATUS_PAUSED) {
-                toast("העדכון כבר בהורדה — אין צורך ללחוץ שוב"); return;
+                clearDownload(); toast("ההורדה הקודמת נתקעה — מתחיל מחדש");
             }
             if (status == DownloadManager.STATUS_SUCCESSFUL && (STATE_READY.equals(state) || STATE_AWAITING_PERMISSION.equals(state))) {
                 handleSuccessfulDownload(existingId); return;
@@ -67,9 +75,23 @@ final class UpdateManager {
             request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
             request.setDestinationInExternalFilesDir(activity, Environment.DIRECTORY_DOWNLOADS, FILE_NAME);
             long id = downloads.enqueue(request);
-            prefs.edit().putLong(KEY_ID, id).putInt(KEY_TARGET, targetVersionCode).putString(KEY_STATE, STATE_DOWNLOADING).apply();
+            prefs.edit().putLong(KEY_ID, id).putInt(KEY_TARGET, targetVersionCode).putString(KEY_STATE, STATE_DOWNLOADING).putLong(KEY_STARTED, System.currentTimeMillis()).apply();
             toast("הורדת העדכון התחילה");
         } catch (Exception error) { clearDownload(); toast("לא ניתן להתחיל את העדכון"); }
+    }
+
+    /** Download progress 0–100, or -1 when unknown. */
+    int progress() {
+        long id = prefs.getLong(KEY_ID, -1);
+        if (id == -1) return -1;
+        try (Cursor c = downloads.query(new DownloadManager.Query().setFilterById(id))) {
+            if (c != null && c.moveToFirst()) {
+                long done = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+                long total = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
+                if (total > 0) return (int) Math.min(100, done * 100 / total);
+            }
+        } catch (Exception ignored) { }
+        return -1;
     }
 
     String state() {
@@ -227,6 +249,11 @@ final class UpdateManager {
         if (dir == null) return;
         File[] files = dir.listFiles((d, name) -> name.startsWith("HaniaION-update") && name.endsWith(".apk"));
         if (files != null) for (File f : files) f.delete();
+    }
+
+    static String installedVersionName(Context context) {
+        try { return context.getPackageManager().getPackageInfo(context.getPackageName(), 0).versionName; }
+        catch (Exception ignored) { return "0"; }
     }
 
     static int installedVersionCode(Context context) {
