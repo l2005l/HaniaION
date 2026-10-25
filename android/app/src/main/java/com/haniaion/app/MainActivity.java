@@ -127,7 +127,7 @@ public class MainActivity extends android.app.Activity {
         settings.setDomStorageEnabled(true);
         settings.setGeolocationEnabled(true);
         settings.setMediaPlaybackRequiresUserGesture(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " HaniaIONNative/3.5.3");
+        settings.setUserAgentString(settings.getUserAgentString() + " HaniaIONNative/" + UpdateManager.installedVersionName(this));
         nativeBridge = new NativeBridge(this);
         webView.addJavascriptInterface(nativeBridge, "HaniaAndroid");
         webView.setWebViewClient(new WebViewClient() {
