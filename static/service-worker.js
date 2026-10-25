@@ -1,4 +1,4 @@
-const CACHE_NAME = "haniaion-v3-6-2-field-1";
+const CACHE_NAME = "haniaion-v3-6-2-field-2";
 
 const APP_SHELL = [
   "/",
@@ -7,15 +7,15 @@ const APP_SHELL = [
   "/static/style.css?v=58",
   "/static/gnss-result.css?v=2",
   "/static/interference.css?v=3",
-  "/static/interference.js?v=6",
+  "/static/interference.js?v=7",
   "/static/app.js?v=88",
   "/static/wind.css?v=45",
   "/static/wind.js?v=47",
   "/static/satellite.css?v=31",
   "/static/satellite-extra.css?v=1",
-  "/static/satellite.js?v=31",
-  "/static/fieldwork.css?v=1",
-  "/static/fieldwork.js?v=1",
+  "/static/satellite.js?v=32",
+  "/static/fieldwork.css?v=2",
+  "/static/fieldwork.js?v=2",
   "/static/data-status.css?v=5",
   "/static/data-status-compact.css?v=1",
   "/static/data-status.js?v=5",

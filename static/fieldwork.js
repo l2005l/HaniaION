@@ -77,6 +77,14 @@
   if (!$("wherePanel")) return;
   const native = () => root.HaniaAndroid && typeof root.HaniaAndroid.getGnssSnapshot === "function";
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  try {
+    const v = JSON.parse(localStorage.getItem("haniaion-interference-session") || "null");
+    if (v && Date.now() - v.startedAt < (v.mode === "watch" ? 30 : 10) * 60 * 1000) {
+      const back = el("a", "fw-running", v.mode === "watch" ? "🛰️ מעקב שיבוש רץ ברקע · לחזור לתוצאה" : "🛰️ בדיקת שיבוש רצה ברקע · לחזור לתוצאה");
+      back.href = "/#gnss-monitor";
+      const tabs = document.querySelector(".tabs"); if (tabs) tabs.before(back);
+    }
+  } catch {}
   const KEY = "haniaion-points";
   const store = { get(d) { try { return JSON.parse(localStorage.getItem(KEY) || "null") || d; } catch { return d; } }, set(v) { try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} } };
   const fmt = (n, d) => n.toLocaleString("he-IL", { minimumFractionDigits: d, maximumFractionDigits: d });

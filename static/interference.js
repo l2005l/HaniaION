@@ -318,6 +318,7 @@
     const r = root.HaniaAndroid.startGnssMonitor();
     if (r === "location-permission-required") { $("ifTitle").textContent = "נדרשת הרשאת מיקום מדויק"; $("ifScores").textContent = "מאשרים מיקום מדויק בהגדרות האפליקציה ומנסים שוב."; return; }
     mode = which; startedAt = Date.now(); results = []; lastTs = Date.now() - 1500;
+    store.set("session", { mode: which, startedAt });
     if (typeof root.HaniaAndroid.startBackgroundWatch === "function") { try { root.HaniaAndroid.startBackgroundWatch(which === "check" ? "בדיקה של דקה" : "מעקב רציף, עד " + WATCH_MINUTES + " דקות"); } catch {} }
     $("ifStart").disabled = $("ifWatch").disabled = true; $("ifStop").hidden = false;
     $("ifProgress").hidden = which !== "check"; $("ifBar").style.width = "0%"; $("ifWatchNote").hidden = which !== "watch";
@@ -328,7 +329,7 @@
     clearInterval(timer); timer = null;
     try { root.HaniaAndroid.stopGnssMonitor(); } catch {}
     try { if (typeof root.HaniaAndroid.stopBackgroundWatch === "function") root.HaniaAndroid.stopBackgroundWatch(); } catch {}
-    mode = null;
+    mode = null; store.set("session", null);
     $("ifStart").disabled = $("ifWatch").disabled = false; $("ifStop").hidden = true; $("ifWatchNote").hidden = true;
   }
   function stop() {
@@ -363,6 +364,24 @@
     $("ifTitle").textContent = "בדפדפן אפשר לבדוק רק איכות קליטה";
     $("ifScores").textContent = "זיהוי שיבוש והטעיה צריך גישה ללוויינים עצמם, ויש אותה רק באפליקציית Android.";
     $("ifStart").addEventListener("click", () => { const d = $("gnssTech"); if (d) d.open = true; const b = $("gnssTestButton"); if (b && !b.disabled) b.click(); });
+  }
+  // A check that was running when the user opened another page (satellites, wind) goes on from
+  // the readings the phone kept meanwhile; a stale one only clears its notification.
+  if (native()) {
+    const sess = store.get("session", null);
+    const alive = sess && sess.startedAt && Date.now() - sess.startedAt < (sess.mode === "watch" ? WATCH_MINUTES * 60 * 1000 : 10 * 60 * 1000);
+    if (alive && root.HaniaAndroid.startGnssMonitor() !== "location-permission-required") {
+      mode = sess.mode; startedAt = sess.startedAt; results = []; lastTs = sess.startedAt - 1;
+      try { if (typeof root.HaniaAndroid.startBackgroundWatch === "function") root.HaniaAndroid.startBackgroundWatch(mode === "check" ? "בדיקה של דקה" : "מעקב רציף, עד " + WATCH_MINUTES + " דקות"); } catch {}
+      $("ifStart").disabled = $("ifWatch").disabled = true; $("ifStop").hidden = false;
+      $("ifProgress").hidden = mode !== "check"; $("ifWatchNote").hidden = mode !== "watch";
+      card.dataset.level = "wait"; $("ifTitle").textContent = mode === "check" ? "ממשיך את הבדיקה…" : "ממשיך את המעקב…";
+      timer = setInterval(tick, 1000);
+      setTimeout(() => { catchUp(); if (mode) { const box = card.querySelector(".if-status"); if (box) box.scrollIntoView({ block: "center" }); } }, 400);
+    } else {
+      store.set("session", null);
+      try { if (typeof root.HaniaAndroid.stopBackgroundWatch === "function") root.HaniaAndroid.stopBackgroundWatch(); } catch {}
+    }
   }
   renderLog(); loadKp(); loadCommunity();
   setInterval(loadKp, 15 * 60 * 1000); setInterval(loadCommunity, 2 * 60 * 1000);

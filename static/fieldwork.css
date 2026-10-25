@@ -30,3 +30,4 @@
 .muted{color:var(--muted)}
 @media(max-width:850px){.fw-two{grid-template-columns:1fr}}
 @media(max-width:420px){.fw-form{grid-template-columns:1fr}}
+.fw-running{display:block;margin:0 0 12px;padding:12px 14px;border-radius:14px;border:1px solid #ffd16677;background:#ffd16614;color:#ffe3a3;font-weight:700;text-decoration:none;text-align:center}
