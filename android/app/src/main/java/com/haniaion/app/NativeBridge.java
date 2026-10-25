@@ -380,6 +380,8 @@ public class NativeBridge {
         activity.runOnUiThread(() -> updateManager.start(url, targetVersionCode));
     }
 
+    @JavascriptInterface public int updateProgress() { return updateManager.progress(); }
+
     @JavascriptInterface public String updateState() {
         return updateManager.state();
     }

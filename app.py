@@ -30,7 +30,7 @@ except ImportError:  # The main RAAM application can still run before push depen
 from urllib3.util.retry import Retry
 
 from satellite_service import build_coverage
-from gnss_sky import expected_sky, space_weather
+from gnss_sky import expected_sky, forecast as gnss_forecast, space_weather
 
 from database import (
     DATABASE_ENABLED,
@@ -65,9 +65,9 @@ from database import (
 )
 
 APP_NAME = "HaniaION RAAM"
-ANDROID_VERSION_CODE = 30601
-ANDROID_VERSION_NAME = "3.6.1"
-ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.6.1/HaniaION.apk"
+ANDROID_VERSION_CODE = 30602
+ANDROID_VERSION_NAME = "3.6.2"
+ANDROID_APK_URL = "https://github.com/l2005l/HaniaION/releases/download/android-v3.6.2/HaniaION.apk"
 CDDIS_BASE = "https://cddis.nasa.gov/archive/gnss/data/daily"
 EARTHDATA_HOST = "urs.earthdata.nasa.gov"
 VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "").strip()
@@ -992,6 +992,12 @@ def gnss_region(lat_cell: float = Query(...), lon_cell: float = Query(...)):
 def gnss_expected(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180)):
     """Where each GPS satellite should be in the sky right now, for the spoofing check."""
     return expected_sky(lat, lon)
+
+
+@app.get("/api/gnss/forecast")
+def gnss_forecast_route(lat: float = Query(..., ge=-90, le=90), lon: float = Query(..., ge=-180, le=180), hours: int = Query(12, ge=1, le=24), mask: float = Query(15, ge=0, le=40)):
+    """When to measure: satellites above the mask and DOP for the coming hours, all four systems."""
+    return gnss_forecast(lat, lon, hours=hours, mask=mask)
 
 
 @app.get("/api/spaceweather")
