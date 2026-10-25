@@ -48,6 +48,9 @@ public class NativeBridge {
     private volatile long gnssTimeOffsetMs;
     private volatile boolean gnssTimeOffsetKnown;
     private volatile String agcJson = "[]";
+    // Every reading of the last 30 minutes, so a check keeps counting while the app is in the background.
+    private final java.util.ArrayDeque<String> history = new java.util.ArrayDeque<>();
+    private static final int HISTORY_MAX = 1800;
     private final LocationListener networkListener = new LocationListener() {
         @Override public void onLocationChanged(Location location) { lastNetwork = location; }
         @Override public void onStatusChanged(String provider, int status, Bundle extras) { }
@@ -127,6 +130,37 @@ public class NativeBridge {
 
     @JavascriptInterface public String getGnssSnapshot() { return gnssSnapshot; }
 
+    /** Readings recorded after `sinceMs` (by their updated_at), oldest first, as a JSON array. */
+    @JavascriptInterface public String getGnssHistory(double sinceMs) {
+        StringBuilder out = new StringBuilder("[");
+        synchronized (history) {
+            boolean first = true;
+            for (String item : history) {
+                try {
+                    if (new JSONObject(item).optLong("updated_at", 0) <= (long) sinceMs) continue;
+                } catch (Exception ignored) { continue; }
+                if (!first) out.append(',');
+                out.append(item);
+                first = false;
+            }
+        }
+        return out.append(']').toString();
+    }
+
+    /** Keep the check running with the app in the background (a notification shows while it runs). */
+    @JavascriptInterface public String startBackgroundWatch(String text) {
+        try {
+            GnssWatchService.start(activity.getApplicationContext(), text == null ? "" : text);
+            return "ok";
+        } catch (Exception error) {
+            return "error:" + error.getClass().getSimpleName();
+        }
+    }
+
+    @JavascriptInterface public void stopBackgroundWatch() {
+        try { GnssWatchService.stop(activity.getApplicationContext()); } catch (Exception ignored) { }
+    }
+
     @JavascriptInterface public void stopGnssMonitor() {
         activity.runOnUiThread(this::stopGnssInternal);
     }
@@ -166,6 +200,10 @@ public class NativeBridge {
             if (gnssTimeOffsetKnown) root.put("time_offset_ms", gnssTimeOffsetMs);
             root.put("agc", new JSONArray(agcJson));
             gnssSnapshot = root.toString();
+            synchronized (history) {
+                history.addLast(gnssSnapshot);
+                while (history.size() > HISTORY_MAX) history.removeFirst();
+            }
         } catch (Exception ignored) { }
     }
 
@@ -319,6 +357,7 @@ public class NativeBridge {
     void onPause() { updateManager.onPause(); }
 
     void shutdown() {
+        stopBackgroundWatch();
         stopGnssInternal();
         if (speech != null) { speech.stop(); speech.shutdown(); }
     }
