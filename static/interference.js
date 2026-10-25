@@ -321,7 +321,7 @@
     if (typeof root.HaniaAndroid.startBackgroundWatch === "function") { try { root.HaniaAndroid.startBackgroundWatch(which === "check" ? "בדיקה של דקה" : "מעקב רציף, עד " + WATCH_MINUTES + " דקות"); } catch {} }
     $("ifStart").disabled = $("ifWatch").disabled = true; $("ifStop").hidden = false;
     $("ifProgress").hidden = which !== "check"; $("ifBar").style.width = "0%"; $("ifWatchNote").hidden = which !== "watch";
-    if (which === "check") { const old = $("gnssTestButton"); if (old && !old.disabled && !startedFromOld) old.click(); }
+    if (which === "check") { const old = $("gnssTestButton"); root.__haniaQuietGnssTest = !startedFromOld; if (old && !old.disabled && !startedFromOld) old.click(); }
     if (!timer) timer = setInterval(tick, 1000);
   }
   function stopReceiver() {
