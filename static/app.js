@@ -1577,7 +1577,8 @@ document.addEventListener("DOMContentLoaded", initializeK69Alerts);
   const scrollBehavior=()=>window.matchMedia?.('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
   const stickyHeaderBottom=()=>Math.max(0,...Array.from(document.querySelectorAll('.focused-header')).filter(header=>getComputedStyle(header).position==='sticky'||getComputedStyle(header).position==='fixed').map(header=>header.getBoundingClientRect().bottom));
   const keepProgressVisible=(force=false)=>{
-    if(!progressEl||progressEl.classList.contains('hidden')||progressScrollInFlight||progressEl.closest('details:not([open])'))return;
+    // When the main check started it, the older test runs quietly and never moves the page.
+    if(!progressEl||progressEl.classList.contains('hidden')||progressScrollInFlight||progressEl.closest('details:not([open])')||window.__haniaQuietGnssTest)return;
     const rect=progressEl.getBoundingClientRect(),headerBottom=stickyHeaderBottom(),gap=12;
     const hiddenBehindHeader=rect.top<headerBottom;
     // Never pull the page back while the user scrolls; only the explicit start may scroll once.

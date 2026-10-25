@@ -1,3 +1,7 @@
+## v3.6.1 — The GPS check keeps going in the background
+- Android: a foreground service with a "HaniaION בודק GPS" notification keeps the receiver running while the app is in the background; every reading of the last 30 minutes is kept and read back by the page.
+- The one-minute check and the continuous watch continue from where they were when you come back.
+
 ## v3.6.0 — Jamming and spoofing monitor
 - New card "שיבוש והטעיית GPS" with the reasons for every suspicion, an incident log (CSV) and anonymous community reports.
 - Spoofing: GNSS fix vs. network fix, landings at known spoofing spots, uniform C/N0, elevation vs. C/N0, GPS satellites where the real sky (SGP4, CelesTrak gps-ops) has none, other constellations vanishing, mock location, satellite time offset, impossible jumps.

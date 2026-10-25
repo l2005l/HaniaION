@@ -265,10 +265,26 @@
     const box = card.querySelector(".if-status");
     if (box) { const head = Math.max(0, ...Array.from(document.querySelectorAll(".focused-header")).map((x) => (getComputedStyle(x).position === "sticky" || getComputedStyle(x).position === "fixed" ? x.getBoundingClientRect().bottom : 0))); root.scrollTo({ top: Math.max(0, box.getBoundingClientRect().top + root.scrollY - head - 12), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
   }
+  let lastTs = 0, lastProcessed = 0;
   function tick() {
     let snap;
     try { snap = JSON.parse(root.HaniaAndroid.getGnssSnapshot() || "{}"); } catch { return; }
-    const now = Date.now();
+    // Count each reading once; if the receiver goes quiet, keep counting every few seconds.
+    if (snap.updated_at && snap.updated_at <= lastTs && Date.now() - lastProcessed < 3000) return;
+    process(snap, true);
+  }
+  /** Readings the phone recorded while the page was in the background, counted as if live. */
+  function catchUp() {
+    if (!mode || typeof root.HaniaAndroid.getGnssHistory !== "function") return;
+    let items = [];
+    try { items = JSON.parse(root.HaniaAndroid.getGnssHistory(lastTs) || "[]"); } catch { return; }
+    if (!items.length) return;
+    for (let i = 0; i < items.length && mode; i++) process(items[i], i === items.length - 1);
+    if (mode === "check") $("ifScores").textContent = "חזרת לאפליקציה. הבדיקה המשיכה ברקע: " + results.length + " מדידות עד עכשיו.";
+  }
+  function process(snap, show) {
+    const now = snap.updated_at || Date.now();
+    lastTs = Math.max(lastTs, now); lastProcessed = Date.now();
     remember(hist, snap, now);
     const where = snap.network || snap.location;
     if (where) loadExpected(where.lat, where.lon);
@@ -277,16 +293,19 @@
     if (mode === "check") {
       results.push(result);
       const left = Math.max(0, CHECK_SECONDS - results.length);
+      if (left <= 0) { finishCheck(); return; }
+      if (!show) return;
       card.dataset.level = "wait";
       $("ifTitle").textContent = "בודק… עוד " + left + " שניות";
       $("ifScores").textContent = result.used + " מתוך " + result.visible + " לוויינים בשימוש" + signal(result.cn0) + ". כדאי להישאר במקום פתוח, ואפשר לגלול בחופשיות.";
       $("ifBar").style.width = Math.min(100, (results.length / CHECK_SECONDS) * 100) + "%";
-      if (left <= 0) finishCheck();
     } else {
-      render(result); log(result, snap);
+      log(result, snap);
+      if (!show) return;
+      render(result);
       const left = WATCH_MINUTES * 60 - Math.round((now - startedAt) / 1000);
-      $("ifWatchNote").textContent = "מעקב רציף · נעצר לבד בעוד " + Math.max(0, Math.ceil(left / 60)) + " דקות · ביציאה מהאפליקציה המעקב מושהה וממשיך כשחוזרים";
-      if (left <= 0) { stop(); $("ifTitle").textContent = "המעקב הרציף נעצר אחרי " + WATCH_MINUTES + " דקות"; }
+      $("ifWatchNote").textContent = "מעקב רציף · נעצר לבד בעוד " + Math.max(0, Math.ceil(left / 60)) + " דקות · ממשיך גם כשהאפליקציה ברקע";
+      if (left <= 0) { stop(); $("ifTitle").textContent = "המעקב הרציף נעצר אחרי " + WATCH_MINUTES + " דקות"; return; }
     }
     // Feed the older GNSS panels on the page, which wait for this event.
     const sats = snap.satellites || [], live = sats.filter((s) => s.cn0 > 0), cons = {};
@@ -298,15 +317,17 @@
     if (!native()) return;
     const r = root.HaniaAndroid.startGnssMonitor();
     if (r === "location-permission-required") { $("ifTitle").textContent = "נדרשת הרשאת מיקום מדויק"; $("ifScores").textContent = "מאשרים מיקום מדויק בהגדרות האפליקציה ומנסים שוב."; return; }
-    mode = which; startedAt = Date.now(); results = [];
+    mode = which; startedAt = Date.now(); results = []; lastTs = Date.now() - 1500;
+    if (typeof root.HaniaAndroid.startBackgroundWatch === "function") { try { root.HaniaAndroid.startBackgroundWatch(which === "check" ? "בדיקה של דקה" : "מעקב רציף, עד " + WATCH_MINUTES + " דקות"); } catch {} }
     $("ifStart").disabled = $("ifWatch").disabled = true; $("ifStop").hidden = false;
     $("ifProgress").hidden = which !== "check"; $("ifBar").style.width = "0%"; $("ifWatchNote").hidden = which !== "watch";
-    if (which === "check") { const old = $("gnssTestButton"); if (old && !old.disabled && !startedFromOld) old.click(); }
+    if (which === "check") { const old = $("gnssTestButton"); root.__haniaQuietGnssTest = !startedFromOld; if (old && !old.disabled && !startedFromOld) old.click(); }
     if (!timer) timer = setInterval(tick, 1000);
   }
   function stopReceiver() {
     clearInterval(timer); timer = null;
     try { root.HaniaAndroid.stopGnssMonitor(); } catch {}
+    try { if (typeof root.HaniaAndroid.stopBackgroundWatch === "function") root.HaniaAndroid.stopBackgroundWatch(); } catch {}
     mode = null;
     $("ifStart").disabled = $("ifWatch").disabled = false; $("ifStop").hidden = true; $("ifWatchNote").hidden = true;
   }
@@ -322,8 +343,10 @@
   // Leaving the screen stops the receiver: no battery drain in the background.
   // Leaving the app pauses the check (Android stops the page); coming back continues it from where it was.
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && mode === "check" && results.length) $("ifScores").textContent = "חזרת לאפליקציה, הבדיקה ממשיכה מ־" + results.length + " מדידות.";
-    if (!document.hidden && mode) { try { root.HaniaAndroid.startGnssMonitor(); } catch {} }
+    if (document.hidden || !mode) return;
+    try { root.HaniaAndroid.startGnssMonitor(); } catch {}
+    catchUp();
+    if (mode === "check" && results.length && typeof root.HaniaAndroid.getGnssHistory !== "function") $("ifScores").textContent = "חזרת לאפליקציה, הבדיקה ממשיכה מ־" + results.length + " מדידות.";
   });
 
   $("ifShare").checked = !!store.get("share", false);
