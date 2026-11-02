@@ -385,4 +385,21 @@ public class NativeBridge {
     @JavascriptInterface public String updateState() {
         return updateManager.state();
     }
+
+    /** Opens the Android share sheet (WhatsApp, mail, ...). WebView has no navigator.share. */
+    @JavascriptInterface public String shareText(String title, String text) {
+        if (text == null || text.isEmpty()) return "empty";
+        activity.runOnUiThread(() -> {
+            try {
+                Intent send = new Intent(Intent.ACTION_SEND);
+                send.setType("text/plain");
+                if (title != null) send.putExtra(Intent.EXTRA_SUBJECT, title);
+                send.putExtra(Intent.EXTRA_TEXT, text);
+                activity.startActivity(Intent.createChooser(send, "שיתוף נתוני HaniaION"));
+            } catch (Exception error) {
+                Toast.makeText(activity, "לא ניתן לפתוח את חלון השיתוף", Toast.LENGTH_LONG).show();
+            }
+        });
+        return "ok";
+    }
 }
