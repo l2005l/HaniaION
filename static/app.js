@@ -570,6 +570,9 @@ async function shareResult() {
   const text = buildTextExport();
   const title = `HaniaION RAAM — ${latestResult.source_date || "Latest result"}`;
   try {
+    // Inside the Android app the WebView has no navigator.share — use the native share sheet.
+    const bridge = window.HaniaAndroid;
+    if (bridge && typeof bridge.shareText === "function" && bridge.shareText(title, text) === "ok") return;
     // Text sharing is supported more consistently than file sharing across mobile browsers.
     if (navigator.share) {
       await navigator.share({ title, text });
