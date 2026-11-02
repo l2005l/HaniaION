@@ -26,6 +26,7 @@ const elements = {
   downloadJsonButton: byId("downloadJsonButton"),
   downloadCsvButton: byId("downloadCsvButton"),
   shareResultButton: byId("shareResultButton"),
+  shareUfcButton: byId("shareUfcButton"),
   viewResultsButton: byId("viewResultsButton"),
   resultsPanel: byId("resultsPanel"),
   idleState: byId("idleState"),
@@ -567,8 +568,31 @@ function exportCsv() {
 
 async function shareResult() {
   if (!latestResult) return;
-  const text = buildTextExport();
-  const title = `HaniaION RAAM — ${latestResult.source_date || "Latest result"}`;
+  await shareTextPayload(`HaniaION RAAM — ${latestResult.source_date || "Latest result"}`, buildTextExport());
+}
+
+// UFC: labelled values, one per line — DATA1, DATA2, DATA3, DATA4, UTC (= tLS), MM:DD of the download (local time).
+function buildUfcText() {
+  const r = latestResult;
+  const when = new Date(r.updated_at || r.saved_at || Date.now());
+  const date = Number.isNaN(when.getTime()) ? new Date() : when;
+  const mmdd = `${String(date.getMonth() + 1).padStart(2, "0")}:${String(date.getDate()).padStart(2, "0")}`;
+  return [
+    `Data 1: ${r.data1}`,
+    `Data 2: ${r.data2}`,
+    `Data 3: ${r.data3}`,
+    `Data 4: ${r.data4}`,
+    `UTC: ${r.tls}`,
+    `Date: ${mmdd}`,
+  ].join("\n");
+}
+
+async function shareUfc() {
+  if (!latestResult) return;
+  await shareTextPayload("UFC", buildUfcText());
+}
+
+async function shareTextPayload(title, text) {
   try {
     // Inside the Android app the WebView has no navigator.share — use the native share sheet.
     const bridge = window.HaniaAndroid;
@@ -662,6 +686,7 @@ function registerEvents() {
   elements.downloadJsonButton.addEventListener("click", exportJson);
   elements.downloadCsvButton.addEventListener("click", exportCsv);
   elements.shareResultButton?.addEventListener("click", shareResult);
+  elements.shareUfcButton?.addEventListener("click", shareUfc);
   elements.viewResultsButton.addEventListener("click", () => scrollToTarget("raam-values-target", "start", 132));
 
 
