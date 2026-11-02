@@ -571,13 +571,20 @@ async function shareResult() {
   await shareTextPayload(`HaniaION RAAM — ${latestResult.source_date || "Latest result"}`, buildTextExport());
 }
 
-// UFC: values only, one per line — DATA1, DATA2, DATA3, DATA4, UTC (= tLS), MM:DD of the download (local time).
+// UFC: labelled values, one per line — DATA1, DATA2, DATA3, DATA4, UTC (= tLS), MM:DD of the download (local time).
 function buildUfcText() {
   const r = latestResult;
   const when = new Date(r.updated_at || r.saved_at || Date.now());
   const date = Number.isNaN(when.getTime()) ? new Date() : when;
   const mmdd = `${String(date.getMonth() + 1).padStart(2, "0")}:${String(date.getDate()).padStart(2, "0")}`;
-  return [r.data1, r.data2, r.data3, r.data4, r.tls, mmdd].join("\n");
+  return [
+    `Data 1: ${r.data1}`,
+    `Data 2: ${r.data2}`,
+    `Data 3: ${r.data3}`,
+    `Data 4: ${r.data4}`,
+    `UTC: ${r.tls}`,
+    `Date: ${mmdd}`,
+  ].join("\n");
 }
 
 async function shareUfc() {
